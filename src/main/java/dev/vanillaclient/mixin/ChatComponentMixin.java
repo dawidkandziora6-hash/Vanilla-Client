@@ -20,7 +20,7 @@ public class ChatComponentMixin {
 			Object a = tc.getArgs()[0];
 			String file = a instanceof Component c ? c.getString() : String.valueOf(a);
 			ci.cancel();
-			Screenshots.saved(file);
+			Screenshots.saved(file, (ChatComponent) (Object) this);
 		}
 	}
 }

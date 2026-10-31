@@ -28,11 +28,10 @@ public final class Screenshots {
 	private Screenshots() {}
 
 	/** Called instead of the vanilla chat line. */
-	public static void saved(String fileName) {
+	public static void saved(String fileName, net.minecraft.client.gui.components.ChatComponent chat) {
 		Path file = Thumbs.screenshotsDir().resolve(fileName);
 		last = file;
 		lastAt = System.currentTimeMillis();
-		Minecraft mc = Minecraft.getInstance();
 		if (!Config.get().screenshotMessage) return;
 		MutableComponent msg = Component.literal("✦ ").withColor(0xFFD34D)
 				.append(Component.literal("Screenshot saved  ").withColor(0xFFFFFF));
@@ -41,7 +40,7 @@ public final class Screenshots {
 		msg.append(button("[Open]", 0x8AF08A, new ClickEvent.OpenFile(file.toAbsolutePath().toString()), "Open the file"));
 		msg.append(Component.literal(" "));
 		msg.append(button("[Folder]", 0xC0C0C0, new ClickEvent.OpenFile(file.getParent().toAbsolutePath().toString()), "Open the screenshots folder"));
-		mc.gui.getChat().addClientSystemMessage(msg);
+		chat.addClientSystemMessage(msg);
 	}
 
 	private static Component button(String text, int color, ClickEvent click, String hover) {
