@@ -153,11 +153,12 @@ public final class VanillaClient implements ClientModInitializer {
 
 	/** Small "UHC Guide" button in Minecraft's own Options screen (top left). */
 	private static void addGuideButton(Minecraft client, Screen screen) {
-		Button button = Button.builder(Component.empty(), b -> client.setScreenAndShow(new dev.vanillaclient.gui.GuideScreen(screen)))
+		boolean icons = Icons.ready();
+		Button button = Button.builder(icons ? Component.empty() : Component.literal("§e✦"), b -> client.setScreenAndShow(new dev.vanillaclient.gui.GuideScreen(screen)))
 				.bounds(6, 6, 20, 20)
 				.tooltip(Tooltip.create(Component.literal("UHC Guide – villagers, enchants, brewing")))
 				.build();
 		Screens.getWidgets(screen).add(button);
-		ScreenEvents.afterExtract(screen).register((s, g, mx, my, delta) -> g.item(Icons.stack(Items.ENCHANTED_BOOK), 8, 8));
+		if (icons) ScreenEvents.afterExtract(screen).register((s, g, mx, my, delta) -> g.item(Icons.stack(Items.ENCHANTED_BOOK), 8, 8));
 	}
 }

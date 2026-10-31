@@ -11,20 +11,16 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import dev.vanillaclient.gui.Icons;
 
 /** Armor in the vanilla hotbar look: the same slot strip as the hotbar, right next to it. */
 public final class ArmorModule extends HudModule {
 	private static final Identifier HOTBAR = Identifier.withDefaultNamespace("hud/hotbar");
 	private static final EquipmentSlot[] ARMOR = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
-	private static ItemStack[] preview;
-
 	private static ItemStack[] preview() {
-		if (preview == null) {
-			preview = new ItemStack[] {
-					new ItemStack(Items.DIAMOND_HELMET), new ItemStack(Items.DIAMOND_CHESTPLATE),
-					new ItemStack(Items.DIAMOND_LEGGINGS), new ItemStack(Items.DIAMOND_BOOTS), new ItemStack(Items.DIAMOND_PICKAXE)};
-		}
-		return preview;
+		return new ItemStack[] {
+				Icons.stack(Items.DIAMOND_HELMET), Icons.stack(Items.DIAMOND_CHESTPLATE),
+				Icons.stack(Items.DIAMOND_LEGGINGS), Icons.stack(Items.DIAMOND_BOOTS), Icons.stack(Items.DIAMOND_PICKAXE)};
 	}
 
 	public ArmorModule() {

@@ -16,8 +16,26 @@ public final class Icons {
 
 	private Icons() {}
 
+	/**
+	 * Cached item stack for drawing. Before you join a world, Minecraft 26.3 can't
+	 * create item stacks yet ("components not bound") – then this returns EMPTY,
+	 * which simply draws nothing.
+	 */
 	public static ItemStack stack(Item item) {
-		return CACHE.computeIfAbsent(item, ItemStack::new);
+		ItemStack cached = CACHE.get(item);
+		if (cached != null) return cached;
+		try {
+			ItemStack s = new ItemStack(item);
+			CACHE.put(item, s);
+			return s;
+		} catch (RuntimeException notReady) {
+			return ItemStack.EMPTY;
+		}
+	}
+
+	/** true once item icons can be drawn (a world has been loaded). */
+	public static boolean ready() {
+		return !stack(Items.STICK).isEmpty();
 	}
 
 	/** Icons a task category can have. */
