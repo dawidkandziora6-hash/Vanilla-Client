@@ -98,7 +98,7 @@ public final class VanillaClient implements ClientModInitializer {
 			ClientTickEvents.END_CLIENT_TICK.register(client -> {
 				if (++step[1] == 35 && step[0] > 0) {
 					try {
-						net.minecraft.client.Screenshot.grab(client.gameDirectory, "vc_" + step[0] + ".png", client.getMainRenderTarget(), 1, msg -> {});
+						net.minecraft.client.Screenshot.grab(client, false);
 					} catch (Throwable t) {
 						Config.LOG.warn("VANILLACLIENT AUDIT screenshot failed", t);
 					}
