@@ -97,6 +97,25 @@ class Face:
                     img.putpixel((ox + x, oy + y), tuple(c[:3]) + (255,))
 
 
+def edges(img, face, fx, fy, side, cap):
+    """Fills the thin side/top/bottom faces of a box next to its front face (fx,fy)."""
+    for y in range(face.h):
+        for col, sx in ((0, fx - side), (face.w - 1, fx + face.w)):
+            c = face.get(col, y)
+            if c is not None:
+                for i in range(side):
+                    img.putpixel((sx + i, fy + y), mul(c, 0.7) + (255,))
+    for x in range(face.w):
+        c = face.get(x, 0)
+        if c is not None:
+            for i in range(cap):
+                img.putpixel((fx + x, fy - cap + i), mul(c, 0.85) + (255,))
+        c = face.get(x, face.h - 1)
+        if c is not None:
+            for i in range(cap):
+                img.putpixel((fx + face.w + x, fy - cap + i), mul(c, 0.6) + (255,))
+
+
 def strip(frames, name):
     w, h = frames[0].size
     out = Image.new("RGBA", (w, h * len(frames)), (0, 0, 0, 0))
@@ -419,6 +438,7 @@ def wings_image(face, cape_tint):
     # front & back of the wing, edges left transparent for shaped wings
     face.blit(img, 48, 4)
     face.blit(img, 72, 4, mirror=True)
+    edges(img, face, 48, 4, 4, 4)
     # matching cape area (vanilla uses it when no cape is chosen)
     for y in range(32):
         for x in range(20):
@@ -581,6 +601,7 @@ def shield_image(face, wood=(120, 85, 50), shaped=True):
     back = Face(24, 44)
     back.fill(lambda x, y: mul(wood, 0.8 + (0.1 if y % 6 == 0 else 0)) if face.get(23 - x, y) is not None else None)
     back.blit(img, 28, 2)
+    edges(img, face, 2, 2, 2, 2)
     if not shaped:
         for x in range(54):
             for y in range(2):

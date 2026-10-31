@@ -45,51 +45,66 @@ public final class Cosmetics {
 
 	public static final List<Design> CAPES = List.of(
 			new Design(NONE, "None", "No cape", 0xFF555555),
-			new Design("crimson", "Crimson Knight", "Gold trim & sword", 0xFFC8202C),
-			new Design("midnight", "Midnight", "Moon & stars", 0xFF1E285F),
-			new Design("aurora", "Aurora", "✦ Animated", 0xFF3CC8AA),
-			new Design("ender", "Ender", "The watching eye", 0xFF1E122D),
-			new Design("forest", "Forest", "Pine & hills", 0xFF3C8C3C),
-			new Design("royal", "Royal", "Crown & ermine", 0xFF7828A0),
-			new Design("ocean", "Ocean", "Rolling waves", 0xFF2896D2),
-			new Design("cherry", "Cherry Blossom", "Falling petals", 0xFFFF9EC3),
-			new Design("inferno", "Inferno", "Rising flames", 0xFFE04010),
-			new Design("diamond", "Diamond", "Shiny gem", 0xFF6EE6E6),
+			new Design("crimson", "Crimson Knight", "V-cut, gold trim", 0xFFC8202C),
+			new Design("midnight", "Midnight", "✦ Twinkling stars", 0xFF1E285F),
+			new Design("aurora", "Aurora", "✦ Flowing lights", 0xFF3CC8AA),
+			new Design("inferno", "Inferno", "✦ Burning hem", 0xFFE04010),
+			new Design("ocean", "Ocean", "✦ Rolling waves", 0xFF2896D2),
+			new Design("ender", "Ender", "✦ Ragged, drifting", 0xFF1E122D),
+			new Design("cherry", "Cherry Blossom", "✦ Falling petals", 0xFFFF9EC3),
+			new Design("diamond", "Diamond", "✦ Sparkling point", 0xFF6EE6E6),
+			new Design("prism", "Prism", "✦ Rainbow scroll", 0xFFE070E0),
+			new Design("rift", "Void Rift", "✦ Pulsing crack", 0xFF8C3CDC),
+			new Design("royal", "Royal", "Rounded, ermine", 0xFF7828A0),
+			new Design("forest", "Forest", "Leafy hem", 0xFF3C8C3C),
+			new Design("wanderer", "Wanderer", "Torn & patched", 0xFF7A6046),
 			new Design(CUSTOM, "Your Image", "cosmetics/cape.png", 0xFFFFFFFF));
 
 	public static final List<Design> WINGS = List.of(
 			new Design(NONE, "Vanilla", "Normal elytra", 0xFF555555),
-			new Design("angel", "Angel", "Soft white feathers", 0xFFF5F5F0),
-			new Design("dragon", "Dragon", "Purple scales", 0xFF5F1E82),
-			new Design("phoenix", "Phoenix", "Fire feathers", 0xFFFFB030),
-			new Design("frost", "Frost", "Icy blue", 0xFF9ACFF0),
-			new Design("phantom", "Phantom", "Glowing veins", 0xFF5A6A8C),
-			new Design("void", "Void", "Starry night", 0xFF190A28),
-			new Design("monarch", "Monarch", "Butterfly", 0xFFFF9620),
+			new Design("angel", "Angel", "Feather tips", 0xFFF5F5F0),
+			new Design("phoenix", "Phoenix", "✦ Flickering fire", 0xFFFFB030),
+			new Design("dragon", "Dragon", "Bony membrane", 0xFF5F1E82),
+			new Design("bat", "Bat", "Scalloped leather", 0xFF34303A),
+			new Design("monarch", "Monarch", "Butterfly shape", 0xFFFF9620),
+			new Design("fairy", "Fairy", "✦ Shimmering", 0xFFE0B0FF),
+			new Design("frost", "Frost", "✦ Icicle edge", 0xFF9ACFF0),
+			new Design("phantom", "Phantom", "✦ Glowing veins", 0xFF5A6A8C),
+			new Design("void", "Void", "✦ Starry night", 0xFF190A28),
 			new Design(CUSTOM, "Your Image", "cosmetics/wings.png", 0xFFFFFFFF));
 
 	public static final List<Design> SHIELDS = List.of(
 			new Design(NONE, "Vanilla", "Normal shield", 0xFF555555),
-			new Design("knight", "Knight", "Red & gold cross", 0xFFC8232D),
-			new Design("oak", "Iron Oak", "Planks & iron", 0xFF966E41),
-			new Design("royal", "Royal", "Blue crown", 0xFF2846AA),
-			new Design("emerald", "Emerald", "Green gem", 0xFF28AA5A),
-			new Design("frost", "Frost", "Snowflake", 0xFFC8EBFF),
-			new Design("obsidian", "Obsidian", "Purple runes", 0xFF28163C),
-			new Design("inferno", "Inferno", "Flames", 0xFFD22A0A),
+			new Design("knight", "Knight", "Heater shape", 0xFFC8232D),
+			new Design("buckler", "Buckler", "Round & studded", 0xFF966E41),
+			new Design("royal", "Royal", "Kite shape", 0xFF2846AA),
+			new Design("emerald", "Emerald", "✦ Glinting gem", 0xFF28AA5A),
+			new Design("frost", "Frost", "✦ Ice crystal", 0xFFC8EBFF),
+			new Design("obsidian", "Obsidian", "✦ Pulsing runes", 0xFF28163C),
+			new Design("inferno", "Inferno", "✦ Flame crest", 0xFFD22A0A),
+			new Design("dragon", "Dragon", "Scaled heater", 0xFF46964A),
+			new Design("tower", "Tower", "Iron-banded", 0xFF78787F),
 			new Design(CUSTOM, "Your Image", "cosmetics/shield.png", 0xFFFFFFFF));
 
 	public static final List<Design> TOTEMS = List.of(
 			new Design(NONE, "Vanilla", "Normal totem", 0xFF555555),
-			new Design("king", "Golden King", "Shiny gold", 0xFFF5C846),
-			new Design("diamond", "Diamond", "Ice-cold blue", 0xFF6EE6E6),
-			new Design("emerald", "Emerald", "Villager's favorite", 0xFF3CC864),
-			new Design("ender", "Ender", "Glowing eyes", 0xFF5A3C8C),
-			new Design("blood", "Blood Moon", "Deep red", 0xFFC81E28),
-			new Design("frost", "Frost", "Snow white", 0xFFDCF0FF),
+			new Design("statue", "Golden Statue", "◆ 3D model", 0xFFF5C846),
+			new Design("king", "Golden King", "✦ Gem pulse", 0xFFF5C846),
+			new Design("diamond", "Diamond", "✦ Glint", 0xFF6EE6E6),
+			new Design("emerald", "Emerald", "✦ Glint", 0xFF3CC864),
+			new Design("ender", "Ender", "✦ Glowing eyes", 0xFF5A3C8C),
+			new Design("blood", "Blood Moon", "✦ Glowing eyes", 0xFFC81E28),
+			new Design("frost", "Frost", "✦ Glint", 0xFFDCF0FF),
 			new Design(CUSTOM, "Your Image", "cosmetics/totem.png", 0xFFFFFFFF));
 
-	public record Tex(Identifier id, int width, int height, ClientAsset.Texture asset) {}
+	/** A registered design. width/height are one frame; animated designs are vertical strips. */
+	public record Tex(Identifier id, int width, int height, int frames, ClientAsset.Texture asset) {}
+
+	/** Animated texture: all frames kept in memory, the current one is copied into the GPU texture. */
+	private record Anim(DynamicTexture tex, int[] strip, int w, int h, int frames) {}
+
+	private static final Map<String, Anim> ANIMS = new HashMap<>();
+	private static int ticks;
 
 	private static final Map<String, Tex> CACHE = new HashMap<>();
 	private static final Set<String> FAILED = new HashSet<>();
@@ -97,11 +112,6 @@ public final class Cosmetics {
 
 	/** Temporary design shown while hovering in the wardrobe (null = use the saved one). */
 	public static String previewCape, previewWings, previewShield;
-
-	// animated aurora cape
-	private static DynamicTexture auroraTex;
-	private static int[] auroraBase;
-	private static int auroraW, auroraH;
 
 	private Cosmetics() {}
 
@@ -169,6 +179,7 @@ public final class Cosmetics {
 	public static void reloadCustom() {
 		generation++;
 		CACHE.keySet().removeIf(key -> key.endsWith(":" + CUSTOM));
+		ANIMS.keySet().removeIf(key -> key.endsWith(":" + CUSTOM));
 		FAILED.removeIf(key -> key.endsWith(":" + CUSTOM));
 	}
 
@@ -204,58 +215,48 @@ public final class Cosmetics {
 		Identifier texPath = Identifier.fromNamespaceAndPath("vanillaclient", "cosmetic/" + kind.prefix + "_" + id + suffix + ".png");
 		int w = img.getWidth();
 		int h = img.getHeight();
-		if (kind == Kind.CAPE && id.equals("aurora")) {
-			auroraW = w;
-			auroraH = h;
-			auroraBase = new int[w * h];
+		int frameH = (kind == Kind.CAPE || kind == Kind.WINGS) ? w / 2 : w;
+		int frames = frameH > 0 && h > frameH && h % frameH == 0 ? h / frameH : 1;
+		DynamicTexture dyn;
+		if (frames > 1) {
+			int[] strip = new int[w * h];
 			for (int y = 0; y < h; y++) {
-				for (int x = 0; x < w; x++) auroraBase[y * w + x] = img.getPixel(x, y);
+				for (int x = 0; x < w; x++) strip[y * w + x] = img.getPixel(x, y);
 			}
+			NativeImage first = new NativeImage(w, frameH, false);
+			for (int y = 0; y < frameH; y++) {
+				for (int x = 0; x < w; x++) first.setPixel(x, y, strip[y * w + x]);
+			}
+			img.close();
+			dyn = new DynamicTexture(() -> key, first);
+			ANIMS.put(key, new Anim(dyn, strip, w, frameH, frames));
+		} else {
+			frameH = h;
+			dyn = new DynamicTexture(() -> key, img);
 		}
-		DynamicTexture dyn = new DynamicTexture(() -> key, img);
 		Minecraft.getInstance().getTextureManager().register(texPath, dyn);
-		if (kind == Kind.CAPE && id.equals("aurora")) auroraTex = dyn;
-		Tex t = new Tex(texPath, w, h, new ClientAsset.ResourceTexture(assetId, texPath));
+		Tex t = new Tex(texPath, w, frameH, frames, new ClientAsset.ResourceTexture(assetId, texPath));
 		CACHE.put(key, t);
 		return t;
 	}
 
-	/** Called every client tick: animates the aurora cape (hue drift). */
+	/** Called every client tick: animated designs advance at 10 frames per second. */
 	public static void tick() {
-		if (auroraTex == null || auroraBase == null) return;
-		if (!"aurora".equals(effective(Kind.CAPE))) return;
-		NativeImage px = auroraTex.getPixels();
-		if (px == null) return;
-		float t = (System.nanoTime() / 1_000_000_000f) * 0.25f;
-		for (int y = 0; y < auroraH; y++) {
-			for (int x = 0; x < auroraW; x++) {
-				int c = auroraBase[y * auroraW + x];
-				int a = (c >>> 24) & 0xFF;
-				if (a == 0) continue;
-				px.setPixel(x, y, shiftHue(c, t + y * 0.01f));
+		if (++ticks % 2 != 0 || ANIMS.isEmpty()) return;
+		int step = ticks / 2;
+		for (Anim a : ANIMS.values()) {
+			NativeImage px = a.tex().getPixels();
+			if (px == null) continue;
+			int base = (step % a.frames()) * a.h() * a.w();
+			for (int y = 0; y < a.h(); y++) {
+				for (int x = 0; x < a.w(); x++) px.setPixel(x, y, a.strip()[base + y * a.w() + x]);
 			}
+			a.tex().upload();
 		}
-		auroraTex.upload();
 	}
 
-	private static int shiftHue(int argb, float amount) {
-		float r = ((argb >> 16) & 0xFF) / 255f;
-		float g = ((argb >> 8) & 0xFF) / 255f;
-		float b = (argb & 0xFF) / 255f;
-		float max = Math.max(r, Math.max(g, b));
-		float min = Math.min(r, Math.min(g, b));
-		float d = max - min;
-		float h = 0f;
-		if (d > 0f) {
-			if (max == r) h = ((g - b) / d) % 6f;
-			else if (max == g) h = (b - r) / d + 2f;
-			else h = (r - g) / d + 4f;
-			h /= 6f;
-		}
-		float s = max == 0f ? 0f : d / max;
-		h = (h + amount) % 1f;
-		if (h < 0) h += 1f;
-		int rgb = java.awt.Color.HSBtoRGB(h, s, max);
-		return (argb & 0xFF000000) | (rgb & 0x00FFFFFF);
+	/** True for textures this mod made (they may have see-through, shaped edges). */
+	public static boolean isOurs(Identifier tex) {
+		return tex != null && "vanillaclient".equals(tex.getNamespace());
 	}
 }

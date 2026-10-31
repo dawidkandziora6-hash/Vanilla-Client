@@ -23,6 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Shield skin: plain shields are drawn with the chosen design instead of the
  * vanilla wood. Shields with a banner on them stay vanilla (the banner wins).
+ * Drawn with cutout so shaped shields (round, kite, heater…) keep their outline.
  * Client-side only, no resource pack needed.
  */
 @Mixin(ShieldSpecialRenderer.class)
@@ -55,7 +56,7 @@ public class ShieldSpecialRendererMixin {
 			if (!patterns.layers().isEmpty() || data.get(DataComponents.BASE_COLOR) != null) return;
 		}
 		collector.submitModel(this.model, Unit.INSTANCE, pose,
-				foil ? RenderTypes.entitySolidGlint(tex) : RenderTypes.entitySolid(tex),
+				foil ? RenderTypes.armorCutoutNoCullGlint(tex) : RenderTypes.entityCutout(tex),
 				light, overlay, -1, VC_IDENTITY, outline);
 		ci.cancel();
 	}

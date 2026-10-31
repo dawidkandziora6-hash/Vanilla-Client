@@ -282,7 +282,7 @@ public final class CosmeticsScreen extends BaseScreen {
 			int cx = (x0 + x1) / 2, cy = (y0 + y1) / 2 - 8;
 			g.pose().pushMatrix();
 			g.pose().translate(cx, cy + bob);
-			g.pose().scale(Math.max(0.08f, Math.abs(spin)) * (spin < 0 ? -1f : 1f), 1f);
+			if (!"statue".equals(id)) g.pose().scale(Math.max(0.08f, Math.abs(spin)) * (spin < 0 ? -1f : 1f), 1f);
 			Cosmetics.Tex tex = Cosmetics.texture(Kind.TOTEM, id);
 			if (tex != null) {
 				int sz = Math.round(size);
@@ -382,7 +382,7 @@ public final class CosmeticsScreen extends BaseScreen {
 		int dh = Math.round(rh * scale);
 		int dx = x + (w - dw) / 2;
 		int dy = y + (h - dh) / 2;
-		g.fill(dx - 1, dy - 1, dx + dw + 1, dy + dh + 1, 0xFF000000);
+		g.fill(dx - 1, dy - 1, dx + dw + 1, dy + dh + 1, 0x30000000); // soft backdrop – shaped designs keep their outline
 		g.blit(RenderPipelines.GUI_TEXTURED, t.id(), dx, dy, ru, rv, dw, dh, rwp, rhp, t.width(), t.height());
 	}
 }
