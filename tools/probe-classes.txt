@@ -1,6 +1,2 @@
-com/mojang/blaze3d/platform/InputConstants
-net/minecraft/server/MinecraftServer
-net/minecraft/world/level/storage/WorldData
-net/minecraft/world/level/dimension/DimensionType
-net/minecraft/client/gui/components/WidgetSprites
-net/minecraft/core/Holder
+net/minecraft/client/Screenshot
+net/minecraft/client/KeyboardHandler -c
