@@ -1,4 +1,35 @@
-net/minecraft/client/renderer/rendertype/RenderTypes
-net/minecraft/client/renderer/entity/layers/CapeLayer -c
-net/minecraft/client/renderer/special/ShieldSpecialRenderer -c
-net/minecraft/client/renderer/entity/layers/WingsLayer -c
+net/minecraft/client/gui/screens/PauseScreen -c
+net/minecraft/client/multiplayer/MultiPlayerGameMode
+net/minecraft/client/gui/screens/inventory/AbstractContainerScreen
+net/minecraft/world/inventory/AbstractContainerMenu
+net/minecraft/world/inventory/Slot
+net/minecraft/stats/StatsCounter
+net/minecraft/stats/Stats
+net/minecraft/stats/Stat
+net/minecraft/stats/StatType
+net/minecraft/advancements/AdvancementHolder
+net/minecraft/advancements/Advancement
+net/minecraft/advancements/AdvancementProgress
+net/minecraft/advancements/DisplayInfo
+net/minecraft/server/PlayerAdvancements
+net/minecraft/server/ServerAdvancementManager
+net/minecraft/client/multiplayer/ClientAdvancements
+net/minecraft/client/gui/screens/advancements/AdvancementsScreen
+net/minecraft/client/KeyMapping
+com/mojang/blaze3d/platform/InputConstants
+com/mojang/blaze3d/platform/InputConstants$Key
+net/minecraft/client/input/KeyEvent
+net/minecraft/client/renderer/entity/LivingEntityRenderer -c
+net/minecraft/client/renderer/entity/player/AvatarRenderer
+net/minecraft/client/renderer/entity/EntityRenderer
+net/minecraft/client/renderer/entity/state/EntityRenderState
+net/minecraft/network/protocol/game/ServerboundClientCommandPacket$Action
+net/minecraft/client/gui/GuiGraphicsExtractor
+net/minecraft/client/gui/screens/options/OptionsScreen -c
+net/minecraft/world/entity/player/PlayerSkin
+net/minecraft/client/renderer/ItemInHandRenderer
+net/minecraft/client/Options
+net/minecraft/client/gui/components/EditBox
+net/minecraft/client/gui/components/MultiLineEditBox
+net/minecraft/client/player/LocalPlayer
+net/minecraft/world/entity/player/Inventory
