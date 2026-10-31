@@ -96,7 +96,14 @@ public final class VanillaClient implements ClientModInitializer {
 					() -> new dev.vanillaclient.gui.ColorPickerScreen(null, "Test", 0xFFFF0000, c -> {}));
 			int[] step = {0, 0};
 			ClientTickEvents.END_CLIENT_TICK.register(client -> {
-				if (++step[1] < 40) return;
+				if (++step[1] == 35 && step[0] > 0) {
+					try {
+						net.minecraft.client.Screenshot.grab(client.gameDirectory, "vc_" + step[0] + ".png", client.getMainRenderTarget(), 1, msg -> {});
+					} catch (Throwable t) {
+						Config.LOG.warn("VANILLACLIENT AUDIT screenshot failed", t);
+					}
+				}
+				if (step[1] < 40) return;
 				step[1] = 0;
 				if (step[0] < tour.size()) {
 					Config.LOG.info("VANILLACLIENT AUDIT opening screen {}", step[0]);
