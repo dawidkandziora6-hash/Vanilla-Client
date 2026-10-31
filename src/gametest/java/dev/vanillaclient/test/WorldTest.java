@@ -17,8 +17,8 @@ public class WorldTest implements FabricClientGameTest {
 		ctx.runOnClient(mc -> {
 			Config c = Config.get();
 			c.cosmetics.cape = "inferno";
-			c.cosmetics.shield = "netherite";
-			c.cosmetics.wings = "phoenix";
+			c.cosmetics.shield = "void";
+			c.cosmetics.wings = "celestial";
 			c.fps.enabled = true;
 			c.biome.enabled = true;
 			c.rankHud.enabled = true;
@@ -68,13 +68,17 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w03_front_nametag_shield");
 
-			s.runCommand("item replace entity @a armor.chest with elytra");
 			ctx.runOnClient(mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK));
+			ctx.runOnClient(mc -> { Config.get().cosmetics.wings = "inferno"; Config.get().cosmetics.cape = "inferno"; });
 			ctx.waitTicks(20);
-			ctx.takeScreenshot("w04_wings_phoenix");
-			ctx.runOnClient(mc -> Config.get().cosmetics.wings = "none");
-			ctx.waitTicks(10);
-			ctx.takeScreenshot("w05_wings_vanilla_with_cape");
+			ctx.takeScreenshot("w04_wings_inferno_back");
+			ctx.runOnClient(mc -> { Config.get().cosmetics.wings = "void"; Config.get().cosmetics.cape = "void"; mc.player.setYRot(60f); mc.player.setYHeadRot(60f); mc.player.yBodyRot = 60f; });
+			ctx.waitTicks(20);
+			ctx.takeScreenshot("w04b_wings_void_side");
+			ctx.runOnClient(mc -> { Config.get().cosmetics.wings = "celestial"; Config.get().cosmetics.cape = "celestial"; mc.player.setYRot(0f); mc.player.yBodyRot = 0f; });
+			s.runCommand("item replace entity @a armor.chest with elytra");
+			ctx.waitTicks(20);
+			ctx.takeScreenshot("w05_elytra_hides_wings");
 			ctx.runOnClient(mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
 
 			ctx.setScreen(() -> new net.minecraft.client.gui.screens.PauseScreen(true));
@@ -132,9 +136,12 @@ public class WorldTest implements FabricClientGameTest {
 				ctx.takeScreenshot("p_" + pg.toLowerCase());
 			}
 			ctx.setScreen(() -> dev.vanillaclient.gui.SettingsScreen.at(null, "HOME"));
-			ctx.setScreen(() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, dev.vanillaclient.cosmetics.Cosmetics.Kind.SHIELD));
-			ctx.waitTicks(20);
-			ctx.takeScreenshot("w13_wardrobe_shield");
+			ctx.setScreen(() -> new dev.vanillaclient.gui.CosmeticsScreen(null));
+			ctx.waitTicks(30);
+			ctx.takeScreenshot("w13_wardrobe_collections");
+			ctx.setScreen(() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, dev.vanillaclient.cosmetics.Cosmetics.Kind.WINGS));
+			ctx.waitTicks(30);
+			ctx.takeScreenshot("w13b_wardrobe_wings");
 			ctx.setScreen(() -> new dev.vanillaclient.gui.TasksScreen(null));
 			ctx.waitTicks(10);
 			ctx.takeScreenshot("w14_tasks");
