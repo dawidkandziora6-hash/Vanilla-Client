@@ -1,19 +1,22 @@
-net/minecraft/client/gui/GuiGraphicsExtractor
-net/minecraft/client/gui/screens/Screen
-net/minecraft/client/gui/screens/inventory/InventoryScreen
-net/minecraft/client/gui/components/AbstractWidget
-net/minecraft/client/gui/components/Button
-net/minecraft/client/renderer/ItemInHandRenderer
-net/minecraft/client/renderer/GameRenderer
-net/minecraft/client/renderer/Sheets
-net/minecraft/client/Minecraft
-net/minecraft/client/Options
-net/minecraft/client/MouseHandler
-net/minecraft/server/packs/repository/PackRepository
-net/minecraft/client/player/AbstractClientPlayer
-net/minecraft/client/player/RemotePlayer
-net/minecraft/world/entity/player/PlayerSkin
+net/minecraft/client/renderer/special/ShieldSpecialRenderer -c
+net/minecraft/client/renderer/FirstPersonHandsAndItemsRenderer -c
+net/minecraft/client/player/ItemActivation -c
+net/minecraft/client/resources/model/sprite/SpriteId
+net/minecraft/client/renderer/texture/TextureAtlasSprite
+net/minecraft/client/renderer/texture/SpriteContents
+net/minecraft/client/renderer/texture/TextureAtlas
+net/minecraft/client/gui/render/pip/GuiEntityRenderer
+net/minecraft/client/renderer/entity/layers/CapeLayer -c
+net/minecraft/client/renderer/entity/layers/WingsLayer -c
+net/minecraft/client/renderer/SubmitNodeCollector
+net/minecraft/client/renderer/rendertype/RenderTypes
+net/minecraft/world/item/ItemStack
+net/minecraft/client/gui/Font
+net/minecraft/client/gui/components/EditBox
+net/minecraft/client/gui/components/Tooltip
+net/minecraft/client/gui/screens/inventory/InventoryScreen -c
 com/mojang/blaze3d/platform/NativeImage
 net/minecraft/client/renderer/texture/DynamicTexture
-net/minecraft/client/gui/Hud
-net/minecraft/client/gui/Gui
+net/minecraft/client/renderer/texture/TextureManager
+net/minecraft/client/renderer/entity/state/AvatarRenderState
+net/minecraft/client/model/object/equipment/ShieldModel
