@@ -1,7 +1,4 @@
-net/minecraft/world/item/Items
-net/minecraft/client/color/block/BlockColors
-net/minecraft/client/renderer/BiomeColors
-net/minecraft/client/AttackIndicatorStatus
-net/minecraft/core/ClientAsset$Texture
-net/minecraft/client/gui/contextualbar/LocatorBarRenderer -c
-net/minecraft/client/gui/contextualbar/ContextualBarRenderer
+net/minecraft/client/renderer/rendertype/RenderTypes
+net/minecraft/client/renderer/entity/layers/CapeLayer -c
+net/minecraft/client/renderer/special/ShieldSpecialRenderer -c
+net/minecraft/client/renderer/entity/layers/WingsLayer -c

@@ -1,8 +1,9 @@
-"""Generates the built-in cosmetic textures (2x vanilla resolution, pixel-art style).
+"""Built-in cosmetics v3: custom shapes (transparency) and animations (vertical frame strips).
 
-Layouts (2x):
-  cape/wings 128x64: cape front (2,2)-(22,34), cape back (24,2)-(44,34), elytra (44,0)-(92,44)
-  shield 128x128:     plate front (2,2)-(26,46), plate back (28,2)-(52,46), handle (52,0)-(84,24)
+Layouts (2x vanilla):
+  cape/wings frame 128x64: cape front (2,2)-(22,34), back (24,2)-(44,34), sides, elytra (44,0)-(92,44)
+  shield frame 128x128:    plate front (2,2)-(26,46), back (28,2)-(52,46), handle (52,0)-(84,24)
+  totem frame 32x32 (item texture)
 """
 import math
 import random
@@ -13,6 +14,9 @@ from PIL import Image
 
 OUT = Path(sys.argv[1])
 OUT.mkdir(parents=True, exist_ok=True)
+for old in OUT.glob("*.png"):
+    old.unlink()
+T = 0  # transparent marker
 
 
 def clamp(v):
@@ -20,452 +24,823 @@ def clamp(v):
 
 
 def mix(a, b, t):
-    return tuple(clamp(a[i] + (b[i] - a[i]) * t) for i in range(3)) + (255,)
+    t = max(0.0, min(1.0, t))
+    return tuple(clamp(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-def shade(c, f):
-    return tuple(clamp(v * f) for v in c[:3]) + (255,)
+def mul(c, f):
+    return tuple(clamp(v * f) for v in c[:3])
 
 
-class Canvas:
-    def __init__(self, w, h, seed):
-        self.img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        self.rnd = random.Random(seed)
+def hsv(h, s, v):
+    import colorsys
+    r, g, b = colorsys.hsv_to_rgb(h % 1.0, s, v)
+    return (int(r * 255), int(g * 255), int(b * 255))
 
-    def px(self, x, y, c):
-        if 0 <= x < self.img.width and 0 <= y < self.img.height:
-            self.img.putpixel((x, y), c if len(c) == 4 else tuple(c) + (255,))
+
+# ================================================================ face painter helpers
+
+class Face:
+    """A w×h pixel face: color function + alpha mask, written into an image region."""
+
+    def __init__(self, w, h):
+        self.w, self.h = w, h
+        self.px = [[None] * w for _ in range(h)]
+
+    def set(self, x, y, c):
+        if 0 <= x < self.w and 0 <= y < self.h:
+            self.px[y][x] = c
 
     def get(self, x, y):
-        return self.img.getpixel((x, y))
+        if 0 <= x < self.w and 0 <= y < self.h:
+            return self.px[y][x]
+        return None
 
-    def rect(self, box, fn):
-        x0, y0, x1, y1 = box
-        for y in range(y0, y1):
-            for x in range(x0, x1):
-                self.px(x, y, fn((x - x0) / max(1, x1 - x0 - 1), (y - y0) / max(1, y1 - y0 - 1), x, y))
+    def fill(self, fn):
+        for y in range(self.h):
+            for x in range(self.w):
+                self.px[y][x] = fn(x, y)
 
-    def vgrad(self, box, top, bottom, noise=0.06):
-        self.rect(box, lambda u, v, x, y: shade(mix(top, bottom, v), 1 + self.rnd.uniform(-noise, noise)))
+    def mask(self, keep):
+        for y in range(self.h):
+            for x in range(self.w):
+                if not keep(x, y):
+                    self.px[y][x] = None
 
-    def border(self, box, c, inset=0, width=1):
-        x0, y0, x1, y1 = box
-        for i in range(width):
-            a, b, cc, d = x0 + inset + i, y0 + inset + i, x1 - 1 - inset - i, y1 - 1 - inset - i
-            for x in range(a, cc + 1):
-                self.px(x, b, c)
-                self.px(x, d, c)
-            for y in range(b, d + 1):
-                self.px(a, y, c)
-                self.px(cc, y, c)
+    def outline(self, col):
+        """Darken pixels that touch transparency (gives cut shapes a clean edge)."""
+        edge = []
+        for y in range(self.h):
+            for x in range(self.w):
+                if self.px[y][x] is None:
+                    continue
+                for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+                    if 0 <= nx < self.w and 0 <= ny < self.h and self.px[ny][nx] is None:
+                        edge.append((x, y))
+                        break
+        for x, y in edge:
+            self.px[y][x] = mix(self.px[y][x], col, 0.55)
 
-    def stamp(self, art, ox, oy, palette, k=1):
+    def stamp(self, art, ox, oy, pal, k=1):
         for j, row in enumerate(art):
             for i, ch in enumerate(row):
-                if ch in palette:
+                if ch in pal:
                     for a in range(k):
                         for b in range(k):
-                            self.px(ox + i * k + a, oy + j * k + b, palette[ch])
+                            self.set(ox + i * k + a, oy + j * k + b, pal[ch])
 
-    def save(self, name):
-        self.img.save(OUT / name)
-
-
-CAPE_FRONT = (2, 2, 22, 34)
-CAPE_BACK = (24, 2, 44, 34)
-CAPE_ALL = (0, 0, 44, 34)
-ELYTRA = (44, 0, 92, 44)
-
-# ---------------------------------------------------------------- emblems (pixel art)
-SWORD = [
-    "......YY......",
-    ".....YWY......",
-    "....YWY.......",
-    "...YWY........",
-    "..YWY.........",
-    ".YWY..........",
-]
-SWORD = [
-    "....W....",
-    "...WSW...",
-    "...WSW...",
-    "...WSW...",
-    "...WSW...",
-    "...WSW...",
-    "...WSW...",
-    "...WSW...",
-    "...WSW...",
-    ".GGGGGGG.",
-    "....B....",
-    "....B....",
-    "...GGG...",
-]
-CROWN = [
-    "G...G...G",
-    "GG.GGG.GG",
-    "GGGGRGGGG",
-    "GGGGGGGGG",
-    ".GGGGGGG.",
-]
-EYE = [
-    "...GGGGG...",
-    ".GGgggggGG.",
-    "GggggBggggG",
-    "GgggBBBgggG",
-    "GggggBggggG",
-    ".GGgggggGG.",
-    "...GGGGG...",
-]
-GEM = [
-    "..CCCCC..",
-    ".CWCCCCC.",
-    "CWCCCCCCC",
-    "CCCCCCCCD",
-    ".CCCCCCD.",
-    "..CCCCD..",
-    "...CCD...",
-    "....D....",
-]
-MOON = [
-    "..YYYY..",
-    ".YYY....",
-    "YYY.....",
-    "YYY.....",
-    "YYY.....",
-    "YYY.....",
-    ".YYY....",
-    "..YYYY..",
-]
-TREE = [
-    "....G....",
-    "...GGG...",
-    "..GGgGG..",
-    ".GGGGGgG.",
-    "..GgGGG..",
-    ".GGGGgGG.",
-    "GGgGGGGGG",
-    "....B....",
-    "....B....",
-]
-FLAKE = [
-    "..W.W.W..",
-    "...WWW...",
-    "W.W.W.W.W",
-    ".WWWWWWW.",
-    "WWW.W.WWW",
-    ".WWWWWWW.",
-    "W.W.W.W.W",
-    "...WWW...",
-    "..W.W.W..",
-]
-CROSS = [
-    "..GGG..",
-    "..GGG..",
-    "GGGGGGG",
-    "GGGGGGG",
-    "..GGG..",
-    "..GGG..",
-    "..GGG..",
-    "..GGG..",
-]
+    def blit(self, img, ox, oy, mirror=False):
+        for y in range(self.h):
+            for x in range(self.w):
+                c = self.px[y][self.w - 1 - x if mirror else x]
+                if c is not None:
+                    img.putpixel((ox + x, oy + y), tuple(c[:3]) + (255,))
 
 
-def cape_lining(c, base):
-    c.vgrad(CAPE_BACK, shade(base, 0.55), shade(base, 0.4), 0.04)
-    c.vgrad((2, 0, 22, 2), shade(base, 0.8), shade(base, 0.8))
-    c.vgrad((22, 0, 42, 2), shade(base, 0.6), shade(base, 0.6))
-    c.vgrad((0, 2, 2, 34), shade(base, 0.7), shade(base, 0.6))
-    c.vgrad((22, 2, 24, 34), shade(base, 0.7), shade(base, 0.6))
+def strip(frames, name):
+    w, h = frames[0].size
+    out = Image.new("RGBA", (w, h * len(frames)), (0, 0, 0, 0))
+    for i, f in enumerate(frames):
+        out.paste(f, (0, i * h))
+    out.save(OUT / name)
 
 
-def elytra_from_cape(c, top, bottom):
-    c.vgrad(ELYTRA, top, bottom, 0.05)
+# ================================================================ emblems
 
-
-def cape(name, top, bottom, trim=None, emblem=None, palette=None, extra=None):
-    c = Canvas(128, 64, name)
-    c.vgrad(CAPE_FRONT, top, bottom)
-    cape_lining(c, top)
-    if trim:
-        c.border(CAPE_FRONT, trim)
-        c.border(CAPE_FRONT, shade(trim, 0.6), inset=1)
-    if extra:
-        extra(c)
-    if emblem:
-        w = len(emblem[0])
-        h = len(emblem)
-        c.stamp(emblem, CAPE_FRONT[0] + (20 - w) // 2, CAPE_FRONT[1] + 8 + (12 - h) // 2, palette)
-    elytra_from_cape(c, top, bottom)
-    c.save(f"cape_{name}.png")
-
+SWORD = ["....W....", "...WSW...", "...WSW...", "...WSW...", "...WSW...", "...WSW...", "...WSW...",
+         "...WSW...", "...WSW...", ".GGGGGGG.", "....B....", "....B....", "...GGG..."]
+CROWN = ["G...G...G", "GG.GGG.GG", "GGGGRGGGG", "GGGGGGGGG", ".GGGGGGG."]
+EYE = ["...GGGGG...", ".GGgggggGG.", "GggggBggggG", "GgggBBBgggG", "GggggBggggG", ".GGgggggGG.", "...GGGGG..."]
+GEM = ["..CCCCC..", ".CWCCCCC.", "CWCCCCCCC", "CCCCCCCCD", ".CCCCCCD.", "..CCCCD..", "...CCD...", "....D...."]
+MOON = ["..YYYY..", ".YYY....", "YYY.....", "YYY.....", "YYY.....", "YYY.....", ".YYY....", "..YYYY.."]
+TREE = ["....G....", "...GGG...", "..GGgGG..", ".GGGGGgG.", "..GgGGG..", ".GGGGgGG.", "GGgGGGGGG", "....B....", "....B...."]
+FLAKE = ["..W.W.W..", "...WWW...", "W.W.W.W.W", ".WWWWWWW.", "WWW.W.WWW", ".WWWWWWW.", "W.W.W.W.W", "...WWW...", "..W.W.W.."]
+CROSS = ["..GGG..", "..GGG..", "GGGGGGG", "GGGGGGG", "..GGG..", "..GGG..", "..GGG..", "..GGG.."]
+RUNE = [["X.X", "XXX", ".X."], ["XX.", ".XX", "X.X"], [".X.", "XXX", "X.X"], ["X..", "XXX", "..X"]]
 
 GOLD = (250, 205, 60)
-GOLD_D = (190, 130, 30)
+FRAMES = 8
 
 
-def stars(c, box, n, cols):
-    x0, y0, x1, y1 = box
-    for _ in range(n):
-        c.px(c.rnd.randrange(x0 + 1, x1 - 1), c.rnd.randrange(y0 + 1, y1 - 1), c.rnd.choice(cols) + (255,))
+# ================================================================ capes
+
+def cape_image(face, lining, name_frames=None):
+    """Writes a cape face into a 128x64 frame (front, mirrored back, matching sides)."""
+    img = Image.new("RGBA", (128, 64), (0, 0, 0, 0))
+    face.blit(img, 2, 2)
+    back = Face(20, 32)
+    back.fill(lambda x, y: mul(lining, 0.85 + 0.15 * (y / 31)) if face.get(19 - x, y) is not None else None)
+    back.blit(img, 24, 2)
+    for y in range(32):
+        if face.get(0, y) is not None:
+            img.putpixel((0, 2 + y), mul(lining, 0.7) + (255,))
+            img.putpixel((1, 2 + y), mul(lining, 0.7) + (255,))
+        if face.get(19, y) is not None:
+            img.putpixel((22, 2 + y), mul(lining, 0.7) + (255,))
+            img.putpixel((23, 2 + y), mul(lining, 0.7) + (255,))
+    for x in range(20):
+        img.putpixel((2 + x, 0), mul(lining, 0.8) + (255,))
+        img.putpixel((2 + x, 1), mul(lining, 0.8) + (255,))
+        if face.get(x, 31) is not None:
+            img.putpixel((22 + x, 0), mul(lining, 0.6) + (255,))
+            img.putpixel((22 + x, 1), mul(lining, 0.6) + (255,))
+    return img
 
 
-cape("crimson", (190, 30, 40), (110, 10, 20), trim=GOLD, emblem=SWORD,
-     palette={"W": (235, 235, 240, 255), "S": (170, 180, 195, 255), "G": GOLD + (255,), "B": (110, 70, 40, 255)})
+def cape(name, frames_fn, lining, n=1):
+    frames = []
+    for f in range(n):
+        rnd = random.Random(name + str(f))
+        face = Face(20, 32)
+        frames_fn(face, f, rnd)
+        frames.append(cape_image(face, lining))
+    strip(frames, f"cape_{name}.png")
 
-cape("midnight", (30, 40, 95), (8, 10, 30), emblem=MOON, palette={"Y": (255, 235, 150, 255)},
-     extra=lambda c: stars(c, CAPE_FRONT, 22, [(255, 255, 255), (255, 240, 170), (170, 200, 255)]))
 
-cape("ender", (30, 18, 45), (8, 5, 14), emblem=EYE,
-     palette={"G": (40, 140, 110, 255), "g": (90, 230, 180, 255), "B": (10, 30, 25, 255)},
-     extra=lambda c: stars(c, CAPE_FRONT, 16, [(200, 90, 255), (140, 60, 210)]))
+def grad(top, bottom, rnd=None, noise=0.05):
+    def fn(x, y):
+        c = mix(top, bottom, y / 31)
+        if rnd:
+            c = mul(c, 1 + rnd.uniform(-noise, noise))
+        return c
+    return fn
 
 
-def forest_extra(c):
-    x0, y0, x1, y1 = CAPE_FRONT
-    for x in range(x0, x1):  # hills
+def border(face, col, inset=0):
+    for x in range(inset, face.w - inset):
+        for y in (inset, face.h - 1 - inset):
+            if face.get(x, y) is not None:
+                face.set(x, y, col)
+    for y in range(inset, face.h - inset):
+        for x in (inset, face.w - 1 - inset):
+            if face.get(x, y) is not None:
+                face.set(x, y, col)
+
+
+# 1 Crimson Knight – V-shaped bottom, gold trim, sword
+def crimson(face, f, rnd):
+    face.fill(grad((200, 32, 44), (115, 10, 22), rnd))
+    face.mask(lambda x, y: y < 26 + min(x, 19 - x) * 0.6)
+    border(face, GOLD)
+    face.stamp(SWORD, 6, 7, {"W": (235, 235, 240), "S": (170, 180, 195), "G": GOLD, "B": (110, 70, 40)})
+    face.outline((60, 10, 10))
+
+
+cape("crimson", crimson, (120, 20, 30))
+
+
+# 2 Midnight – swallowtail, twinkling stars, moon
+STAR_POS = [(random.Random(i).randrange(1, 19), random.Random(i * 7).randrange(1, 30)) for i in range(26)]
+
+
+def midnight(face, f, rnd):
+    face.fill(grad((34, 44, 104), (8, 10, 30)))
+    face.mask(lambda x, y: not (y > 24 and abs(x - 9.5) < (y - 24) * 0.9))
+    for i, (x, y) in enumerate(STAR_POS):
+        phase = (f + i * 3) % FRAMES
+        b = [1.0, 0.8, 0.5, 0.25, 0.1, 0.25, 0.5, 0.8][phase]
+        if face.get(x, y) is not None:
+            face.set(x, y, mix((40, 50, 110), (255, 250, 220), b))
+            if b > 0.9:
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    if face.get(x + dx, y + dy) is not None:
+                        face.set(x + dx, y + dy, mix((40, 50, 110), (255, 250, 220), 0.45))
+    face.stamp(MOON, 11, 3, {"Y": (255, 236, 160)})
+    face.outline((5, 5, 20))
+
+
+cape("midnight", midnight, (20, 26, 60), FRAMES)
+
+
+# 3 Aurora – flowing bands
+def aurora(face, f, rnd):
+    t = f / FRAMES * math.tau
+
+    def fn(x, y):
+        band = math.sin(x * 0.35 + y * 0.22 + t) * 0.5 + 0.5
+        band2 = math.sin(x * 0.2 - y * 0.15 + t * 0.5 + 1.3) * 0.5 + 0.5
+        base = mix((10, 18, 40), (20, 10, 45), y / 31)
+        glow = mix((40, 230, 170), (170, 80, 240), band2)
+        return mix(base, glow, band ** 2 * 0.9)
+    face.fill(fn)
+    for x, y in STAR_POS[:8]:
+        face.set(x, y, (255, 255, 255))
+    face.outline((0, 0, 0))
+
+
+cape("aurora", aurora, (20, 20, 50), FRAMES)
+
+
+# 4 Ender – ragged bottom, drifting particles, eye
+def ender(face, f, rnd):
+    r0 = random.Random("ender-edge")
+    edge = [27 + r0.randrange(0, 5) for _ in range(20)]
+    face.fill(grad((32, 18, 50), (8, 4, 14)))
+    face.mask(lambda x, y: y < edge[x])
+    for i in range(14):
+        rr = random.Random(i)
+        x = rr.randrange(0, 20)
+        y = (rr.randrange(0, 32) - f * 2 - i) % 32
+        if face.get(x, y) is not None:
+            face.set(x, y, (200, 100, 255) if i % 2 else (150, 70, 220))
+    face.stamp(EYE, 4, 8, {"G": (40, 140, 110), "g": (90 + f * 12, 230, 180), "B": (10, 30, 25)})
+    face.outline((0, 0, 0))
+
+
+cape("ender", ender, (20, 10, 30), FRAMES)
+
+
+# 5 Forest – leafy bottom edge, pine
+def forest(face, f, rnd):
+    face.fill(grad((120, 190, 100), (40, 110, 45), rnd))
+    face.mask(lambda x, y: y < 27 + (2 if x % 4 in (1, 2) else 0) + (1 if x % 8 < 4 else 0))
+    for x in range(20):
         h = int(5 + 3 * math.sin(x * 0.7))
-        for y in range(y1 - h, y1):
-            c.px(x, y, shade((30, 70, 30), 1 + c.rnd.uniform(-0.1, 0.1)))
+        for y in range(28 - h, 32):
+            if face.get(x, y) is not None:
+                face.set(x, y, mul((30, 72, 30), 1 + rnd.uniform(-0.1, 0.1)))
+    face.stamp(TREE, 5, 6, {"G": (25, 90, 35), "g": (70, 150, 70), "B": (90, 60, 30)})
+    face.outline((15, 40, 15))
 
 
-cape("forest", (110, 180, 90), (40, 110, 45), emblem=TREE,
-     palette={"G": (25, 90, 35, 255), "g": (60, 140, 60, 255), "B": (90, 60, 30, 255)}, extra=forest_extra)
+cape("forest", forest, (30, 70, 30))
 
 
-def ermine(c):
-    x0, y0, x1, y1 = CAPE_FRONT
-    for y in range(y1 - 7, y1):
-        for x in range(x0, x1):
-            c.px(x, y, (240, 240, 235, 255))
-    for (dx, dy) in [(3, 2), (9, 4), (15, 2), (6, 5), (12, 1), (17, 5)]:
-        c.px(x0 + dx, y1 - 7 + dy, (25, 25, 25, 255))
-        c.px(x0 + dx, y1 - 7 + dy + 1, (25, 25, 25, 255))
+# 6 Royal – rounded bottom, crown, ermine
+def royal(face, f, rnd):
+    face.fill(grad((130, 45, 170), (70, 20, 100), rnd))
+    face.mask(lambda x, y: (x - 9.5) ** 2 / 110 + (y - 22) ** 2 / 100 < 1.0 or y < 22)
+    for y in range(24, 32):
+        for x in range(20):
+            if face.get(x, y) is not None:
+                face.set(x, y, (242, 242, 236))
+    for dx, dy in ((4, 26), (9, 28), (14, 26), (7, 30), (12, 30)):
+        face.set(dx, dy, (25, 25, 25))
+        face.set(dx, dy + 1, (25, 25, 25))
+    border(face, GOLD)
+    face.stamp(CROWN, 5, 8, {"G": GOLD, "R": (220, 30, 50)}, 1)
+    face.outline((40, 10, 60))
 
 
-cape("royal", (120, 40, 160), (70, 20, 100), trim=GOLD, emblem=CROWN,
-     palette={"G": GOLD + (255,), "R": (220, 30, 50, 255)}, extra=ermine)
+cape("royal", royal, (60, 20, 80))
 
 
-def waves(c):
-    x0, y0, x1, y1 = CAPE_FRONT
+# 7 Ocean – moving waves, wavy bottom
+def ocean(face, f, rnd):
+    t = f / FRAMES * math.tau
+    face.fill(grad((50, 160, 220), (10, 50, 110)))
+    face.mask(lambda x, y: y < 29 + round(1.6 * math.sin(x * 0.7 + t)))
     for k in range(5):
-        base = y0 + 6 + k * 6
-        for x in range(x0, x1):
-            y = base + int(round(1.5 * math.sin((x + k * 3) * 0.6)))
-            c.px(x, y, (150, 230, 255, 255))
-            c.px(x, y + 1, (90, 180, 230, 255))
+        base = 5 + k * 6
+        for x in range(20):
+            y = base + round(1.5 * math.sin((x + k * 3) * 0.6 + t))
+            if face.get(x, y) is not None:
+                face.set(x, y, (160, 235, 255))
+            if face.get(x, y + 1) is not None:
+                face.set(x, y + 1, (90, 185, 235))
+    face.outline((5, 30, 70))
 
 
-cape("ocean", (40, 150, 210), (10, 50, 110), extra=waves)
+cape("ocean", ocean, (15, 60, 110), FRAMES)
 
 
-def petals(c):
-    x0, y0, x1, y1 = CAPE_FRONT
-    for _ in range(26):
-        x = c.rnd.randrange(x0 + 1, x1 - 2)
-        y = c.rnd.randrange(y0 + 1, y1 - 2)
-        col = c.rnd.choice([(255, 255, 255), (255, 200, 225), (255, 150, 190)])
-        c.px(x, y, col + (255,))
-        c.px(x + 1, y, col + (255,))
-        c.px(x, y + 1, shade(col, 0.9))
-    for i in range(18):  # branch
-        c.px(x0 + 2 + i, y0 + 4 + i // 2, (95, 55, 50, 255))
-        c.px(x0 + 2 + i, y0 + 5 + i // 2, (70, 40, 38, 255))
+# 8 Cherry – falling petals, scalloped bottom
+def cherry(face, f, rnd):
+    face.fill(grad((255, 196, 220), (232, 128, 176)))
+    face.mask(lambda x, y: y < 28 + (2 if (x % 5) in (1, 2, 3) else 0))
+    for i in range(18):
+        rr = random.Random("p" + str(i))
+        x = (rr.randrange(0, 20) + f // 2) % 20
+        y = (rr.randrange(0, 32) + f * 2) % 32
+        col = rr.choice([(255, 255, 255), (255, 214, 232), (255, 160, 200)])
+        if face.get(x, y) is not None:
+            face.set(x, y, col)
+        if face.get(x + 1, y) is not None:
+            face.set(x + 1, y, mul(col, 0.92))
+    for i in range(16):
+        face.set(2 + i, 4 + i // 2, (95, 55, 50))
+    face.outline((150, 70, 110))
 
 
-cape("cherry", (255, 190, 215), (230, 120, 170), extra=petals)
+cape("cherry", cherry, (180, 90, 130), FRAMES)
 
 
-def flames(c):
-    x0, y0, x1, y1 = CAPE_FRONT
-    for x in range(x0, x1):
-        h = 10 + int(6 * abs(math.sin(x * 0.9))) + c.rnd.randrange(0, 5)
-        for i in range(h):
-            y = y1 - 1 - i
+# 9 Inferno – burning hem, flame tongues flicker every frame
+def inferno(face, f, rnd):
+    def height(x):
+        a = 9 + 7 * abs(math.sin(x * 0.55 + f * 0.785))
+        b = 4 * abs(math.sin(x * 1.3 - f * 1.57 + 0.7))
+        return a + b + random.Random(f * 31 + x).randrange(0, 3)
+    hs = [height(x) for x in range(20)]
+    face.fill(grad((46, 12, 10), (24, 6, 6), rnd, 0.06))
+    for x in range(20):
+        h = hs[x]
+        for i in range(int(h)):
+            y = 31 - i
             t = i / h
-            col = mix((255, 230, 90), (220, 40, 10), t)
-            c.px(x, y, col)
+            face.set(x, y, mix(mix((255, 250, 190), (255, 190, 40), min(1, t * 2)), (200, 30, 10), max(0, t * 1.4 - 0.4)))
+    for i in range(6):
+        rr = random.Random("ember" + str(i))
+        x = rr.randrange(0, 20)
+        y = (rr.randrange(0, 20) - f * 3) % 20
+        face.set(x, y, (255, 160, 40))
+    face.mask(lambda x, y: y < 30 or x % 3 != (f % 3))
+    face.outline((40, 8, 0))
 
 
-cape("inferno", (40, 10, 10), (15, 5, 5), extra=flames)
+cape("inferno", inferno, (40, 10, 10), FRAMES)
 
 
-def aurora(c):
-    x0, y0, x1, y1 = CAPE_FRONT
-    for y in range(y0, y1):
-        for x in range(x0, x1):
-            t = (y - y0) / (y1 - y0)
-            band = 0.5 + 0.5 * math.sin(x * 0.45 + y * 0.18)
-            col = mix(mix((40, 220, 170), (150, 70, 230), t), (20, 30, 60), 0.35 * band)
-            c.px(x, y, col)
-    stars(c, CAPE_FRONT, 10, [(255, 255, 255)])
+# 10 Diamond – sparkles
+def diamond(face, f, rnd):
+    face.fill(grad((120, 236, 236), (30, 140, 160)))
+    face.mask(lambda x, y: y < 29 or abs(x - 9.5) < (31 - y) * 3)
+    border(face, (225, 255, 255))
+    face.stamp(GEM, 6, 9, {"C": (90, 225, 225), "W": (255, 255, 255), "D": (30, 120, 140)})
+    for i, (x, y) in enumerate(STAR_POS[:10]):
+        if (f + i) % 4 == 0 and face.get(x, y) is not None:
+            for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
+                face.set(x + dx, y + dy, (255, 255, 255))
+    face.outline((20, 90, 110))
 
 
-cape("aurora", (60, 200, 170), (110, 60, 200), extra=aurora)
+cape("diamond", diamond, (40, 120, 140), FRAMES)
 
 
-def sparkle(c):
-    stars(c, CAPE_FRONT, 14, [(255, 255, 255), (200, 255, 255)])
+# 11 Wanderer – torn cloth with holes
+def wanderer(face, f, rnd):
+    r0 = random.Random("tatter")
+    edge = [24 + r0.randrange(0, 8) for _ in range(20)]
+    holes = {(r0.randrange(2, 18), r0.randrange(6, 24)) for _ in range(5)}
+    face.fill(grad((122, 96, 70), (78, 58, 42), rnd, 0.08))
+    face.mask(lambda x, y: y < edge[x] and (x, y) not in holes)
+    for y in range(0, 32, 5):
+        for x in range(20):
+            if face.get(x, y) is not None and (x + y) % 3 == 0:
+                face.set(x, y, mul(face.get(x, y), 0.85))
+    face.outline((40, 28, 18))
 
 
-cape("diamond", (110, 230, 230), (30, 140, 160), trim=(220, 255, 255), emblem=GEM,
-     palette={"C": (90, 225, 225, 255), "W": (255, 255, 255, 255), "D": (30, 120, 140, 255)}, extra=sparkle)
-
-# ---------------------------------------------------------------- wings (elytra region)
+cape("wanderer", wanderer, (60, 45, 32))
 
 
-def wings(name, fn):
-    c = Canvas(128, 64, "w" + name)
-    x0, y0, x1, y1 = ELYTRA
-    for y in range(y0, y1):
-        for x in range(x0, x1):
-            c.px(x, y, fn(c, (x - x0) / (x1 - x0 - 1), (y - y0) / (y1 - y0 - 1), x, y))
-    # also give the cape area a matching look (vanilla uses it when no cape is chosen)
-    for y in range(0, 34):
-        for x in range(0, 44):
-            c.px(x, y, fn(c, (x % 20) / 19, y / 33, x, y))
-    c.save(f"wings_{name}.png")
+# 12 Prism – scrolling rainbow
+def prism(face, f, rnd):
+    face.fill(lambda x, y: hsv((y / 32 + f / FRAMES) % 1, 0.65, 0.95))
+    face.mask(lambda x, y: y < 28 + (x % 2) * 2)
+    face.outline((30, 30, 30))
 
 
-def feather(base, edge, vein):
-    def f(c, u, v, x, y):
-        col = mix(base, edge, v ** 1.6)
-        if (y % 6) == 5 and (x + y // 6) % 2 == 0:
-            col = shade(col, 0.82)
-        if x % 7 == 3 and v > 0.25:
-            col = mix(col, vein, 0.35)
-        return shade(col, 1 + c.rnd.uniform(-0.05, 0.05))
-    return f
+cape("prism", prism, (60, 60, 60), FRAMES)
 
 
-wings("phoenix", feather((255, 215, 70), (210, 50, 20), (255, 140, 30)))
-wings("frost", feather((235, 250, 255), (120, 190, 240), (255, 255, 255)))
+# 13 Void Rift – pulsing crack
+def rift(face, f, rnd):
+    face.fill(grad((14, 8, 22), (4, 2, 8), rnd, 0.1))
+    pulse = 0.5 + 0.5 * math.sin(f / FRAMES * math.tau)
+    x = 10
+    for y in range(32):
+        x += random.Random("rift" + str(y)).choice([-1, 0, 0, 1])
+        x = max(3, min(16, x))
+        for dx in range(-1, 2):
+            c = mix((120, 40, 200), (240, 170, 255), pulse) if dx == 0 else mix((60, 20, 100), (160, 80, 230), pulse)
+            face.set(x + dx, y, c)
+    face.mask(lambda xx, y: y < 30 or xx % 3 != 0)
+    face.outline((0, 0, 0))
 
 
-def scales(base, hi, dark=0.55):
-    def f(c, u, v, x, y):
+cape("rift", rift, (10, 5, 16), FRAMES)
+
+
+# ================================================================ wings (elytra region)
+
+def wings_image(face, cape_tint):
+    img = Image.new("RGBA", (128, 64), (0, 0, 0, 0))
+    # front & back of the wing, edges left transparent for shaped wings
+    face.blit(img, 48, 4)
+    face.blit(img, 72, 4, mirror=True)
+    # matching cape area (vanilla uses it when no cape is chosen)
+    for y in range(32):
+        for x in range(20):
+            c = face.get(x, min(39, y + 4))
+            if c is not None:
+                img.putpixel((2 + x, 2 + y), tuple(c) + (255,))
+    return img
+
+
+def wings(name, fn, n=1):
+    frames = []
+    for f in range(n):
+        rnd = random.Random(name + str(f))
+        face = Face(20, 40)
+        fn(face, f, rnd)
+        frames.append(wings_image(face, None))
+    strip(frames, f"wings_{name}.png")
+
+
+def scallop_mask(depth=5, period=5):
+    return lambda x, y: y < 40 - depth + round(depth * abs(math.sin(math.pi * x / period)))
+
+
+def feathers(face, light, dark, tip=None):
+    def fn(x, y):
+        r = y // 4
+        sx = (x + (r % 2) * 2) % 4
+        c = mix(light, dark, (y / 39) ** 1.4)
+        if y % 4 == 3 or sx == 0:
+            c = mul(c, 0.86)
+        if tip and y > 32:
+            c = mix(c, tip, (y - 32) / 8)
+        return c
+    face.fill(fn)
+
+
+def angel(face, f, rnd):
+    feathers(face, (255, 255, 252), (210, 210, 205), (255, 220, 120))
+    face.mask(scallop_mask(7, 4))
+    face.outline((150, 150, 150))
+
+
+def dragon(face, f, rnd):
+    def fn(x, y):
         r = y // 3
         sx = (x + (r % 2) * 2) % 4
-        sy = y % 3
-        col = mix(base, shade(base, 0.7), v)
-        if sy == 2 or (sy == 1 and sx in (0, 3)):
-            col = shade(col, dark)
-        elif sy == 0 and sx in (1, 2):
-            col = mix(col, hi, 0.55)
-        return shade(col, 1 + c.rnd.uniform(-0.04, 0.04))
-    return f
+        c = mix((110, 36, 150), (55, 16, 80), y / 39)
+        if y % 3 == 2 or sx == 0:
+            c = mul(c, 0.6)
+        elif sx in (1, 2) and y % 3 == 0:
+            c = mix(c, (230, 110, 250), 0.5)
+        return c
+    face.fill(fn)
+    for bone_x in (0, 7, 14):
+        for y in range(40):
+            face.set(bone_x + y // 10, y, (40, 12, 55))
+    face.mask(lambda x, y: y < 33 + round(6 * abs(math.sin(math.pi * x / 7))))
+    face.outline((20, 5, 30))
 
 
-wings("dragon", scales((95, 30, 130), (220, 90, 240)))
-wings("angel", scales((252, 252, 248), (255, 255, 255), dark=0.86))
+def phoenix(face, f, rnd):
+    tips = [round(4 + 3 * abs(math.sin(x * 0.8 + f * 0.9)) + random.Random(f * 13 + x).randrange(0, 2)) for x in range(20)]
+    feathers(face, (255, 225, 80), (215, 55, 20))
+    face.mask(lambda x, y: y < 33 + tips[x] % 7)
+    for x in range(20):
+        y = 32 + tips[x] % 7
+        for d in range(3):
+            if face.get(x, y - d) is not None:
+                face.set(x, y - d, mix((255, 245, 160), (255, 120, 20), d / 3))
+    face.outline((90, 20, 0))
 
 
-def membrane(c, u, v, x, y):
-    col = mix((90, 105, 140), (50, 60, 90), v)
-    if x % 8 == 0 or (y % 11 == 0 and x % 2 == 0):
-        col = (110, 230, 200)
-    return shade(col, 1 + c.rnd.uniform(-0.05, 0.05)) if len(col) == 4 else col + (255,)
+def frost(face, f, rnd):
+    feathers(face, (240, 252, 255), (120, 185, 240))
+    face.mask(lambda x, y: y < 32 + (8 if x % 5 == 2 else 4 if x % 5 in (1, 3) else 0))
+    for i, (x, y) in enumerate(STAR_POS[:9]):
+        if (f + i) % 4 == 0:
+            for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
+                if face.get(x + dx, y + dy) is not None:
+                    face.set(x + dx, y + dy, (255, 255, 255))
+    face.outline((70, 120, 180))
 
 
-wings("phantom", membrane)
+def phantom(face, f, rnd):
+    pulse = 0.5 + 0.5 * math.sin(f / FRAMES * math.tau)
+    face.fill(lambda x, y: mix((95, 110, 150), (50, 60, 90), y / 39))
+    for vx in (2, 9, 16):
+        for y in range(40):
+            face.set(vx + (y // 8), y, mix((60, 160, 140), (140, 255, 220), pulse))
+    holes = {(5, 22), (12, 28), (6, 32), (14, 18), (11, 12)}
+    face.mask(lambda x, y: y < 34 + round(5 * abs(math.sin(math.pi * x / 7))) and (x, y) not in holes)
+    face.outline((25, 30, 50))
 
 
-def void(c, u, v, x, y):
-    col = mix((25, 10, 40), (5, 3, 10), v)
-    if c.rnd.random() < 0.04:
-        col = c.rnd.choice([(200, 120, 255), (255, 255, 255), (140, 80, 220)]) + (255,)
-    return col
+def void(face, f, rnd):
+    face.fill(lambda x, y: mix((30, 12, 46), (6, 3, 12), y / 39))
+    for i in range(22):
+        rr = random.Random("v" + str(i))
+        x, y = rr.randrange(0, 20), rr.randrange(0, 40)
+        b = [1, .7, .4, .2, .1, .2, .4, .7][(f + i) % FRAMES]
+        face.set(x, y, mix((30, 12, 46), rr.choice([(220, 140, 255), (255, 255, 255)]), b))
+    face.mask(lambda x, y: y < 31 + random.Random("vw" + str(x)).randrange(0, 9))
+    face.outline((0, 0, 0))
 
 
-wings("void", void)
+def monarch(face, f, rnd):
+    def fn(x, y):
+        c = mix((255, 170, 45), (228, 88, 10), y / 39)
+        if (x * 2 + y) % 11 == 0 or x in (0, 19):
+            c = (25, 20, 20)
+        return c
+    face.fill(fn)
+    face.mask(lambda x, y: ((x - 10) / 10.5) ** 2 + ((y - 13) / 13.5) ** 2 < 1.0 or ((x - 9) / 8) ** 2 + ((y - 31) / 9) ** 2 < 1.0)
+    face.outline((25, 20, 20))
+    for y in range(40):
+        for x in range(20):
+            c = face.get(x, y)
+            if c == (25, 20, 20) or c is None:
+                continue
+            nb = [face.get(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+            if any(n is None for n in nb) and (x + y) % 3 == 0:
+                face.set(x, y, (250, 250, 250))
 
 
-def monarch(c, u, v, x, y):
-    col = mix((255, 165, 40), (225, 85, 10), v)
-    lx = (x - 44) % 24
-    if lx in (0, 23) or v > 0.88 or (lx * 2 + y) % 13 == 0 and v > 0.1:
-        col = (25, 20, 20, 255)
-    if v > 0.88 and (x + y) % 3 == 0:
-        col = (250, 250, 250, 255)
-    return col
+def fairy(face, f, rnd):
+    t = f / FRAMES
+    face.fill(lambda x, y: hsv(0.75 + 0.25 * math.sin((x + y) * 0.15 + t * math.tau) * 0.5, 0.35, 1.0))
+    face.mask(lambda x, y: ((x - 10) / 10.5) ** 2 + ((y - 12) / 12.5) ** 2 < 1.0 or ((x - 8) / 7) ** 2 + ((y - 30) / 10) ** 2 < 1.0)
+    for i, (x, y) in enumerate(STAR_POS[:12]):
+        if (f + i) % 3 == 0 and face.get(x, y) is not None:
+            face.set(x, y, (255, 255, 255))
+    face.outline((170, 120, 200))
 
 
+def bat(face, f, rnd):
+    face.fill(lambda x, y: mix((52, 46, 58), (22, 18, 26), y / 39))
+    for bx in (0, 6, 12, 18):
+        for y in range(40):
+            face.set(min(19, bx + y // 14), y, (12, 10, 14))
+    face.mask(lambda x, y: y < 33 + round(6 * abs(math.sin(math.pi * x / 6))))
+    face.outline((0, 0, 0))
+
+
+wings("angel", angel)
+wings("dragon", dragon)
+wings("phoenix", phoenix, FRAMES)
+wings("frost", frost, FRAMES)
+wings("phantom", phantom, FRAMES)
+wings("void", void, FRAMES)
 wings("monarch", monarch)
+wings("fairy", fairy, FRAMES)
+wings("bat", bat)
 
-# ---------------------------------------------------------------- shields (128x128)
-PLATE = (2, 2, 26, 46)
-PLATE_BACK = (28, 2, 52, 46)
-HANDLE = (52, 0, 84, 24)
-
-
-def shield(name, face_top, face_bottom, rim, wood=(120, 85, 50), emblem=None, palette=None, extra=None):
-    c = Canvas(128, 128, "s" + name)
-    c.vgrad((0, 0, 54, 48), shade(wood, 0.9), shade(wood, 0.7))  # edges
-    c.vgrad(PLATE, face_top, face_bottom)
-    # back: planks
-    c.vgrad(PLATE_BACK, wood, shade(wood, 0.8))
-    for y in range(PLATE_BACK[1], PLATE_BACK[3]):
-        if y % 6 == 0:
-            for x in range(PLATE_BACK[0], PLATE_BACK[2]):
-                c.px(x, y, shade(wood, 0.6))
-    c.vgrad(HANDLE, shade(wood, 0.8), shade(wood, 0.6))
-    if extra:
-        extra(c)
-    if rim:
-        c.border(PLATE, rim, width=2)
-        c.border(PLATE, shade(rim, 0.65), inset=2)
-        for (x, y) in [(4, 4), (23, 4), (4, 43), (23, 43)]:  # rivets
-            c.px(x, y, shade(rim, 1.3))
-    if emblem:
-        k = 2 if len(emblem[0]) * 2 <= 18 else 1
-        w = len(emblem[0]) * k
-        h = len(emblem) * k
-        c.stamp(emblem, PLATE[0] + (24 - w) // 2, PLATE[1] + (44 - h) // 2 - 2, palette, k)
-    c.save(f"shield_{name}.png")
+# ================================================================ shields
 
 
-def planks(c):
-    x0, y0, x1, y1 = PLATE
-    for y in range(y0, y1):
-        for x in range(x0, x1):
-            col = (150, 110, 65) if ((x - x0) // 6) % 2 == 0 else (135, 98, 58)
-            if (x - x0) % 6 == 0:
-                col = (95, 68, 40)
-            c.px(x, y, shade(col, 1 + c.rnd.uniform(-0.06, 0.06)))
-    for x in range(x0, x1):  # iron band
-        for y in (y0 + 14, y0 + 15, y0 + 30, y0 + 31):
-            c.px(x, y, (165, 165, 170, 255))
+def shield_image(face, wood=(120, 85, 50), shaped=True):
+    img = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
+    face.blit(img, 2, 2)
+    back = Face(24, 44)
+    back.fill(lambda x, y: mul(wood, 0.8 + (0.1 if y % 6 == 0 else 0)) if face.get(23 - x, y) is not None else None)
+    back.blit(img, 28, 2)
+    if not shaped:
+        for x in range(54):
+            for y in range(2):
+                img.putpixel((x, y), mul(wood, 0.8) + (255,))
+        for y in range(2, 46):
+            for x in (0, 1, 26, 27):
+                img.putpixel((x, y), mul(wood, 0.7) + (255,))
+    for y in range(24):
+        for x in range(52, 84):
+            img.putpixel((x, y), mul(wood, 0.65 + 0.1 * ((x + y) % 3 == 0)) + (255,))
+    return img
 
 
-shield("oak", (150, 110, 65), (130, 95, 55), rim=(175, 175, 180), extra=planks)
-shield("knight", (200, 35, 45), (140, 20, 30), rim=GOLD, emblem=CROSS, palette={"G": GOLD + (255,)})
+def shield(name, fn, wood=(120, 85, 50), n=1, shaped=True):
+    frames = []
+    for f in range(n):
+        rnd = random.Random(name + str(f))
+        face = Face(24, 44)
+        fn(face, f, rnd)
+        frames.append(shield_image(face, wood, shaped))
+    strip(frames, f"shield_{name}.png")
 
 
-def runes(c):
-    x0, y0, x1, y1 = PLATE
-    for _ in range(9):
-        x = c.rnd.randrange(x0 + 4, x1 - 5)
-        y = c.rnd.randrange(y0 + 4, y1 - 5)
-        for (dx, dy) in c.rnd.choice([[(0, 0), (0, 1), (0, 2), (1, 1)], [(0, 0), (1, 0), (1, 1), (1, 2)], [(0, 1), (1, 0), (2, 1), (1, 2)]]):
-            c.px(x + dx, y + dy, (190, 100, 255, 255))
+def heater(x, y):
+    return y < 26 or ((x - 11.5) / 12) ** 2 + ((y - 26) / 18) ** 2 < 1.0
 
 
-shield("obsidian", (40, 22, 60), (15, 8, 25), rim=(90, 60, 120), wood=(40, 30, 50), extra=runes)
-shield("royal", (40, 70, 170), (20, 35, 100), rim=GOLD, emblem=CROWN,
-       palette={"G": GOLD + (255,), "R": (220, 30, 50, 255)})
-shield("emerald", (40, 170, 90), (15, 100, 50), rim=(220, 255, 230), emblem=GEM,
-       palette={"C": (70, 230, 120, 255), "W": (220, 255, 230, 255), "D": (20, 110, 55, 255)})
-shield("frost", (200, 235, 255), (110, 170, 230), rim=(240, 250, 255), emblem=FLAKE,
-       palette={"W": (255, 255, 255, 255)}, wood=(140, 160, 180))
+def kite(x, y):
+    return abs(x - 11.5) < 12 * (1 - max(0, y - 14) / 30) and (y > 3 or abs(x - 11.5) < 10)
 
 
-def shield_flames(c):
-    x0, y0, x1, y1 = PLATE
-    for x in range(x0, x1):
-        h = 14 + int(7 * abs(math.sin(x * 0.8))) + c.rnd.randrange(0, 5)
+def rim(face, col, w=2):
+    for y in range(face.h):
+        for x in range(face.w):
+            if face.get(x, y) is None:
+                continue
+            near = any(face.get(x + dx, y + dy) is None for dx in range(-w, w + 1) for dy in range(-w, w + 1)
+                       if abs(dx) + abs(dy) <= w)
+            if near:
+                face.set(x, y, col)
+
+
+def knight(face, f, rnd):
+    face.fill(grad((205, 36, 46), (140, 20, 30), rnd))
+    face.mask(heater)
+    rim(face, GOLD)
+    face.stamp(CROSS, 5, 8, {"G": GOLD}, 2)
+    face.outline((90, 60, 10))
+
+
+def buckler(face, f, rnd):
+    def fn(x, y):
+        c = (150, 110, 65) if (x // 5) % 2 == 0 else (132, 96, 56)
+        return mul(c, 1 + rnd.uniform(-0.06, 0.06))
+    face.fill(fn)
+    face.mask(lambda x, y: (x - 11.5) ** 2 + (y - 21.5) ** 2 < 12 ** 2)
+    rim(face, (170, 170, 178))
+    for y in range(18, 26):
+        for x in range(8, 16):
+            if (x - 11.5) ** 2 + (y - 21.5) ** 2 < 4 ** 2:
+                face.set(x, y, (200, 200, 208) if y < 22 else (150, 150, 158))
+    face.outline((60, 60, 66))
+
+
+def royal_s(face, f, rnd):
+    face.fill(grad((44, 76, 180), (20, 36, 100), rnd))
+    face.mask(kite)
+    rim(face, GOLD)
+    face.stamp(CROWN, 3, 12, {"G": GOLD, "R": (220, 30, 50)}, 2)
+    face.outline((20, 20, 60))
+
+
+def emerald(face, f, rnd):
+    face.fill(grad((44, 176, 96), (16, 100, 52), rnd))
+    face.mask(lambda x, y: not ((x < 3 or x > 20) and (y < 3 or y > 40)))
+    rim(face, (220, 255, 230), 1)
+    face.stamp(GEM, 3, 14, {"C": (80, 235, 130), "W": (230, 255, 236), "D": (20, 110, 55)}, 2)
+    glint = (f * 6) % 60 - 10
+    for y in range(44):
+        for x in range(24):
+            if abs((x + y) - glint) < 2 and face.get(x, y) is not None:
+                face.set(x, y, mix(face.get(x, y), (255, 255, 255), 0.6))
+    face.outline((10, 60, 30))
+
+
+def frost_s(face, f, rnd):
+    face.fill(grad((214, 240, 255), (120, 176, 232), rnd))
+    face.mask(lambda x, y: abs(x - 11.5) + abs(y - 21.5) * 0.55 < 13 or (y < 30 and abs(x - 11.5) < 9))
+    rim(face, (250, 254, 255), 1)
+    face.stamp(FLAKE, 3, 13, {"W": (255, 255, 255)}, 2)
+    for i, (x, y) in enumerate(STAR_POS[:8]):
+        if (f + i) % 4 == 0 and face.get(x, y + 6) is not None:
+            face.set(x, y + 6, (255, 255, 255))
+    face.outline((90, 140, 200))
+
+
+def obsidian(face, f, rnd):
+    face.fill(grad((44, 24, 66), (16, 8, 26), rnd, 0.1))
+    face.mask(heater)
+    rim(face, (80, 54, 110))
+    pulse = 0.5 + 0.5 * math.sin(f / FRAMES * math.tau)
+    rr = random.Random("runes")
+    for i in range(7):
+        r = RUNE[i % len(RUNE)]
+        x, y = rr.randrange(3, 18), rr.randrange(4, 34)
+        face.stamp(r, x, y, {"X": mix((90, 40, 150), (220, 150, 255), (pulse + i * 0.15) % 1)})
+    face.outline((0, 0, 0))
+
+
+def inferno_s(face, f, rnd):
+    tips = [round(4 * abs(math.sin(x * 0.8 + f)) + random.Random(f * 7 + x).randrange(0, 3)) for x in range(24)]
+    face.fill(grad((44, 12, 12), (22, 6, 6)))
+    for x in range(24):
+        h = 18 + tips[x]
         for i in range(h):
-            c.px(x, y1 - 1 - i, mix((255, 220, 80), (210, 40, 10), i / h))
+            face.set(x, 43 - i, mix((255, 225, 90), (210, 40, 10), i / h))
+    face.mask(lambda x, y: y > 6 - tips[x] % 5)
+    rim(face, (60, 60, 60), 1)
+    face.outline((30, 8, 0))
 
 
-shield("inferno", (40, 12, 12), (20, 6, 6), rim=(60, 60, 60), wood=(50, 35, 30), extra=shield_flames)
+def dragon_s(face, f, rnd):
+    def fn(x, y):
+        r = y // 3
+        sx = (x + (r % 2) * 2) % 4
+        c = mix((70, 150, 70), (30, 80, 40), y / 43)
+        if y % 3 == 2 or sx == 0:
+            c = mul(c, 0.6)
+        return c
+    face.fill(fn)
+    face.mask(heater)
+    rim(face, (200, 180, 120))
+    face.outline((20, 40, 20))
+
+
+def tower(face, f, rnd):
+    face.fill(grad((120, 120, 128), (84, 84, 92), rnd))
+    rim(face, (60, 60, 66), 1)
+    for y in (6, 21, 36):
+        for x in range(24):
+            face.set(x, y, (150, 150, 158))
+    for x, y in ((4, 4), (19, 4), (4, 39), (19, 39), (11, 13), (11, 29)):
+        face.set(x, y, (210, 210, 220))
+        face.set(x + 1, y, (170, 170, 180))
+
+
+shield("knight", knight)
+shield("buckler", buckler)
+shield("royal", royal_s)
+shield("emerald", emerald, n=FRAMES)
+shield("frost", frost_s, wood=(140, 160, 180), n=FRAMES)
+shield("obsidian", obsidian, wood=(40, 30, 50), n=FRAMES)
+shield("inferno", inferno_s, wood=(50, 35, 30), n=FRAMES)
+shield("dragon", dragon_s)
+shield("tower", tower, wood=(80, 80, 86), shaped=False)
+
+# ================================================================ totems (32x32 item textures)
+
+TOTEM = [
+    "................",
+    ".....HHHHHH.....",
+    "....HhhhhhhH....",
+    "....HhEhhEhH....",
+    "....HhhhhhhH....",
+    ".....HhMMhH.....",
+    "..WW.HHHHHH.WW..",
+    ".WwwWBbbbbbBWwwW",
+    ".WwwWBbGGbbBWwwW",
+    "..WWwBbGGbbBwWW.",
+    "....WBbbbbbBW...",
+    ".....BbbbbbB....",
+    ".....BBbbbBB....",
+    "......BbbbB.....",
+    "......BBBBB.....",
+    "................",
+]
+
+TOTEMS = {
+    "king": ((150, 105, 20), (250, 205, 70), (40, 20, 10), (120, 70, 10), (165, 115, 25), (245, 200, 80), (60, 220, 100), (190, 140, 40), (255, 225, 120)),
+    "diamond": ((30, 120, 140), (120, 235, 235), (10, 40, 60), (20, 90, 110), (35, 135, 150), (130, 240, 240), (255, 255, 255), (40, 150, 170), (190, 255, 255)),
+    "emerald": ((20, 110, 50), (80, 220, 120), (10, 40, 20), (15, 80, 40), (25, 125, 60), (90, 230, 130), (255, 230, 90), (30, 140, 70), (150, 255, 170)),
+    "ender": ((25, 15, 40), (90, 60, 140), (110, 255, 200), (60, 30, 90), (30, 20, 50), (120, 80, 180), (200, 100, 255), (45, 25, 70), (160, 110, 230)),
+    "blood": ((110, 10, 15), (220, 40, 50), (255, 230, 120), (70, 5, 10), (120, 12, 18), (230, 60, 60), (255, 200, 60), (90, 10, 15), (200, 50, 60)),
+    "frost": ((120, 170, 210), (235, 250, 255), (30, 60, 110), (90, 140, 190), (130, 180, 220), (240, 252, 255), (90, 180, 255), (150, 200, 235), (255, 255, 255)),
+}
+
+
+def totem_frame(pal, f, glow_eyes=False, pulse_gem=True):
+    H, h, E, M, B, b, G, W, w = pal
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    t = f / FRAMES * math.tau
+    colors = {"H": H, "h": h, "E": E, "M": M, "B": B, "b": b, "G": G, "W": W, "w": w}
+    for y, row in enumerate(TOTEM):
+        for x, ch in enumerate(row):
+            if ch not in colors:
+                continue
+            c = colors[ch]
+            if ch == "G" and pulse_gem:
+                c = mix(c, (255, 255, 255), 0.25 + 0.25 * math.sin(t))
+            if ch == "E" and glow_eyes:
+                c = mix(c, (255, 255, 255), 0.5 + 0.5 * math.sin(t * 2))
+            for dy in range(2):
+                for dx in range(2):
+                    shade = 1.0 if (dx == 0 and dy == 0) else 0.92
+                    img.putpixel((x * 2 + dx, y * 2 + dy), mul(c, shade) + (255,))
+    # moving glint across the figure
+    gx = (f * 6) % 48 - 8
+    for y in range(32):
+        for x in range(32):
+            p = img.getpixel((x, y))
+            if p[3] and abs((x + y) - gx - 8) < 2:
+                img.putpixel((x, y), mix(p, (255, 255, 255), 0.45) + (255,))
+    return img
+
+
+for name, pal in TOTEMS.items():
+    frames = [totem_frame(pal, f, glow_eyes=name in ("ender", "blood")) for f in range(FRAMES)]
+    strip(frames, f"totem_{name}.png")
+
+# 3D statue: model texture (16x16 color blocks) + an isometric preview for the menu
+model = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+blocks = {(0, 0): (250, 205, 70), (8, 0): (205, 150, 35), (0, 8): (255, 236, 150), (8, 8): (60, 220, 100)}
+for (ox, oy), c in blocks.items():
+    for y in range(8):
+        for x in range(8):
+            n = 1 + random.Random(x * 9 + y + ox * 3 + oy).uniform(-0.06, 0.06)
+            model.putpixel((ox + x, oy + y), mul(c, n) + (255,))
+# face on the head block (eyes + mouth)
+for (x, y) in ((2, 3), (5, 3)):
+    model.putpixel((x, y), (40, 20, 10, 255))
+for x in range(3, 5):
+    model.putpixel((x, 5), (120, 70, 10, 255))
+model.save(OUT / "totem_statue_model.png")
+
+# preview: simple 3D-ish render (front + right side + top) at 32x32
+prev = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+
+
+def box(x0, y0, w, h, d, col):
+    for y in range(h):
+        for x in range(w):
+            prev.putpixel((x0 + x, y0 + y), mul(col, 0.95) + (255,))
+    for i in range(d):
+        for y in range(h):
+            prev.putpixel((x0 + w + i, y0 + y - i - 1), mul(col, 0.7) + (255,))
+        for x in range(w):
+            prev.putpixel((x0 + x + i + 1, y0 - i - 1), mul(col, 1.15) + (255,))
+
+
+box(8, 27, 14, 3, 3, (205, 150, 35))
+box(2, 13, 6, 9, 2, (255, 236, 150))
+box(22, 13, 6, 9, 2, (255, 236, 150))
+box(10, 13, 10, 14, 3, (240, 196, 60))
+box(11, 4, 9, 9, 3, (250, 205, 70))
+prev.putpixel((13, 7), (40, 20, 10, 255))
+prev.putpixel((17, 7), (40, 20, 10, 255))
+for x in range(14, 17):
+    prev.putpixel((x, 10), (120, 70, 10, 255))
+for y in range(17, 21):
+    for x in range(13, 17):
+        prev.putpixel((x, y), (60, 220, 100, 255))
+prev.save(OUT / "totem_statue.png")
 print("ok")
