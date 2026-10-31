@@ -5,160 +5,163 @@ import java.util.List;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
-/** Reference data for the UHC guide (vanilla Java Edition defaults). */
+/** Reference data for the UHC guide (vanilla Java Edition default trades). */
 final class GuideData {
-	record Line(Item icon, String text) {}
+	/** One trade: up to two inputs → one output. Counts are text so ranges like "5-64" work. */
+	record Trade(Item in1, String c1, Item in2, String c2, Item out, String cOut, String note) {}
 
-	record Entry(Item icon, String title, String sub, List<Line> lines) {}
+	record Level(String name, List<Trade> trades) {}
+
+	record Profession(String name, Item workstation, String station, List<Level> levels) {}
+
+	record Enchant(Item icon, String item, String best, String alt) {}
+
+	record Potion(Item ingredient, String effect, int color, String base, String source, String time, String redstone, String glowstone) {}
 
 	private GuideData() {}
 
-	static Line l(Item i, String t) {
-		return new Line(i, t);
+	static final Item E = Items.EMERALD;
+
+	/** "24 paper → 1 emerald" */
+	static Trade buy(Item in, String c) {
+		return new Trade(in, c, null, null, E, "1", null);
 	}
 
-	static Line t(String text) {
-		return new Line(null, text);
+	/** "5 emeralds → item" */
+	static Trade sell(String price, Item out, String c) {
+		return new Trade(E, price, null, null, out, c, null);
 	}
 
-	static List<Entry> villagers() {
+	static Trade sell(String price, Item out, String c, String note) {
+		return new Trade(E, price, null, null, out, c, note);
+	}
+
+	static Trade sell2(String price, Item in2, String c2, Item out, String c) {
+		return new Trade(E, price, in2, c2, out, c, null);
+	}
+
+	static Level lv(String name, Trade... trades) {
+		return new Level(name, List.of(trades));
+	}
+
+	static List<Profession> villagers() {
 		return List.of(
-				new Entry(Items.LECTERN, "Librarian", "Workstation: Lectern", List.of(
-						l(Items.ENCHANTED_BOOK, "§fSells enchanted books §7– any normal enchant + §bMending"),
-						l(Items.BOOKSHELF, "§fBookshelves, lanterns, glass, clock, compass, name tag"),
-						l(Items.PAPER, "§7Buys paper, books, ink sacs, book & quill"),
-						t("§eTip: §7break & replace the lectern to reroll – before your first trade"))),
-				new Entry(Items.BLAST_FURNACE, "Armorer", "Workstation: Blast Furnace", List.of(
-						l(Items.IRON_CHESTPLATE, "§fIron & chainmail armor, bell, shield"),
-						l(Items.DIAMOND_CHESTPLATE, "§fMaster: §benchanted diamond armor"),
-						l(Items.COAL, "§7Buys coal, iron, lava bucket, diamonds"))),
-				new Entry(Items.SMITHING_TABLE, "Toolsmith", "Workstation: Smithing Table", List.of(
-						l(Items.DIAMOND_PICKAXE, "§fEnchanted iron & §bdiamond tools"),
-						l(Items.STONE_PICKAXE, "§fStone tools, bell"),
-						l(Items.IRON_INGOT, "§7Buys coal, iron, flint, diamonds"))),
-				new Entry(Items.GRINDSTONE, "Weaponsmith", "Workstation: Grindstone", List.of(
-						l(Items.DIAMOND_SWORD, "§fEnchanted iron & §bdiamond swords / axes"),
-						l(Items.IRON_AXE, "§fIron axe, bell"),
-						l(Items.IRON_INGOT, "§7Buys coal, iron, flint, diamonds"))),
-				new Entry(Items.BREWING_STAND, "Cleric", "Workstation: Brewing Stand", List.of(
-						l(Items.ENDER_PEARL, "§fEnder pearls, glowstone, lapis, redstone"),
-						l(Items.EXPERIENCE_BOTTLE, "§fBottles o' Enchanting"),
-						l(Items.ROTTEN_FLESH, "§7Buys rotten flesh, gold, rabbit feet, nether wart"))),
-				new Entry(Items.COMPOSTER, "Farmer", "Workstation: Composter", List.of(
-						l(Items.GOLDEN_CARROT, "§fGolden carrots §7(best food), glistering melon"),
-						l(Items.BREAD, "§fBread, pie, apples, cookies, cake, stew"),
-						l(Items.WHEAT, "§7Buys wheat, potatoes, carrots, beetroot, pumpkin, melon"))),
-				new Entry(Items.FLETCHING_TABLE, "Fletcher", "Workstation: Fletching Table", List.of(
-						l(Items.BOW, "§fBows, crossbows (also enchanted)"),
-						l(Items.ARROW, "§fArrows, flint, tipped arrows"),
-						l(Items.STICK, "§7Buys sticks, flint, string, feathers, tripwire hooks"))),
-				new Entry(Items.CARTOGRAPHY_TABLE, "Cartographer", "Workstation: Cartography Table", List.of(
-						l(Items.FILLED_MAP, "§fExplorer maps §7(ocean monument, woodland mansion, trial chambers)"),
-						l(Items.MAP, "§fEmpty maps, banners, item frames"),
-						l(Items.PAPER, "§7Buys paper, glass panes, compasses"))),
-				new Entry(Items.BARREL, "Fisherman", "Workstation: Barrel", List.of(
-						l(Items.FISHING_ROD, "§fEnchanted fishing rods, cooked fish, campfire"),
-						l(Items.COD, "§7Buys string, coal, fish, boats"))),
-				new Entry(Items.SMOKER, "Butcher", "Workstation: Smoker", List.of(
-						l(Items.COOKED_PORKCHOP, "§fCooked porkchop & chicken, rabbit stew"),
-						l(Items.SWEET_BERRIES, "§7Buys raw meat, coal, kelp blocks, sweet berries"))),
-				new Entry(Items.CAULDRON, "Leatherworker", "Workstation: Cauldron", List.of(
-						l(Items.SADDLE, "§fSaddles, leather armor, leather horse armor"),
-						l(Items.LEATHER, "§7Buys leather, flint, rabbit hide, scutes"))),
-				new Entry(Items.STONECUTTER, "Mason", "Workstation: Stonecutter", List.of(
-						l(Items.QUARTZ_BLOCK, "§fBricks, terracotta, quartz blocks, polished stone"),
-						l(Items.CLAY_BALL, "§7Buys clay, stone, granite, diorite, andesite, quartz"))),
-				new Entry(Items.LOOM, "Shepherd", "Workstation: Loom", List.of(
-						l(Items.SHEARS, "§fShears, wool, carpets, beds, banners, paintings"),
-						l(Items.STRING, "§7Buys wool and dyes"))),
-				new Entry(Items.EMERALD, "Trading tips", "Cheaper trades", List.of(
-						l(Items.GOLDEN_APPLE, "§fCure a zombie villager §7(weakness + golden apple) = big discounts"),
-						l(Items.TOTEM_OF_UNDYING, "§fHero of the Village §7after a raid = lower prices"),
-						t("§7Villagers restock up to 2× a day at their workstation"),
-						t("§7Since 26.1 trades are data-driven; the \"Trade Rebalance\" is still an experiment"))));
+				new Profession("Librarian", Items.LECTERN, "Lectern", List.of(
+						lv("Novice", buy(Items.PAPER, "24"), sell("9", Items.BOOKSHELF, "1"), sell2("5-64", Items.BOOK, "1", Items.ENCHANTED_BOOK, "1")),
+						lv("Apprentice", buy(Items.BOOK, "4"), sell("1", Items.LANTERN, "1"), sell2("5-64", Items.BOOK, "1", Items.ENCHANTED_BOOK, "1")),
+						lv("Journeyman", buy(Items.INK_SAC, "5"), sell("1", Items.GLASS, "4"), sell2("5-64", Items.BOOK, "1", Items.ENCHANTED_BOOK, "1")),
+						lv("Expert", buy(Items.WRITABLE_BOOK, "2"), sell("5", Items.CLOCK, "1"), sell("4", Items.COMPASS, "1"), sell2("5-64", Items.BOOK, "1", Items.ENCHANTED_BOOK, "1")),
+						lv("Master", sell("20", Items.NAME_TAG, "1")))),
+				new Profession("Armorer", Items.BLAST_FURNACE, "Blast Furnace", List.of(
+						lv("Novice", buy(Items.COAL, "15"), sell("5", Items.IRON_HELMET, "1"), sell("9", Items.IRON_CHESTPLATE, "1"), sell("7", Items.IRON_LEGGINGS, "1"), sell("4", Items.IRON_BOOTS, "1")),
+						lv("Apprentice", buy(Items.IRON_INGOT, "4"), sell("36", Items.BELL, "1"), sell("3", Items.CHAINMAIL_LEGGINGS, "1"), sell("1", Items.CHAINMAIL_BOOTS, "1")),
+						lv("Journeyman", buy(Items.LAVA_BUCKET, "1"), buy(Items.DIAMOND, "1"), sell("1", Items.CHAINMAIL_HELMET, "1"), sell("4", Items.CHAINMAIL_CHESTPLATE, "1"), sell("5", Items.SHIELD, "1")),
+						lv("Expert", sell("19-33", Items.DIAMOND_LEGGINGS, "1", "enchanted"), sell("13-27", Items.DIAMOND_BOOTS, "1", "enchanted")),
+						lv("Master", sell("13-27", Items.DIAMOND_HELMET, "1", "enchanted"), sell("21-35", Items.DIAMOND_CHESTPLATE, "1", "enchanted")))),
+				new Profession("Toolsmith", Items.SMITHING_TABLE, "Smithing Table", List.of(
+						lv("Novice", buy(Items.COAL, "15"), sell("1", Items.STONE_AXE, "1"), sell("1", Items.STONE_SHOVEL, "1"), sell("1", Items.STONE_PICKAXE, "1"), sell("1", Items.STONE_HOE, "1")),
+						lv("Apprentice", buy(Items.IRON_INGOT, "4"), sell("36", Items.BELL, "1")),
+						lv("Journeyman", buy(Items.FLINT, "30"), sell("1-15", Items.IRON_PICKAXE, "1", "enchanted"), sell("4", Items.DIAMOND_HOE, "1")),
+						lv("Expert", buy(Items.DIAMOND, "1"), sell("17-31", Items.DIAMOND_AXE, "1", "enchanted"), sell("10-24", Items.DIAMOND_SHOVEL, "1", "enchanted")),
+						lv("Master", sell("18-32", Items.DIAMOND_PICKAXE, "1", "enchanted")))),
+				new Profession("Weaponsmith", Items.GRINDSTONE, "Grindstone", List.of(
+						lv("Novice", buy(Items.COAL, "15"), sell("3", Items.IRON_AXE, "1"), sell("2-16", Items.IRON_SWORD, "1", "enchanted")),
+						lv("Apprentice", buy(Items.IRON_INGOT, "4"), sell("36", Items.BELL, "1")),
+						lv("Journeyman", buy(Items.FLINT, "24")),
+						lv("Expert", buy(Items.DIAMOND, "1"), sell("17-31", Items.DIAMOND_AXE, "1", "enchanted")),
+						lv("Master", sell("13-27", Items.DIAMOND_SWORD, "1", "enchanted")))),
+				new Profession("Cleric", Items.BREWING_STAND, "Brewing Stand", List.of(
+						lv("Novice", buy(Items.ROTTEN_FLESH, "32"), sell("1", Items.REDSTONE, "2")),
+						lv("Apprentice", buy(Items.GOLD_INGOT, "3"), sell("1", Items.LAPIS_LAZULI, "1")),
+						lv("Journeyman", buy(Items.RABBIT_FOOT, "2"), sell("4", Items.GLOWSTONE, "1")),
+						lv("Expert", buy(Items.TURTLE_SCUTE, "4"), buy(Items.GLASS_BOTTLE, "9"), sell("5", Items.ENDER_PEARL, "1")),
+						lv("Master", buy(Items.NETHER_WART, "22"), sell("3", Items.EXPERIENCE_BOTTLE, "1")))),
+				new Profession("Farmer", Items.COMPOSTER, "Composter", List.of(
+						lv("Novice", buy(Items.WHEAT, "20"), buy(Items.POTATO, "26"), buy(Items.CARROT, "22"), buy(Items.BEETROOT, "15"), sell("1", Items.BREAD, "6")),
+						lv("Apprentice", buy(Items.PUMPKIN, "6"), sell("1", Items.PUMPKIN_PIE, "4"), sell("1", Items.APPLE, "4")),
+						lv("Journeyman", buy(Items.MELON, "4"), sell("3", Items.COOKIE, "18")),
+						lv("Expert", sell("1", Items.CAKE, "1"), sell("1", Items.SUSPICIOUS_STEW, "1")),
+						lv("Master", sell("3", Items.GOLDEN_CARROT, "3"), sell("4", Items.GLISTERING_MELON_SLICE, "3")))),
+				new Profession("Fletcher", Items.FLETCHING_TABLE, "Fletching Table", List.of(
+						lv("Novice", buy(Items.STICK, "32"), sell("1", Items.ARROW, "16"), sell2("1", Items.GRAVEL, "10", Items.FLINT, "10")),
+						lv("Apprentice", buy(Items.FLINT, "26"), sell("2", Items.BOW, "1")),
+						lv("Journeyman", buy(Items.STRING, "14"), sell("3", Items.CROSSBOW, "1")),
+						lv("Expert", buy(Items.FEATHER, "24"), sell("7-21", Items.BOW, "1", "enchanted")),
+						lv("Master", buy(Items.TRIPWIRE_HOOK, "8"), sell("8-22", Items.CROSSBOW, "1", "enchanted"), sell2("2", Items.ARROW, "5", Items.TIPPED_ARROW, "5")))),
+				new Profession("Cartographer", Items.CARTOGRAPHY_TABLE, "Cartography Table", List.of(
+						lv("Novice", buy(Items.PAPER, "24"), sell("7", Items.MAP, "1")),
+						lv("Apprentice", buy(Items.GLASS_PANE, "11"), sell2("13", Items.COMPASS, "1", Items.FILLED_MAP, "1")),
+						lv("Journeyman", buy(Items.COMPASS, "1"), sell2("14", Items.COMPASS, "1", Items.FILLED_MAP, "1")),
+						lv("Expert", sell("7", Items.ITEM_FRAME, "1")),
+						lv("Master", sell("8", Items.GLOBE_BANNER_PATTERN, "1")))),
+				new Profession("Fisherman", Items.BARREL, "Barrel", List.of(
+						lv("Novice", buy(Items.STRING, "20"), buy(Items.COAL, "10"), sell2("1", Items.COD, "6", Items.COOKED_COD, "6"), sell("3", Items.COD_BUCKET, "1")),
+						lv("Apprentice", buy(Items.COD, "15"), sell2("1", Items.SALMON, "6", Items.COOKED_SALMON, "6"), sell("2", Items.CAMPFIRE, "1")),
+						lv("Journeyman", buy(Items.SALMON, "13"), sell("7-22", Items.FISHING_ROD, "1", "enchanted")),
+						lv("Expert", buy(Items.TROPICAL_FISH, "6")),
+						lv("Master", buy(Items.PUFFERFISH, "4"), buy(Items.OAK_BOAT, "1")))),
+				new Profession("Butcher", Items.SMOKER, "Smoker", List.of(
+						lv("Novice", buy(Items.CHICKEN, "14"), buy(Items.PORKCHOP, "7"), buy(Items.RABBIT, "4"), sell("1", Items.RABBIT_STEW, "1")),
+						lv("Apprentice", buy(Items.COAL, "15"), sell("1", Items.COOKED_PORKCHOP, "5"), sell("1", Items.COOKED_CHICKEN, "8")),
+						lv("Journeyman", buy(Items.MUTTON, "7"), buy(Items.BEEF, "10")),
+						lv("Expert", buy(Items.DRIED_KELP_BLOCK, "10")),
+						lv("Master", buy(Items.SWEET_BERRIES, "10")))),
+				new Profession("Leatherworker", Items.CAULDRON, "Cauldron", List.of(
+						lv("Novice", buy(Items.LEATHER, "6"), sell("3", Items.LEATHER_LEGGINGS, "1"), sell("7", Items.LEATHER_CHESTPLATE, "1")),
+						lv("Apprentice", buy(Items.FLINT, "26"), sell("5", Items.LEATHER_HELMET, "1"), sell("4", Items.LEATHER_BOOTS, "1")),
+						lv("Journeyman", buy(Items.RABBIT_HIDE, "9"), sell("7", Items.LEATHER_CHESTPLATE, "1")),
+						lv("Expert", buy(Items.TURTLE_SCUTE, "4"), sell("6", Items.LEATHER_HORSE_ARMOR, "1")),
+						lv("Master", sell("6", Items.SADDLE, "1"), sell("5", Items.LEATHER_HELMET, "1")))),
+				new Profession("Mason", Items.STONECUTTER, "Stonecutter", List.of(
+						lv("Novice", buy(Items.CLAY_BALL, "10"), sell("1", Items.BRICK, "10")),
+						lv("Apprentice", buy(Items.STONE, "20"), sell("1", Items.CHISELED_STONE_BRICKS, "4")),
+						lv("Journeyman", buy(Items.GRANITE, "16"), buy(Items.ANDESITE, "16"), buy(Items.DIORITE, "16"), sell("1", Items.POLISHED_ANDESITE, "4")),
+						lv("Expert", buy(Items.QUARTZ, "12"), sell("1", Items.TERRACOTTA, "1")),
+						lv("Master", sell("1", Items.QUARTZ_PILLAR, "1"), sell("1", Items.QUARTZ_BLOCK, "1")))),
+				new Profession("Shepherd", Items.LOOM, "Loom", List.of(
+						lv("Novice", sell("2", Items.SHEARS, "1", "buys 18 wool → 1 emerald")),
+						lv("Apprentice", new Trade(null, null, null, null, E, "1", "buys 12 dye; sells wool & carpets")),
+						lv("Journeyman", new Trade(null, null, null, null, E, "3", "sells beds (any color)")),
+						lv("Expert", new Trade(null, null, null, null, E, "3", "sells banners")),
+						lv("Master", sell("2", Items.PAINTING, "3")))));
 	}
 
-	static List<Entry> enchants() {
+	static List<Enchant> enchants() {
 		return List.of(
-				new Entry(Items.DIAMOND_HELMET, "Helmet", "", List.of(
-						t("§7Protection IV, Unbreaking III, Mending, Respiration III, Aqua Affinity"))),
-				new Entry(Items.DIAMOND_CHESTPLATE, "Chestplate", "", List.of(
-						t("§7Protection IV, Unbreaking III, Mending §8(Thorns III optional)"))),
-				new Entry(Items.DIAMOND_LEGGINGS, "Leggings", "", List.of(
-						t("§7Protection IV, Unbreaking III, Mending, Swift Sneak III"))),
-				new Entry(Items.DIAMOND_BOOTS, "Boots", "", List.of(
-						t("§7Protection IV, Feather Falling IV, Depth Strider III, Soul Speed III,"),
-						t("§7Unbreaking III, Mending §8(Frost Walker instead of Depth Strider)"))),
-				new Entry(Items.DIAMOND_SWORD, "Sword", "", List.of(
-						t("§7Sharpness V, Looting III, Sweeping Edge III, Fire Aspect II,"),
-						t("§7Unbreaking III, Mending §8(Knockback II optional)"))),
-				new Entry(Items.DIAMOND_AXE, "Axe", "", List.of(
-						t("§7Sharpness V, Efficiency V, Unbreaking III, Mending"))),
-				new Entry(Items.DIAMOND_PICKAXE, "Pickaxe / Shovel", "", List.of(
-						t("§7Efficiency V, Fortune III §8or§7 Silk Touch, Unbreaking III, Mending"))),
-				new Entry(Items.BOW, "Bow", "", List.of(
-						t("§7Power V, Punch II, Flame, Unbreaking III, Infinity §8or§7 Mending"))),
-				new Entry(Items.CROSSBOW, "Crossbow", "", List.of(
-						t("§7Quick Charge III, Multishot §8or§7 Piercing IV, Unbreaking III, Mending"))),
-				new Entry(Items.TRIDENT, "Trident", "", List.of(
-						t("§7Loyalty III + Channeling §8or§7 Riptide III, Impaling V,"),
-						t("§7Unbreaking III, Mending"))),
-				new Entry(Items.MACE, "Mace", "", List.of(
-						t("§7Density V §8or§7 Breach IV, Wind Burst III, Unbreaking III, Mending"))),
-				new Entry(Items.FISHING_ROD, "Fishing rod", "", List.of(
-						t("§7Luck of the Sea III, Lure III, Unbreaking III, Mending"))),
-				new Entry(Items.ELYTRA, "Elytra / Shield", "", List.of(
-						t("§7Unbreaking III, Mending"))),
-				new Entry(Items.ENCHANTING_TABLE, "Can't combine", "Pick one of each", List.of(
-						t("§7Protection types · Sharpness / Smite / Bane"),
-						t("§7Fortune / Silk Touch · Infinity / Mending · Multishot / Piercing"),
-						t("§7Depth Strider / Frost Walker · Riptide / Loyalty & Channeling"),
-						l(Items.BOOKSHELF, "§715 bookshelves for level 30 enchants"))));
+				new Enchant(Items.DIAMOND_HELMET, "Helmet", "Protection IV · Unbreaking III · Mending · Respiration III · Aqua Affinity", "Thorns III"),
+				new Enchant(Items.DIAMOND_CHESTPLATE, "Chestplate", "Protection IV · Unbreaking III · Mending", "Thorns III"),
+				new Enchant(Items.DIAMOND_LEGGINGS, "Leggings", "Protection IV · Unbreaking III · Mending · Swift Sneak III", ""),
+				new Enchant(Items.DIAMOND_BOOTS, "Boots", "Protection IV · Feather Falling IV · Depth Strider III · Soul Speed III · Unbreaking III · Mending", "Frost Walker II instead of Depth Strider"),
+				new Enchant(Items.DIAMOND_SWORD, "Sword", "Sharpness V · Looting III · Sweeping Edge III · Fire Aspect II · Unbreaking III · Mending", "Knockback II"),
+				new Enchant(Items.DIAMOND_AXE, "Axe", "Sharpness V · Efficiency V · Unbreaking III · Mending", "Silk Touch or Fortune III"),
+				new Enchant(Items.DIAMOND_PICKAXE, "Pickaxe", "Efficiency V · Fortune III · Unbreaking III · Mending", "Silk Touch instead of Fortune"),
+				new Enchant(Items.DIAMOND_SHOVEL, "Shovel", "Efficiency V · Unbreaking III · Mending", "Silk Touch or Fortune III"),
+				new Enchant(Items.BOW, "Bow", "Power V · Punch II · Flame · Unbreaking III · Infinity", "Mending instead of Infinity"),
+				new Enchant(Items.CROSSBOW, "Crossbow", "Quick Charge III · Multishot · Unbreaking III · Mending", "Piercing IV instead of Multishot"),
+				new Enchant(Items.TRIDENT, "Trident", "Loyalty III · Channeling · Impaling V · Unbreaking III · Mending", "Riptide III instead of Loyalty + Channeling"),
+				new Enchant(Items.MACE, "Mace", "Density V · Wind Burst III · Unbreaking III · Mending", "Breach IV instead of Density"),
+				new Enchant(Items.FISHING_ROD, "Fishing Rod", "Luck of the Sea III · Lure III · Unbreaking III · Mending", ""),
+				new Enchant(Items.ELYTRA, "Elytra", "Unbreaking III · Mending", ""),
+				new Enchant(Items.SHIELD, "Shield", "Unbreaking III · Mending", ""));
 	}
 
-	static List<Entry> brewing() {
+	static List<Potion> potions() {
 		return List.of(
-				new Entry(Items.NETHER_WART, "Start: Awkward Potion", "Water bottle + Nether Wart", List.of(
-						l(Items.BLAZE_POWDER, "§7Brewing stand fuel: blaze powder"))),
-				new Entry(Items.GLISTERING_MELON_SLICE, "Healing", "Glistering Melon", List.of(t("§7Instant health · §eglowstone§7 = II"))),
-				new Entry(Items.GHAST_TEAR, "Regeneration", "Ghast Tear", List.of(t("§7§credstone§7 = longer · §eglowstone§7 = II"))),
-				new Entry(Items.BLAZE_POWDER, "Strength", "Blaze Powder", List.of(t("§7§credstone§7 = longer · §eglowstone§7 = II"))),
-				new Entry(Items.SUGAR, "Swiftness", "Sugar", List.of(t("§7§credstone§7 = longer · §eglowstone§7 = II"))),
-				new Entry(Items.MAGMA_CREAM, "Fire Resistance", "Magma Cream", List.of(t("§7Nether essential · §credstone§7 = 8 min"))),
-				new Entry(Items.GOLDEN_CARROT, "Night Vision", "Golden Carrot", List.of(
-						l(Items.FERMENTED_SPIDER_EYE, "§7+ Fermented Spider Eye = §fInvisibility"))),
-				new Entry(Items.PUFFERFISH, "Water Breathing", "Pufferfish", List.of(t("§7§credstone§7 = longer"))),
-				new Entry(Items.RABBIT_FOOT, "Leaping", "Rabbit's Foot", List.of(t("§7§credstone§7 = longer · §eglowstone§7 = II"))),
-				new Entry(Items.PHANTOM_MEMBRANE, "Slow Falling", "Phantom Membrane", List.of(t("§7§credstone§7 = longer"))),
-				new Entry(Items.TURTLE_HELMET, "Turtle Master", "Turtle Shell", List.of(t("§7Resistance + slowness"))),
-				new Entry(Items.SPIDER_EYE, "Poison", "Spider Eye", List.of(
-						l(Items.FERMENTED_SPIDER_EYE, "§7Poison/Healing + Fermented Eye = §fHarming"))),
-				new Entry(Items.FERMENTED_SPIDER_EYE, "Corrupting", "Fermented Spider Eye", List.of(
-						t("§7Swiftness/Leaping → §fSlowness§7 · Water → §fWeakness"))),
-				new Entry(Items.GUNPOWDER, "Modifiers", "Add after brewing", List.of(
-						l(Items.REDSTONE, "§cRedstone§7: longer"),
-						l(Items.GLOWSTONE_DUST, "§eGlowstone§7: stronger"),
-						l(Items.GUNPOWDER, "§7Gunpowder: splash"),
-						l(Items.DRAGON_BREATH, "§7Dragon's Breath: lingering"))));
-	}
-
-	static List<Entry> tips() {
-		return List.of(
-				new Entry(Items.GOLDEN_APPLE, "Golden Apple", "8 gold ingots around an apple", List.of(
-						t("§7Absorption + Regeneration II – your best heal"))),
-				new Entry(Items.GOLDEN_CARROT, "Best food", "Golden carrots & steak", List.of(
-						t("§7Highest saturation – keeps natural regen going"))),
-				new Entry(Items.TOTEM_OF_UNDYING, "Totem of Undying", "Evokers in mansions & raids", List.of(
-						t("§7Hold it in the offhand – it saves you once"))),
-				new Entry(Items.SHIELD, "Shield", "1 iron + 6 planks", List.of(
-						t("§7Blocks arrows and melee; axes disable it for 5 s"))),
-				new Entry(Items.WATER_BUCKET, "Water bucket", "Always carry one", List.of(
-						t("§7Stops fall damage (MLG), puts out fire, blocks lava"))),
-				new Entry(Items.DIAMOND, "Diamonds", "Best at Y -59", List.of(
-						t("§7Branch-mine with 2 blocks between tunnels"))),
-				new Entry(Items.ANCIENT_DEBRIS, "Ancient Debris", "Best at Y 15 in the Nether", List.of(
-						t("§7Beds explode in the Nether – great for mining, deadly for you"))),
-				new Entry(Items.ENDER_EYE, "Strongholds", "Throw eyes of ender", List.of(
-						t("§7Nether travel: 1 block in the Nether = 8 in the Overworld"))));
+				new Potion(Items.GLISTERING_MELON_SLICE, "Healing", 0xFFF82423, "Awkward", "Melon slice + 8 gold nuggets", "instant", "–", "II"),
+				new Potion(Items.GHAST_TEAR, "Regeneration", 0xFFCD5CAB, "Awkward", "Ghasts (Nether)", "0:45", "1:30", "II 0:22"),
+				new Potion(Items.BLAZE_POWDER, "Strength", 0xFFFFC700, "Awkward", "Blaze rods (Nether fortress)", "3:00", "8:00", "II 1:30"),
+				new Potion(Items.SUGAR, "Swiftness", 0xFF33EBFF, "Awkward", "Sugar cane", "3:00", "8:00", "II 1:30"),
+				new Potion(Items.MAGMA_CREAM, "Fire Resistance", 0xFFFF9900, "Awkward", "Magma cubes / slime + blaze powder", "3:00", "8:00", "–"),
+				new Potion(Items.GOLDEN_CARROT, "Night Vision", 0xFFC2FF66, "Awkward", "Carrot + 8 gold nuggets", "3:00", "8:00", "–"),
+				new Potion(Items.FERMENTED_SPIDER_EYE, "Invisibility", 0xFFF6F6F6, "Night Vision", "Spider eye + sugar + brown mushroom", "3:00", "8:00", "–"),
+				new Potion(Items.PUFFERFISH, "Water Breathing", 0xFF98DAC0, "Awkward", "Fishing / warm oceans", "3:00", "8:00", "–"),
+				new Potion(Items.RABBIT_FOOT, "Leaping", 0xFFFDFF84, "Awkward", "Rabbits", "3:00", "8:00", "II 1:30"),
+				new Potion(Items.PHANTOM_MEMBRANE, "Slow Falling", 0xFFF3CFB9, "Awkward", "Phantoms", "1:30", "4:00", "–"),
+				new Potion(Items.TURTLE_HELMET, "Turtle Master", 0xFF8E6E9E, "Awkward", "Turtle scutes", "0:20", "0:40", "II 0:20"),
+				new Potion(Items.BREEZE_ROD, "Wind Charging", 0xFFBDC9FF, "Awkward", "Breezes (trial chambers)", "3:00", "–", "–"),
+				new Potion(Items.SPIDER_EYE, "Poison", 0xFF87A363, "Awkward", "Spiders", "0:45", "1:30", "II 0:21"),
+				new Potion(Items.FERMENTED_SPIDER_EYE, "Weakness", 0xFF484D48, "Water", "Spider eye + sugar + brown mushroom", "1:30", "4:00", "–"),
+				new Potion(Items.FERMENTED_SPIDER_EYE, "Slowness", 0xFF8BAFE0, "Swiftness/Leaping", "Corrupts the potion", "1:30", "4:00", "IV 0:20"),
+				new Potion(Items.FERMENTED_SPIDER_EYE, "Harming", 0xFFA9656A, "Healing/Poison", "Corrupts the potion", "instant", "–", "II"));
 	}
 }

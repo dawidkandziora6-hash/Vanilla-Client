@@ -63,9 +63,37 @@ public final class Config {
 
 	public static class WorldMap {
 		public boolean enabled = true;
-		/** Chunks around you that get mapped. */
-		public int radius = 8;
+		/** Chunks around you that get mapped (0 = your render distance). */
+		public int radius = 0;
 		public boolean showTasks = true;
+	}
+
+	public static class Waypoint {
+		public String name = "Waypoint";
+		public int x, y, z;
+		/** World id + dimension, e.g. "sp_myworld/overworld". */
+		public String world = "";
+		public int color = 0xFFFFD34D;
+		public boolean visible = true;
+
+		public Waypoint() {}
+
+		public Waypoint(String name, int x, int y, int z, String world, int color) {
+			this.name = name;
+			this.x = x;
+			this.y = y;
+			this.z = z;
+			this.world = world;
+			this.color = color;
+		}
+	}
+
+	public static class WaypointHud {
+		/** 0 = off, 1 = dots on the XP bar, 2 = compass bar at the top */
+		public int mode = 1;
+		public boolean showDistance = true;
+		/** Hide waypoints farther away than this (0 = never). */
+		public int maxDistance = 0;
 	}
 
 	public static class Todo extends Hud {
@@ -186,6 +214,8 @@ public final class Config {
 	public Cosmetics cosmetics = new Cosmetics();
 	public HeldItems heldItems = new HeldItems();
 	public List<Image> images = new ArrayList<>();
+	public List<Waypoint> waypoints = new ArrayList<>();
+	public WaypointHud waypointHud = new WaypointHud();
 	public List<TodoItem> todos = new ArrayList<>();
 	public List<Category> taskCategories;
 	/** Old format (plain names) – only read for migration. */
@@ -300,6 +330,8 @@ public final class Config {
 		if (cosmetics == null) cosmetics = new Cosmetics();
 		if (heldItems == null) heldItems = new HeldItems();
 		if (images == null) images = new ArrayList<>();
+		if (waypoints == null) waypoints = new ArrayList<>();
+		if (waypointHud == null) waypointHud = new WaypointHud();
 		if (todos == null) todos = new ArrayList<>();
 
 		// German defaults from the first version -> English

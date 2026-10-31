@@ -25,6 +25,9 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.client.renderer.BiomeColors;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.Blocks;
 
 /**
  * Explored-area map. Only reads chunks your client already has loaded, colors
@@ -133,7 +136,7 @@ public final class WorldMap {
 			loadAround(mc.player.getBlockX(), mc.player.getBlockZ());
 		}
 		if (!Config.get().worldMap.enabled) return;
-		if (++tick % 4 != 0) return;
+		if (++tick % 2 != 0) return;
 		scanSome(level, mc.player.getBlockX() >> 4, mc.player.getBlockZ() >> 4, mc.player.getBlockY());
 		if (System.currentTimeMillis() - lastSave > 60_000) {
 			saveAll();
@@ -149,10 +152,16 @@ public final class WorldMap {
 		SCANNED.clear();
 	}
 
+	private static int radius(Minecraft mc) {
+		int r = Config.get().worldMap.radius;
+		if (r <= 0) r = mc.options.renderDistance().get();
+		return Math.max(2, Math.min(32, r));
+	}
+
 	private static void scanSome(ClientLevel level, int pcx, int pcz, int playerY) {
-		int radius = Math.max(2, Math.min(16, Config.get().worldMap.radius));
+		int radius = radius(Minecraft.getInstance());
 		boolean ceiling = level.dimensionType().hasCeiling();
-		int budget = ceiling ? 2 : 6;
+		int budget = ceiling ? 4 : 24;
 		long now = System.currentTimeMillis();
 		for (int r = 0; r <= radius && budget > 0; r++) {
 			for (int dx = -r; dx <= r && budget > 0; dx++) {
@@ -161,7 +170,7 @@ public final class WorldMap {
 					int cx = pcx + dx, cz = pcz + dz;
 					long ck = key(cx, cz);
 					Long last = SCANNED.get(ck);
-					long age = r <= 1 ? 3_000 : 30_000;
+					long age = r <= 1 ? 2_000 : r <= 4 ? 10_000 : 40_000;
 					if (last != null && now - last < age) continue;
 					LevelChunk chunk = level.getChunkSource().getChunk(cx, cz, ChunkStatus.FULL, false);
 					if (chunk == null) continue;
@@ -171,6 +180,31 @@ public final class WorldMap {
 				}
 			}
 		}
+	}
+
+	private static int shade(int argb, int factor) {
+		int r = ((argb >> 16) & 0xFF) * factor / 255;
+		int g = ((argb >> 8) & 0xFF) * factor / 255;
+		int b = (argb & 0xFF) * factor / 255;
+		return 0xFF000000 | (r << 16) | (g << 8) | b;
+	}
+
+	private static int mix(int a, int b, float t) {
+		int ar = (a >> 16) & 0xFF, ag = (a >> 8) & 0xFF, ab = a & 0xFF;
+		int br = (b >> 16) & 0xFF, bg = (b >> 8) & 0xFF, bb = b & 0xFF;
+		return 0xFF000000 | ((int) (ar + (br - ar) * t) << 16) | ((int) (ag + (bg - ag) * t) << 8) | (int) (ab + (bb - ab) * t);
+	}
+
+	/** Base color of a block: biome tint for grass, leaves and water, else the vanilla map color. */
+	private static int baseColor(ClientLevel level, BlockState state, BlockPos pos, MapColor mc) {
+		if (mc == MapColor.GRASS || state.is(Blocks.SHORT_GRASS) || state.is(Blocks.TALL_GRASS)
+				|| state.is(Blocks.FERN) || state.is(Blocks.LARGE_FERN) || state.is(Blocks.SUGAR_CANE)) {
+			return shade(BiomeColors.getAverageGrassColor(level, pos), 235);
+		}
+		if (mc == MapColor.PLANT && (state.is(BlockTags.LEAVES) || state.is(Blocks.VINE))) {
+			return shade(BiomeColors.getAverageFoliageColor(level, pos), 215);
+		}
+		return mc.calculateARGBColor(MapColor.Brightness.HIGH) | 0xFF000000;
 	}
 
 	private static void scanChunk(ClientLevel level, LevelChunk chunk, int cx, int cz, boolean ceiling, int playerY) {
@@ -192,24 +226,37 @@ public final class WorldMap {
 					BlockState state = chunk.getBlockState(pos);
 					MapColor mc = state.getMapColor(level, pos);
 					if (mc == MapColor.NONE && y - 1 > minY) {
-						pos.set(wx, y - 1, wz);
-						mc = chunk.getBlockState(pos).getMapColor(level, pos);
+						y--;
+						pos.set(wx, y, wz);
+						state = chunk.getBlockState(pos);
+						mc = state.getMapColor(level, pos);
 					}
 					if (mc != MapColor.NONE) {
-						MapColor.Brightness b;
 						if (mc == MapColor.WATER) {
+							int water = BiomeColors.getAverageWaterColor(level, pos) | 0xFF000000;
 							int depth = 0;
-							for (int d = 1; d <= 10; d++) {
+							int floor = water;
+							for (int d = 1; d <= 16; d++) {
 								pos.set(wx, y - d, wz);
-								if (chunk.getBlockState(pos).getMapColor(level, pos) != MapColor.WATER) break;
+								BlockState below = chunk.getBlockState(pos);
+								MapColor bm = below.getMapColor(level, pos);
+								if (bm != MapColor.WATER) {
+									if (bm != MapColor.NONE) floor = baseColor(level, below, pos, bm);
+									break;
+								}
 								depth++;
 							}
-							b = depth < 2 ? MapColor.Brightness.HIGH : depth < 6 ? MapColor.Brightness.NORMAL : MapColor.Brightness.LOW;
+							float see = depth <= 1 ? 0.45f : depth <= 3 ? 0.3f : depth <= 6 ? 0.15f : 0.04f;
+							int f = depth <= 2 ? 245 : depth <= 5 ? 220 : depth <= 9 ? 195 : 170;
+							// subtle ripple pattern so oceans aren't flat
+							if (((wx + wz) & 3) == 0 && depth > 2) f -= 6;
+							color = shade(mix(water, floor, see), f);
 						} else {
-							int north = z == 0 ? y : prevRow[x];
-							b = y > north ? MapColor.Brightness.HIGH : y < north ? MapColor.Brightness.LOW : MapColor.Brightness.NORMAL;
+							int north = z == 0 ? (ceiling ? y : level.getHeight(Heightmap.Types.WORLD_SURFACE, wx, wz - 1) - 1) : prevRow[x];
+							int diff = y - north;
+							int f = diff > 1 ? 255 : diff == 1 ? 242 : diff == 0 ? 220 : diff == -1 ? 198 : 178;
+							color = shade(baseColor(level, state, pos.set(wx, y, wz), mc), f);
 						}
-						color = mc.calculateARGBColor(b) | 0xFF000000;
 					}
 				}
 				prevRow[x] = y;

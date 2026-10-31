@@ -53,6 +53,8 @@ public final class VanillaClient implements ClientModInitializer {
 				"key.vanillaclient.toggle_todo", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
 		KeyMapping mapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.vanillaclient.map", InputConstants.Type.KEYBOARD, InputConstants.KEY_M, category));
+		KeyMapping waypointKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.vanillaclient.waypoint", InputConstants.Type.KEYBOARD, InputConstants.KEY_B, category));
 		Zoom.init(zoom);
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -70,6 +72,9 @@ public final class VanillaClient implements ClientModInitializer {
 			while (mapKey.consumeClick()) {
 				if (client.gui.screen() == null) client.setScreenAndShow(new dev.vanillaclient.gui.WorldMapScreen(null));
 			}
+			while (waypointKey.consumeClick()) {
+				if (client.gui.screen() == null) dev.vanillaclient.map.Waypoints.addHere();
+			}
 			Cosmetics.tick();
 			dev.vanillaclient.map.WorldMap.tick(client);
 		});
@@ -78,6 +83,8 @@ public final class VanillaClient implements ClientModInitializer {
 		HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
 				Identifier.fromNamespaceAndPath(MOD_ID, "hud"), HudManager::render);
 		HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, CrosshairRenderer::wrap);
+		HudElementRegistry.attachElementAfter(VanillaHudElements.INFO_BAR_FOREGROUND,
+				Identifier.fromNamespaceAndPath(MOD_ID, "waypoints"), dev.vanillaclient.hud.WaypointBar::render);
 
 		ScreenEvents.AFTER_INIT.register(VanillaClient::afterScreenInit);
 

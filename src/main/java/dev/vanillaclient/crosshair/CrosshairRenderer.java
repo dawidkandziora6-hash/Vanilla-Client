@@ -26,6 +26,8 @@ public final class CrosshairRenderer {
 			draw(g, c.size, c.pixels, c.color, c.outline, c.outlineColor, cx, cy, scale);
 			if (c.attackIndicator) {
 				drawAttackIndicator(g, mc, cx, cy, c, scale);
+			} else {
+				drawVanillaAttackIndicator(g, mc, cx, cy);
 			}
 		};
 	}
@@ -69,6 +71,30 @@ public final class CrosshairRenderer {
 
 	private static boolean on(String p, int n, int x, int y) {
 		return x >= 0 && y >= 0 && x < n && y < n && p.charAt(y * n + x) == '1';
+	}
+
+	private static final net.minecraft.resources.Identifier IND_FULL = net.minecraft.resources.Identifier.withDefaultNamespace("hud/crosshair_attack_indicator_full");
+	private static final net.minecraft.resources.Identifier IND_BG = net.minecraft.resources.Identifier.withDefaultNamespace("hud/crosshair_attack_indicator_background");
+	private static final net.minecraft.resources.Identifier IND_PROGRESS = net.minecraft.resources.Identifier.withDefaultNamespace("hud/crosshair_attack_indicator_progress");
+
+	/** The normal Minecraft attack indicator (only if it is set to "Crosshair" in the options). */
+	private static void drawVanillaAttackIndicator(GuiGraphicsExtractor g, Minecraft mc, int cx, int cy) {
+		if (mc.options.attackIndicator().get() != net.minecraft.client.AttackIndicatorStatus.CROSSHAIR) return;
+		float f = mc.player.getAttackStrengthScale(0f);
+		boolean full = false;
+		if (mc.crosshairPickEntity instanceof net.minecraft.world.entity.LivingEntity target && f >= 1f) {
+			full = mc.player.getCurrentItemAttackStrengthDelay() > 5f && target.isAlive();
+		}
+		int y = cy - 7 + 16;
+		int x = cx - 8;
+		var pipe = net.minecraft.client.renderer.RenderPipelines.CROSSHAIR;
+		if (full) {
+			g.blitSprite(pipe, IND_FULL, x, y, 16, 16);
+		} else if (f < 1f) {
+			int l = (int) (f * 17f);
+			g.blitSprite(pipe, IND_BG, x, y, 16, 4);
+			g.blitSprite(pipe, IND_PROGRESS, 16, 4, 0, 0, x, y, l, 4);
+		}
 	}
 
 	private static void drawAttackIndicator(GuiGraphicsExtractor g, Minecraft mc, int cx, int cy, Config.Crosshair c, int scale) {

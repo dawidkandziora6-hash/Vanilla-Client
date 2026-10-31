@@ -25,6 +25,7 @@ public final class SettingsScreen extends BaseScreen {
 		ARMOR("HUD", "Armor", Items.DIAMOND_CHESTPLATE),
 		TASKLIST("HUD", "Task List", Items.WRITABLE_BOOK),
 		IMAGES("HUD", "Images", Items.PAINTING),
+		WAYPOINTS("HUD", "Waypoints", Items.RECOVERY_COMPASS),
 		CROSSHAIR("VISUALS", "Crosshair", Items.TARGET),
 		ZOOM("VISUALS", "Zoom", Items.SPYGLASS),
 		HELD("VISUALS", "Held Items", Items.TOTEM_OF_UNDYING),
@@ -125,6 +126,7 @@ public final class SettingsScreen extends BaseScreen {
 			case ARMOR -> armor();
 			case TASKLIST -> taskList();
 			case IMAGES -> images();
+			case WAYPOINTS -> waypoints();
 			case CROSSHAIR -> crosshair();
 			case ZOOM -> zoom();
 			case HELD -> held();
@@ -242,6 +244,29 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Info("Place & resize them in the HUD editor."));
 	}
 
+	private void waypoints() {
+		Config.WaypointHud w = cfg().waypointHud;
+		list.add(new Ui.Header("WAYPOINTS"));
+		list.add(new Ui.Cycle<>("Show waypoints", List.of(1, 2, 0), () -> w.mode, v -> w.mode = v,
+				v -> switch (v) {
+					case 1 -> "On the XP bar";
+					case 2 -> "Compass at the top";
+					default -> "Off";
+				}));
+		list.add(new Ui.Toggle("Show distance", null, () -> w.showDistance, v -> w.showDistance = v));
+		list.add(new Ui.Slider("Hide farther than", 0, 5000, 100, () -> w.maxDistance, v -> w.maxDistance = (int) v,
+				v -> v <= 0 ? "never" : (int) v + " m"));
+		list.add(new Ui.Button("Open the world map", i(Items.FILLED_MAP), () -> open(new WorldMapScreen(this))));
+		list.add(new Ui.Info("Press B in game to save a waypoint where you stand.",
+				"Right-click the world map to place one anywhere.",
+				"Look towards a waypoint to see its name and distance."));
+		java.util.List<Config.Waypoint> here = dev.vanillaclient.map.Waypoints.here();
+		if (!here.isEmpty()) list.add(new Ui.Header("IN THIS WORLD"));
+		for (Config.Waypoint wp : here) {
+			list.add(new Ui.Toggle(wp.name + " §8" + wp.x + " " + wp.y + " " + wp.z, null, () -> wp.visible, v -> wp.visible = v));
+		}
+	}
+
 	private void crosshair() {
 		Config.Crosshair s = cfg().crosshair;
 		list.add(new Ui.Header("CROSSHAIR"));
@@ -299,13 +324,14 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Toggle("Button in the pause menu", i(Items.WRITABLE_BOOK), () -> c.pauseMenuButton, v -> c.pauseMenuButton = v));
 		list.add(new Ui.Header("WORLD MAP"));
 		list.add(new Ui.Toggle("Record explored land", i(Items.FILLED_MAP), () -> c.worldMap.enabled, v -> c.worldMap.enabled = v));
-		list.add(new Ui.Slider("Map radius", 2, 16, 1, () -> c.worldMap.radius, v -> c.worldMap.radius = (int) v, v -> (int) v + " chunks"));
+		list.add(new Ui.Slider("Map radius", 0, 32, 1, () -> c.worldMap.radius, v -> c.worldMap.radius = (int) v,
+				v -> v <= 0 ? "Auto (render distance)" : (int) v + " chunks"));
 		list.add(new Ui.Toggle("Show tasks on the map", null, () -> c.worldMap.showTasks, v -> c.worldMap.showTasks = v));
 		list.add(new Ui.Button("Open the world map", i(Items.FILLED_MAP), () -> open(new WorldMapScreen(this))));
 		list.add(new Ui.Header("FILES"));
 		list.add(new Ui.Button("Open settings folder", i(Items.CHEST), () -> Platform.open(Config.dir())));
 		list.add(new Ui.Header("KEYS"));
-		list.add(new Ui.Info("Right Shift  ·  open this menu", "M  ·  world map", "C  ·  zoom (hold)", "Change keys in Options › Controls"));
+		list.add(new Ui.Info("Right Shift  ·  open this menu", "M  ·  world map", "B  ·  save a waypoint", "C  ·  zoom (hold)", "Change keys in Options › Controls"));
 	}
 
 	private void say(String s) {
@@ -319,7 +345,7 @@ public final class SettingsScreen extends BaseScreen {
 
 	/** Entry height shrinks on small windows so everything fits. */
 	private int entryH() {
-		int avail = bottom() - top() - 3 * HEADER;
+		int avail = bottom() - top() - 3 * HEADER - 2;
 		return Math.max(12, Math.min(17, avail / Page.values().length));
 	}
 
