@@ -6,7 +6,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import dev.vanillaclient.config.Config;
 import dev.vanillaclient.features.ClientRanks;
-import dev.vanillaclient.features.Ranks;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -60,7 +59,7 @@ public final class ClientSync {
 		if (ticks % 12000 == 0) ClientRanks.refresh();
 		if (!Config.get().ranks.shareCosmetics) return;
 		Config.Cosmetics c = Config.get().cosmetics;
-		String data = c.cape + "|" + c.wings + "|" + c.shield + "|" + Ranks.current().id();
+		String data = c.cape + "|" + c.wings + "|" + c.shield + "|" + Config.get().ranks.display;
 		if (data.equals(lastSent)) return;
 		try {
 			if (!ClientPlayNetworking.canSend(SyncPayload.TYPE)) return;

@@ -31,15 +31,49 @@ public final class ClientRanks {
 
 	public record Entry(String rank, String cape, String wings, String shield) {}
 
+	/** Lowest to highest. Not obtainable yet – only the owner account can wear them. */
 	public static final List<Rank> ALL = List.of(
-			new Rank("owner", "OWNER", "♛", 0xFF3B3B, 0xFFC21A, 0xFFD966),
-			new Rank("admin", "ADMIN", "✪", 0xFF4F6A, 0xFF6AD5, 0xFF9AC8),
-			new Rank("dev", "DEV", "⚙", 0x48E0FF, 0x5A7CFF, 0x9FE8FF),
+			new Rank("vip", "VIP", "★", 0x55FF55, 0x2FD67A, 0xB8FFC8),
+			new Rank("vip+", "VIP+", "★", 0x3CFF9A, 0x00D4C8, 0xA8FFE8),
+			new Rank("mvp", "MVP", "✦", 0x55FFFF, 0x3C9CFF, 0xB0F0FF),
+			new Rank("mvp+", "MVP+", "✦", 0x6AA8FF, 0xA05CFF, 0xC8C0FF),
+			new Rank("elite", "ELITE", "❖", 0xC86CFF, 0xFF5CD6, 0xF0C0FF),
+			new Rank("legend", "LEGEND", "♚", 0xFFC21A, 0xFF7A1A, 0xFFE3A0),
+			new Rank("media", "MEDIA", "▶", 0xFF5555, 0xFFFFFF, 0xFFC8C8),
+			new Rank("partner", "PARTNER", "❤", 0xFF7AC8, 0xB48CFF, 0xFFC8E8),
 			new Rank("mod", "MOD", "⚔", 0x5CFF7A, 0x1FB58F, 0xA8FFB8),
-			new Rank("partner", "PARTNER", "❖", 0xFF9A1F, 0xFFE066, 0xFFE3A0),
-			new Rank("vip", "VIP", "★", 0xFFD700, 0xFFF7A8, 0xFFF0B0),
-			new Rank("friend", "FRIEND", "❤", 0xFF7AC8, 0xB48CFF, 0xFFC8E8),
-			new Rank("tester", "TESTER", "✎", 0xB0B0B0, 0xFFFFFF, 0xE0E0E0));
+			new Rank("admin", "ADMIN", "✪", 0xFF4F6A, 0xFF6AD5, 0xFF9AC8),
+			new Rank("owner", "OWNER", "♛", 0xFF3B3B, 0xFFC21A, 0xFFD966));
+
+	public static Rank byId(String id) {
+		if (id == null) return null;
+		for (Rank r : ALL) if (r.id().equalsIgnoreCase(id)) return r;
+		return null;
+	}
+
+	/** Owner accounts may wear any rank. */
+	public static boolean isOwner(String name, java.util.UUID uuid) {
+		Entry e = entry(name, uuid);
+		return e != null && "owner".equalsIgnoreCase(e.rank());
+	}
+
+	/** The rank a player shows: their granted rank, or (owners only) the one they picked. */
+	public static Rank shown(String name, java.util.UUID uuid, String picked) {
+		if (!Config.get().ranks.showClientRanks) return null;
+		Entry e = entry(name, uuid);
+		if (e == null || e.rank() == null) return null;
+		if ("owner".equalsIgnoreCase(e.rank()) && picked != null && !picked.isEmpty()) {
+			Rank p = byId(picked);
+			if (p != null) return p;
+		}
+		return byId(e.rank());
+	}
+
+	/** Your own rank on your screen. */
+	public static Rank mine() {
+		var u = net.minecraft.client.Minecraft.getInstance().getUser();
+		return shown(u.getName(), u.getProfileId(), Config.get().ranks.display);
+	}
 
 	private static final String URL = "https://raw.githubusercontent.com/dawidkandziora6-hash/Vanilla-Client/main/ranks.json";
 	private static final Map<String, Entry> PLAYERS = new ConcurrentHashMap<>();
@@ -104,11 +138,7 @@ public final class ClientRanks {
 	}
 
 	public static Rank rank(String name, java.util.UUID uuid) {
-		if (!Config.get().ranks.showClientRanks) return null;
-		Entry e = entry(name, uuid);
-		if (e == null || e.rank() == null) return null;
-		for (Rank r : ALL) if (r.id().equalsIgnoreCase(e.rank())) return r;
-		return null;
+		return shown(name, uuid, null);
 	}
 
 	/** Text with a color gradient from one color to another. */

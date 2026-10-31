@@ -222,40 +222,6 @@ public final class InfoModules {
 		}
 	}
 
-	public static final class RankLine extends TextModule {
-		public RankLine() {
-			super("rank", "Rank");
-		}
-
-		@Override
-		public Config.TextHud settings() {
-			return Config.get().rankHud;
-		}
-
-		@Override
-		public ItemStack icon() {
-			return Icons.stack(Items.NETHER_STAR);
-		}
-
-		@Override
-		protected String value(boolean editing) {
-			Ranks.Rank r = Ranks.current();
-			return r.plain() + " §7· " + Ranks.formatHours(Ranks.hours());
-		}
-
-		@Override
-		public void draw(GuiGraphicsExtractor g, boolean editing) {
-			Config.TextHud s = settings();
-			Font f = mc().font;
-			Ranks.Rank r = Ranks.current();
-			String l = labelText();
-			background(g, s, width(editing), 8);
-			g.text(f, l, 0, 0, s.labelColor, s.shadow);
-			g.text(f, r.plain(), f.width(l), 0, r.color(), s.shadow);
-			g.text(f, " §7· " + Ranks.formatHours(Ranks.hours()), f.width(l) + f.width(r.plain()), 0, s.color, s.shadow);
-		}
-	}
-
 	/** Active potion effects with remaining time. */
 	public static final class Effects extends HudModule {
 		public Effects() {
@@ -375,7 +341,20 @@ public final class InfoModules {
 
 		private record Entry(Item item, int count) {}
 
+		private long cachedFrame = -1;
+		private List<Entry> cached;
+
 		private List<Entry> entries(boolean editing) {
+			if (!editing && cached != null && cachedFrame == HudManager.frame) return cached;
+			List<Entry> e = compute(editing);
+			if (!editing) {
+				cached = e;
+				cachedFrame = HudManager.frame;
+			}
+			return e;
+		}
+
+		private List<Entry> compute(boolean editing) {
 			List<Entry> out = new ArrayList<>();
 			Config.Counter s = settings();
 			for (String id : s.items) {

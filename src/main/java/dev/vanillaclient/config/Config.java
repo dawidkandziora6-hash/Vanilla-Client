@@ -98,6 +98,17 @@ public final class Config {
 		public int keyColor = 0x80000000;
 		public int pressedColor = 0xD0FFFFFF;
 		public int pressedTextColor = 0xFF000000;
+		public int keySize = 20;
+		public int gap = 2;
+		public boolean rounded = true;
+		public int borderColor = 0x60FFFFFF;
+		public boolean textShadow = false;
+		public boolean showSneakSprint = false;
+		/** 0 = key names, 1 = arrows */
+		public int labelStyle = 0;
+		/** How fast a key fades back (1 = normal). */
+		public float fadeSpeed = 1f;
+		public boolean showLabelsOnMouse = true;
 	}
 
 	/** Ranks earned with play time. */
@@ -107,8 +118,8 @@ public final class Config {
 		public boolean ownNameTag = true;
 		/** Rank symbol in front of your name tag. */
 		public boolean symbolInName = true;
-		/** Chosen rank id ("" = best unlocked). */
-		public String chosen = "";
+		/** Rank the owner account wears ("" = Owner). */
+		public String display = "";
 		/** Show Owner / Admin … ranks from the online list. */
 		public boolean showClientRanks = true;
 		/** Download the rank list from GitHub. */

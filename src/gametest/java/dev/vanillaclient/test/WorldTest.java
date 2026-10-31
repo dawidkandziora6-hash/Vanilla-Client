@@ -126,7 +126,7 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.setScreen(() -> new dev.vanillaclient.gui.SettingsScreen(null));
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w12_settings");
-			for (String pg : new String[] {"RANK", "KEYS", "IMAGES"}) {
+			for (String pg : new String[] {"HOME", "RANK", "KEYS", "FPS", "COUNTER"}) {
 				ctx.setScreen(() -> dev.vanillaclient.gui.SettingsScreen.at(null, pg));
 				ctx.waitTicks(15);
 				ctx.takeScreenshot("p_" + pg.toLowerCase());

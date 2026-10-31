@@ -20,7 +20,7 @@ public final class HudManager {
 	public static final KeystrokesModule KEYSTROKES = new KeystrokesModule();
 	public static final List<HudModule> INFO = List.of(new InfoModules.Fps(), new InfoModules.Ping(), new InfoModules.Biome(),
 			new InfoModules.Clock(), new InfoModules.Speed(), new InfoModules.Light(), new InfoModules.Session(),
-			new InfoModules.RankLine(), new InfoModules.Effects(), new InfoModules.Counter());
+new InfoModules.Effects(), new InfoModules.Counter());
 	private static final Map<String, ImageModule> IMAGES = new HashMap<>();
 
 	private HudManager() {}
@@ -45,6 +45,9 @@ public final class HudManager {
 		return out;
 	}
 
+	/** Counts HUD frames – modules use it to compute their text once per frame. */
+	public static long frame;
+
 	public static boolean editing() {
 		return Minecraft.getInstance().gui.screen() instanceof HudEditorScreen;
 	}
@@ -52,6 +55,7 @@ public final class HudManager {
 	/** Normal in-game HUD pass. The HUD editor draws everything itself. */
 	public static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
 		Minecraft mc = Minecraft.getInstance();
+		frame++;
 		if (mc.player == null || editing()) return;
 		int sw = g.guiWidth();
 		int sh = g.guiHeight();

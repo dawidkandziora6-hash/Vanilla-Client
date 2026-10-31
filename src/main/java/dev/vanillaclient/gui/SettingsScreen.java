@@ -25,29 +25,44 @@ public final class SettingsScreen extends BaseScreen {
 		ARMOR("HUD", "Armor", Items.DIAMOND_CHESTPLATE),
 		TASKLIST("HUD", "Task List", Items.WRITABLE_BOOK),
 		KEYS("HUD", "Keystrokes", Items.STONE_BUTTON),
-		IMAGES("HUD", "Pictures", Items.PAINTING),
 		WAYPOINTS("HUD", "Waypoints", Items.RECOVERY_COMPASS),
-		INFO("HUD", "Info Lines", Items.REDSTONE),
+		IMAGES("HUD", "Pictures", Items.PAINTING),
+		FPS("HUD", "FPS", Items.REDSTONE, 0),
+		PING("HUD", "Ping", Items.ENDER_PEARL, 1),
+		BIOME("HUD", "Biome", Items.OAK_SAPLING, 2),
+		CLOCK("HUD", "Real Time", Items.CLOCK, 3),
+		SPEED("HUD", "Speed", Items.FEATHER, 4),
+		LIGHT("HUD", "Light Level", Items.TORCH, 5),
+		SESSION("HUD", "Session Time", Items.COMPASS, 6),
+		EFFECTS("HUD", "Effects", Items.POTION, 7),
+		COUNTER("HUD", "Item Counter", Items.TOTEM_OF_UNDYING, 8),
 		CROSSHAIR("VISUALS", "Crosshair", Items.TARGET),
 		ZOOM("VISUALS", "Zoom", Items.SPYGLASS),
 		HELD("VISUALS", "Held Items", Items.TOTEM_OF_UNDYING),
-		RANK("GENERAL", "Rank & Name", Items.NETHER_STAR),
+		RANK("ACCOUNT", "Rank", Items.NETHER_STAR),
 		CONTROLS("GENERAL", "Controls", Items.LEVER),
 		GENERAL("GENERAL", "Settings", Items.COMPARATOR);
 
 		final String group;
 		final String label;
 		final Item icon;
+		/** Index into HudManager.INFO for the small info modules, else -1. */
+		final int module;
 
 		Page(String group, String label, Item icon) {
+			this(group, label, icon, -1);
+		}
+
+		Page(String group, String label, Item icon, int module) {
 			this.group = group;
 			this.label = label;
 			this.icon = icon;
+			this.module = module;
 		}
 	}
 
 	private static Page page = Page.HOME;
-	private static int infoIndex = 0;
+	private float sideScroll, sideScrollTarget;
 
 	private static final int SIDEBAR = 106, GAP = 10, HEADER = 12;
 
@@ -118,6 +133,14 @@ public final class SettingsScreen extends BaseScreen {
 	private void go(Page p) {
 		if (page == p) return;
 		page = p;
+		for (Entry e : sidebar()) {
+			if (e.page() == p) {
+				int vis = bottom() - top();
+				float y = e.y() - top() + sideScrollTarget;
+				if (y < sideScrollTarget) sideScrollTarget = Math.max(0, y - 14);
+				if (y + 16 > sideScrollTarget + vis) sideScrollTarget = y + 30 - vis;
+			}
+		}
 		pageAt = System.currentTimeMillis();
 		buildPage();
 	}
@@ -145,7 +168,7 @@ public final class SettingsScreen extends BaseScreen {
 			case IMAGES -> images();
 			case KEYS -> keystrokes();
 			case WAYPOINTS -> waypoints();
-			case INFO -> info();
+			case FPS, PING, BIOME, CLOCK, SPEED, LIGHT, SESSION, EFFECTS, COUNTER -> info(page.module);
 			case CROSSHAIR -> crosshair();
 			case ZOOM -> zoom();
 			case HELD -> held();
@@ -176,8 +199,7 @@ public final class SettingsScreen extends BaseScreen {
 			final int idx = k;
 			dev.vanillaclient.hud.HudModule m = info.get(k);
 			list.add(new Ui.Chip(m.name, m.icon(), () -> m.settings().enabled, v -> m.settings().enabled = v, () -> {
-				infoIndex = idx;
-				go(Page.INFO);
+				for (Page p : Page.values()) if (p.module == idx) go(p);
 			}));
 		}
 		list.add(new Ui.Header("TOOLS"));
@@ -191,32 +213,29 @@ public final class SettingsScreen extends BaseScreen {
 	}
 
 	private void drawRankBanner(GuiGraphicsExtractor g, int x, int y, int w, float a) {
-		dev.vanillaclient.features.Ranks.Rank r = dev.vanillaclient.features.Ranks.current();
-		dev.vanillaclient.features.Ranks.Rank next = dev.vanillaclient.features.Ranks.next();
-		double h = dev.vanillaclient.features.Ranks.hours();
-		g.fill(x, y, x + w, y + 32, Theme.alpha(0x50000000, a));
-		g.fill(x, y, x + 2, y + 32, Theme.alpha(r.color(), a));
+		var user = this.minecraft.getUser();
+		dev.vanillaclient.features.ClientRanks.Rank cr = dev.vanillaclient.features.ClientRanks.mine();
+		int col = cr == null ? 0xFF808080 : 0xFF000000 | cr.from();
+		float pulse = 0.5f + 0.5f * (float) Math.sin(Theme.time() * 2.5);
+		g.fillGradient(x, y, x + w, y + 32, Theme.alpha(Theme.lerpColor(col, 0xFF000000, 0.55f - pulse * 0.1f), a), Theme.alpha(0x60000000, a));
+		g.fill(x, y, x + 2, y + 32, Theme.alpha(col, a));
 		g.outline(x, y, w, 32, Theme.alpha(0x40FFFFFF, a));
-		String name = this.minecraft.getUser().getName();
-		g.pose().pushMatrix();
-		g.pose().translate(x + 8, y + 6);
-		g.pose().scale(2f, 2f);
-		g.text(this.font, r.symbol(), 0, 0, Theme.alpha(r.color(), a), true);
-		g.pose().popMatrix();
-		dev.vanillaclient.features.ClientRanks.Rank cr = dev.vanillaclient.features.ClientRanks.rank(name, this.minecraft.getUser().getProfileId());
-		net.minecraft.network.chat.MutableComponent line = cr != null ? dev.vanillaclient.features.ClientRanks.prefix(cr)
-				.append(Component.literal(name).withColor(cr.nameColor())) : Component.literal(name).withColor(0xFFFFFF);
-		line.append(Component.literal(" · " + r.name()).withColor(r.color() & 0xFFFFFF));
-		g.text(this.font, line, x + 28, y + 6, Theme.alpha(0xFFFFFFFF, a), false);
-		String sub = "§7" + dev.vanillaclient.features.Ranks.formatHours(h) + " played"
-				+ (next == null ? " §6· max rank!" : " §8· next: " + next.symbol() + " " + next.name() + " at " + next.hours() + "h");
-		g.text(this.font, this.font.plainSubstrByWidth(sub, w - 34), x + 28, y + 17, Theme.alpha(0xFFFFFFFF, a), false);
-		if (next != null) {
-			double from = r.hours() <= h ? dev.vanillaclient.features.Ranks.best().hours() : 0;
-			float f = (float) Math.max(0, Math.min(1, (h - from) / Math.max(0.01, next.hours() - from)));
-			g.fill(x + 28, y + 27, x + w - 6, y + 29, Theme.alpha(0x60000000, a));
-			g.fill(x + 28, y + 27, x + 28 + Math.round((w - 34) * f), y + 29, Theme.alpha(next.color(), a));
+		// your head
+		try {
+			var tex = this.minecraft.player != null ? this.minecraft.player.getSkin().body().texturePath() : null;
+			if (tex != null) {
+				g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, tex, x + 7, y + 6, 8f, 8f, 20, 20, 8, 8, 64, 64);
+				g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, tex, x + 7, y + 6, 40f, 8f, 20, 20, 8, 8, 64, 64);
+			}
+		} catch (RuntimeException ignored) {
+			// no skin yet
 		}
+		net.minecraft.network.chat.MutableComponent line = cr != null ? dev.vanillaclient.features.ClientRanks.prefix(cr)
+				.append(Component.literal(user.getName()).withColor(cr.nameColor())) : Component.literal(user.getName()).withColor(0xFFFFFF);
+		g.text(this.font, line, x + 33, y + 7, Theme.alpha(0xFFFFFFFF, a), true);
+		String sub = cr == null ? "§7No rank yet · ranks are not available yet"
+				: "§7" + dev.vanillaclient.features.Ranks.formatHours(dev.vanillaclient.features.Ranks.hours()) + " played with Vanilla Client";
+		g.text(this.font, this.font.plainSubstrByWidth(sub, w - 40), x + 33, y + 19, Theme.alpha(0xFFFFFFFF, a), false);
 	}
 
 	private void labelOptions(Config.TextHud s, String hint) {
@@ -362,22 +381,46 @@ public final class SettingsScreen extends BaseScreen {
 		Config.Keystrokes k = cfg().keystrokes;
 		list.add(new Ui.Header("KEYSTROKES"));
 		list.add(new Ui.Toggle("Show on screen", i(Items.STONE_BUTTON), () -> k.enabled, v -> k.enabled = v));
-		list.add(new Ui.Custom(80, (g, x, y, w, h, mx, my, a) -> {
+		list.add(new Ui.Custom(118, (g, x, y, w, h, mx, my, a) -> {
 			dev.vanillaclient.hud.KeystrokesModule m = dev.vanillaclient.hud.HudManager.KEYSTROKES;
+			float sc = Math.min(1f, 112f / Math.max(1, m.height(true)));
 			g.pose().pushMatrix();
-			g.pose().translate(x + w / 2f - m.width(true) / 2f, y + 2);
+			g.pose().translate(x + w / 2f - m.width(true) * sc / 2f, y + 3);
+			g.pose().scale(sc, sc);
 			m.draw(g, true);
 			g.pose().popMatrix();
 		}));
+		list.add(new Ui.Header("PARTS"));
 		list.add(new Ui.Toggle("Mouse buttons", null, () -> k.showMouse, v -> k.showMouse = v));
 		list.add(new Ui.Toggle("Clicks per second", null, () -> k.showCps, v -> k.showCps = v));
+		list.add(new Ui.Toggle("LMB / RMB text", null, () -> k.showLabelsOnMouse, v -> k.showLabelsOnMouse = v));
+		list.add(new Ui.Toggle("Sneak & sprint", null, () -> k.showSneakSprint, v -> k.showSneakSprint = v));
 		list.add(new Ui.Toggle("Space bar", null, () -> k.showSpace, v -> k.showSpace = v));
-		list.add(new Ui.Toggle("Outline", null, () -> k.outline, v -> k.outline = v));
-		list.add(new Ui.ColorPick("Key color", () -> k.keyColor, v -> k.keyColor = v, this::colorPicker));
-		list.add(new Ui.ColorPick("Pressed color", () -> k.pressedColor, v -> k.pressedColor = v, this::colorPicker));
-		list.add(new Ui.ColorPick("Text color", () -> k.color, v -> k.color = v, this::colorPicker));
-		list.add(new Ui.ColorPick("Pressed text color", () -> k.pressedTextColor, v -> k.pressedTextColor = v, this::colorPicker));
+		list.add(new Ui.Cycle<>("Labels", java.util.List.of(0, 1), () -> k.labelStyle, v -> k.labelStyle = v, v -> v == 1 ? "Arrows ▲" : "Key names"));
+		list.add(new Ui.Header("SHAPE"));
+		list.add(new Ui.Slider("Key size", 12, 32, 1, () -> k.keySize, v -> k.keySize = (int) v, v -> (int) v + " px"));
+		list.add(new Ui.Slider("Gap", 0, 8, 1, () -> k.gap, v -> k.gap = (int) v, v -> (int) v + " px"));
+		list.add(new Ui.Toggle("Rounded corners", null, () -> k.rounded, v -> k.rounded = v));
+		list.add(new Ui.Toggle("Border", null, () -> k.outline, v -> k.outline = v));
+		list.add(new Ui.Slider("Fade speed", 0.3, 3.0, 0.1, () -> k.fadeSpeed, v -> k.fadeSpeed = (float) v, v -> Math.round(v * 100) + "%"));
 		list.add(new Ui.Slider("Size", 0.5, 3.0, 0.05, () -> k.scale, v -> k.scale = (float) v, v -> Math.round(v * 100) + "%"));
+		list.add(new Ui.Header("COLORS"));
+		list.add(new Ui.ColorPick("Key", () -> k.keyColor, v -> k.keyColor = v, this::colorPicker));
+		list.add(new Ui.ColorPick("Key pressed", () -> k.pressedColor, v -> k.pressedColor = v, this::colorPicker));
+		list.add(new Ui.ColorPick("Text", () -> k.color, v -> k.color = v, this::colorPicker));
+		list.add(new Ui.ColorPick("Text pressed", () -> k.pressedTextColor, v -> k.pressedTextColor = v, this::colorPicker));
+		list.add(new Ui.ColorPick("Border", () -> k.borderColor, v -> k.borderColor = v, this::colorPicker));
+		list.add(new Ui.Toggle("Text shadow", null, () -> k.textShadow, v -> k.textShadow = v));
+		list.add(new Ui.Header("PRESETS"));
+		list.add(new Ui.Button("Classic (dark, white pressed)", null, () -> {
+			k.keyColor = 0x80000000; k.pressedColor = 0xD0FFFFFF; k.color = 0xFFFFFFFF; k.pressedTextColor = 0xFF000000; k.rounded = false; k.outline = false;
+		}));
+		list.add(new Ui.Button("Neon (outline, cyan glow)", null, () -> {
+			k.keyColor = 0x60000000; k.pressedColor = 0xC000E5FF; k.color = 0xFF7FF4FF; k.pressedTextColor = 0xFF001018; k.rounded = true; k.outline = true; k.borderColor = 0xA000E5FF;
+		}));
+		list.add(new Ui.Button("Gold", null, () -> {
+			k.keyColor = 0x70201A08; k.pressedColor = 0xE0F2C440; k.color = 0xFFF6D77A; k.pressedTextColor = 0xFF2A1A00; k.rounded = true; k.outline = true; k.borderColor = 0x80F2C440;
+		}));
 		list.add(new Ui.Button("Move it in the HUD editor", i(Items.ITEM_FRAME), () -> open(new HudEditorScreen(this))));
 	}
 
@@ -476,17 +519,9 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Info("Only changes how items look in your own hands."));
 	}
 
-	private void info() {
-		java.util.List<dev.vanillaclient.hud.HudModule> mods = dev.vanillaclient.hud.HudManager.INFO;
-		infoIndex = Math.floorMod(infoIndex, mods.size());
-		java.util.List<Integer> idx = new ArrayList<>();
-		for (int k = 0; k < mods.size(); k++) idx.add(k);
-		list.add(new Ui.Header("INFO LINES"));
-		list.add(new Ui.Cycle<>("Module", idx, () -> infoIndex, v -> {
-			infoIndex = v;
-			buildPage();
-		}, v -> mods.get(v).name));
-		dev.vanillaclient.hud.HudModule m = mods.get(infoIndex);
+	private void info(int index) {
+		dev.vanillaclient.hud.HudModule m = dev.vanillaclient.hud.HudManager.INFO.get(index);
+		list.add(new Ui.Header(m.name.toUpperCase(java.util.Locale.ROOT)));
 		Config.Hud hs = m.settings();
 		list.add(new Ui.Toggle("Show on screen", m.icon(), () -> hs.enabled, v -> hs.enabled = v));
 		if (hs instanceof Config.Counter c) {
@@ -519,50 +554,44 @@ public final class SettingsScreen extends BaseScreen {
 
 	private void rank() {
 		Config.Ranks r = cfg().ranks;
-		list.add(new Ui.Custom(34, (g, x, y, w, h, mx, my, a) -> drawRankBanner(g, x, y, w, a)));
-		list.add(new Ui.Header("NAME"));
-		list.add(new Ui.Toggle("Show your name in F5 (third person)", i(Items.NAME_TAG), () -> r.ownNameTag, v -> r.ownNameTag = v));
-		list.add(new Ui.Toggle("Rank symbol in front of your name", null, () -> r.symbolInName, v -> r.symbolInName = v));
-		list.add(new Ui.Toggle("Rank line on screen", i(Items.NETHER_STAR), () -> cfg().rankHud.enabled, v -> cfg().rankHud.enabled = v));
-		list.add(new Ui.Header("CLIENT RANKS & OTHER PLAYERS"));
 		var me = this.minecraft.getUser();
-		dev.vanillaclient.features.ClientRanks.Rank cr = dev.vanillaclient.features.ClientRanks.rank(me.getName(), me.getProfileId());
-		list.add(new Ui.Custom(22, (g, x, y, w, h, mx, my, a) -> {
-			g.fill(x, y, x + w, y + 20, Theme.alpha(0x30000000, a));
-			if (cr != null) {
-				net.minecraft.network.chat.MutableComponent t = dev.vanillaclient.features.ClientRanks.prefix(cr)
-						.append(net.minecraft.network.chat.Component.literal(me.getName()).withColor(cr.nameColor()));
-				g.text(this.font, t, x + 6, y + 6, 0xFFFFFFFF, true);
-			} else {
-				g.text(this.font, "§7No client rank for §f" + me.getName(), x + 6, y + 6, 0xFFFFFFFF, false);
-			}
-		}));
-		list.add(new Ui.Toggle("Show Owner / Admin … ranks", null, () -> r.showClientRanks, v -> r.showClientRanks = v));
-		list.add(new Ui.Toggle("Load the rank list from GitHub", null, () -> r.onlineRanks, v -> r.onlineRanks = v));
-		list.add(new Ui.Toggle("Share my cosmetics with other players", null, () -> r.shareCosmetics, v -> r.shareCosmetics = v));
-		list.add(new Ui.Toggle("Show other players' cosmetics", null, () -> r.showOthers, v -> r.showOthers = v));
-		list.add(new Ui.Info("Ranks are given by name in ranks.json on GitHub.",
-				"Cosmetics are shared on LAN worlds and servers that run Vanilla Client."));
-		list.add(new Ui.Header("RANKS  §8· click an unlocked one to wear it"));
-		for (dev.vanillaclient.features.Ranks.Rank rk : dev.vanillaclient.features.Ranks.ALL) {
-			list.add(new Ui.Custom(20, (g, x, y, w, h, mx, my, a) -> {
-				boolean un = dev.vanillaclient.features.Ranks.unlocked(rk);
-				boolean cur = dev.vanillaclient.features.Ranks.current() == rk;
-				boolean hov = mx >= x && mx < x + w && my >= y && my < y + 18;
-				g.fill(x, y, x + w, y + 18, Theme.alpha(cur ? 0x50FFFFFF : hov && un ? 0x30FFFFFF : 0x18FFFFFF, a));
-				if (cur) g.fill(x, y, x + 2, y + 18, Theme.alpha(rk.color(), a));
-				g.text(this.font, rk.symbol(), x + 7, y + 5, Theme.alpha(un ? rk.color() : 0xFF555555, a), true);
-				g.text(this.font, un ? rk.name() : "§8" + rk.name(), x + 20, y + 5, Theme.alpha(un ? rk.color() : 0xFFFFFFFF, a), false);
-				String req = un ? (cur ? "§a✔ wearing" : "§7unlocked") : "§8locked · " + rk.hours() + " h";
-				g.text(this.font, req, x + w - 6 - this.font.width(req), y + 5, Theme.alpha(0xFFFFFFFF, a), false);
+		boolean owner = dev.vanillaclient.features.ClientRanks.isOwner(me.getName(), me.getProfileId());
+		list.add(new Ui.Custom(34, (g, x, y, w, h, mx, my, a) -> drawRankBanner(g, x, y, w, a)));
+		list.add(new Ui.Header(owner ? "RANKS  §8· owner account: click a rank to wear it" : "RANKS  §8· not available yet"));
+		java.util.List<dev.vanillaclient.features.ClientRanks.Rank> all = dev.vanillaclient.features.ClientRanks.ALL;
+		for (int k = all.size() - 1; k >= 0; k--) {
+			dev.vanillaclient.features.ClientRanks.Rank rk = all.get(k);
+			Ui.Custom card = new Ui.Custom(24, (g, x, y, w, h, mx, my, a) -> {
+				dev.vanillaclient.features.ClientRanks.Rank cur = dev.vanillaclient.features.ClientRanks.mine();
+				boolean wearing = cur == rk;
+				boolean hov = mx >= x && mx < x + w && my >= y && my < y + 22;
+				int c = 0xFF000000 | rk.from();
+				g.fillGradient(x, y, x + w, y + 22, Theme.alpha(Theme.lerpColor(c, 0xFF101010, wearing ? 0.45f : hov && owner ? 0.6f : 0.8f), a), Theme.alpha(0x50000000, a));
+				if (wearing) g.outline(x, y, w, 22, Theme.alpha(c, a));
+				net.minecraft.network.chat.MutableComponent t = dev.vanillaclient.features.ClientRanks.prefix(rk);
+				g.text(this.font, t, x + 6, y + 7, Theme.alpha(owner ? 0xFFFFFFFF : 0x90FFFFFF, a), true);
+				String st = wearing ? "§a✔" : owner ? (hov ? "§eWear" : "") : "§8🔒";
+				st = st.replace("🔒", "locked");
+				g.text(this.font, st, x + w - 6 - this.font.width(st), y + 7, Theme.alpha(0xFFFFFFFF, a), false);
 			}, () -> {
-				if (dev.vanillaclient.features.Ranks.unlocked(rk)) {
-					r.chosen = rk.id();
+				if (owner) {
+					r.display = rk.id().equals("owner") ? "" : rk.id();
 					Config.save();
 				}
-			}));
+			});
+			card.span = 2;
+			list.add(card);
 		}
-		list.add(new Ui.Info("Hours = play time with Vanilla Client, or the world's", "\"Time Played\" statistic – whichever is higher."));
+		list.add(new Ui.Header("NAME TAG"));
+		list.add(new Ui.Toggle("Show your name in F5 (third person)", i(Items.NAME_TAG), () -> r.ownNameTag, v -> r.ownNameTag = v));
+		list.add(new Ui.Toggle("Rank in front of your name", null, () -> r.symbolInName, v -> r.symbolInName = v));
+		list.add(new Ui.Header("OTHER PLAYERS"));
+		list.add(new Ui.Toggle("Show ranks of other players", null, () -> r.showClientRanks, v -> r.showClientRanks = v));
+		list.add(new Ui.Toggle("Share my cosmetics with other players", null, () -> r.shareCosmetics, v -> r.shareCosmetics = v));
+		list.add(new Ui.Toggle("Show other players' cosmetics", null, () -> r.showOthers, v -> r.showOthers = v));
+		list.add(new Ui.Toggle("Load the rank list from GitHub", null, () -> r.onlineRanks, v -> r.onlineRanks = v));
+		list.add(new Ui.Info("Ranks can't be bought or earned yet.",
+				"Cosmetics are shared on LAN worlds and servers with Vanilla Client."));
 	}
 
 	private void controls() {
@@ -610,28 +639,30 @@ public final class SettingsScreen extends BaseScreen {
 
 	private record Entry(Page page, String header, int y) {}
 
-	/** Entry height shrinks on small windows so everything fits. */
 	private int entryH() {
-		int avail = bottom() - top() - groups() * headerH() - 2;
-		return Math.max(9, Math.min(17, avail / Page.values().length));
+		return 14;
 	}
 
-	private static int groups() {
-		java.util.Set<String> g = new java.util.HashSet<>();
-		for (Page p : Page.values()) if (p.group != null) g.add(p.group);
-		return g.size();
-	}
-
-	/** Group headers shrink too when the window is small. */
 	private int headerH() {
-		int avail = bottom() - top() - 2;
-		return avail < Page.values().length * 12 + groups() * HEADER ? 9 : HEADER;
+		return HEADER;
+	}
+
+	private int sidebarContentH() {
+		int groups = 0;
+		String g = null;
+		for (Page p : Page.values()) {
+			if (p.group != null && !p.group.equals(g)) {
+				g = p.group;
+				groups++;
+			}
+		}
+		return Page.values().length * entryH() + groups * headerH() + 4;
 	}
 
 	private List<Entry> sidebar() {
 		int ENTRY = entryH();
 		List<Entry> out = new ArrayList<>();
-		int y = top();
+		int y = top() - Math.round(sideScroll);
 		String group = null;
 		for (Page p : Page.values()) {
 			if (p.group != null && !p.group.equals(group)) {
@@ -649,6 +680,10 @@ public final class SettingsScreen extends BaseScreen {
 		int ENTRY = entryH();
 		int x = left();
 		Theme.panel(g, x - 4, top() - 4, SIDEBAR + 8, bottom() - top() + 6);
+		int maxScroll = Math.max(0, sidebarContentH() - (bottom() - top()));
+		sideScrollTarget = Math.max(0, Math.min(maxScroll, sideScrollTarget));
+		sideScroll += (sideScrollTarget - sideScroll) * 0.3f;
+		g.enableScissor(x - 4, top() - 2, x + SIDEBAR + 4, bottom());
 		float targetY = 0;
 		for (Entry e : sidebar()) if (e.page() == page) targetY = e.y();
 		if (indicatorY < 0) indicatorY = targetY;
@@ -676,11 +711,36 @@ public final class SettingsScreen extends BaseScreen {
 		}
 	}
 
+	private void sidebarScrollbar(GuiGraphicsExtractor g) {
+		g.disableScissor();
+		int viewH = bottom() - top();
+		int contentH = sidebarContentH();
+		if (contentH > viewH) {
+			int x = left() + SIDEBAR + 1;
+			int barH = Math.max(12, viewH * viewH / contentH);
+			int barY = top() + Math.round((viewH - barH) * (sideScroll / Math.max(1, contentH - viewH)));
+			g.fill(x, barY, x + 1, barY + barH, 0x90FFFFFF);
+		}
+	}
+
 	// ------------------------------------------------------------ drawing & input
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
 		super.extractBackground(g, mouseX, mouseY, delta);
+		// slow floating light specks behind the panels
+		float t = Theme.time();
+		for (int k = 0; k < 36; k++) {
+			float seed = k * 12.9898f;
+			float fx = (float) ((Math.sin(seed) * 43758.5453) % 1 + 1) % 1;
+			float speed = 4f + (k % 5) * 2.5f;
+			float fy = 1f - ((t * speed / Math.max(1, this.height) + k * 0.137f) % 1f);
+			int x = Math.round(fx * this.width + (float) Math.sin(t * 0.6 + k) * 6f);
+			int y = Math.round(fy * this.height);
+			float tw = 0.35f + 0.35f * (float) Math.sin(t * 2 + k);
+			int c = k % 3 == 0 ? Theme.ACCENT : 0xFFFFFFFF;
+			g.fill(x, y, x + (k % 4 == 0 ? 2 : 1), y + (k % 4 == 0 ? 2 : 1), Theme.alpha(c, tw * 0.6f));
+		}
 	}
 
 	@Override
@@ -694,6 +754,7 @@ public final class SettingsScreen extends BaseScreen {
 		g.centeredText(this.font, "§7" + shown, this.width / 2, 29, 0xFFFFFFFF);
 
 		drawSidebar(g, mouseX, mouseY);
+		sidebarScrollbar(g);
 		Theme.panel(g, cx() - 4, top() - 4, contentW() + 10, bottom() - top() + 6);
 		list.render(g, this.font, mouseX, mouseY);
 
@@ -709,7 +770,7 @@ public final class SettingsScreen extends BaseScreen {
 		double mx = event.x(), my = event.y();
 		if (mx >= left() && mx < left() + SIDEBAR) {
 			for (Entry e : sidebar()) {
-				if (e.page() != null && my >= e.y() && my < e.y() + entryH()) {
+				if (e.page() != null && my >= e.y() && my < e.y() + entryH() && my >= top() && my < bottom()) {
 					Ui.click();
 					go(e.page());
 					return true;
@@ -733,6 +794,10 @@ public final class SettingsScreen extends BaseScreen {
 
 	@Override
 	public boolean mouseScrolled(double mx, double my, double h, double v) {
+		if (mx >= left() - 4 && mx < left() + SIDEBAR + 4 && my >= top() && my < bottom()) {
+			sideScrollTarget -= (float) v * 28f;
+			return true;
+		}
 		if (list.scroll(mx, my, v)) return true;
 		return super.mouseScrolled(mx, my, h, v);
 	}

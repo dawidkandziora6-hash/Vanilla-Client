@@ -27,13 +27,13 @@ public class AbstractClientPlayerMixin {
 		ClientAsset.Texture cape, wings;
 		if (self == Minecraft.getInstance().player) {
 			cape = Cosmetics.capeTexture();
-			wings = Cosmetics.wingsTexture();
+			wings = null; // wings are their own 3D model now (WingsLayer)
 		} else {
 			// other Vanilla Client players (server sync or ranks.json)
 			dev.vanillaclient.net.ClientSync.Remote r = dev.vanillaclient.net.ClientSync.of(self);
 			if (r == null || !dev.vanillaclient.config.Config.get().ranks.showOthers) return;
 			cape = Cosmetics.assetOf(Cosmetics.Kind.CAPE, r.cape());
-			wings = Cosmetics.assetOf(Cosmetics.Kind.WINGS, r.wings());
+			wings = null;
 		}
 		if (cape == null && wings == null) {
 			return;

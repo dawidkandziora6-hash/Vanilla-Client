@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "AbstractClientPlayerMixin",
+    "AvatarRendererMixin",
     "CapeLayerMixin",
     "ChatComponentMixin",
     "ClientClockManagerAccessor",
@@ -12,6 +13,7 @@
     "FirstPersonItemsMixin",
     "GameRendererMixin",
     "InventoryScreenInvoker",
+    "LivingEntityRendererInvoker",
     "MouseHandlerMixin",
     "NameTagMixin",
     "RenderContextMixin",

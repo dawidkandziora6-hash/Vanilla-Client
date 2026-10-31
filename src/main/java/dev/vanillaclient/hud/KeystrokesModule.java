@@ -14,10 +14,9 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-/** W A S D, mouse buttons with clicks per second and the space bar – lights up when pressed. */
+/** W A S D, mouse buttons with CPS, space, sneak/sprint – lights up when pressed. Everything adjustable. */
 public final class KeystrokesModule extends HudModule {
-	private static final int K = 20, GAP = 2;
-	private final float[] glow = new float[7];
+	private final float[] glow = new float[10];
 	private final Deque<Long> left = new ArrayDeque<>(), right = new ArrayDeque<>();
 	private boolean wasLeft, wasRight;
 	private long lastFrame = System.nanoTime();
@@ -36,23 +35,33 @@ public final class KeystrokesModule extends HudModule {
 		return Icons.stack(Items.STONE_BUTTON);
 	}
 
+	private int k() {
+		return Math.max(12, Math.min(32, settings().keySize));
+	}
+
+	private int gap() {
+		return Math.max(0, Math.min(8, settings().gap));
+	}
+
 	@Override
 	public int width(boolean editing) {
-		return 3 * K + 2 * GAP;
+		return 3 * k() + 2 * gap();
 	}
 
 	@Override
 	public int height(boolean editing) {
 		Config.Keystrokes s = settings();
-		int h = 2 * K + GAP;
-		if (s.showMouse) h += K + GAP;
-		if (s.showSpace) h += 10 + GAP;
+		int h = 2 * k() + gap();
+		if (s.showMouse) h += k() + gap();
+		if (s.showSpace) h += Math.max(8, k() / 2) + gap();
+		if (s.showSneakSprint) h += Math.max(10, k() * 2 / 3) + gap();
 		return h;
 	}
 
-	private static String label(KeyMapping k) {
-		String s = k.getTranslatedKeyMessage().getString();
-		return s.length() > 3 ? s.substring(0, 3) : s;
+	private String label(KeyMapping key, String arrow) {
+		if (settings().labelStyle == 1 && arrow != null) return arrow;
+		String s = key.getTranslatedKeyMessage().getString();
+		return s.length() > 4 ? s.substring(0, 4) : s;
 	}
 
 	private static int cps(Deque<Long> q, long now) {
@@ -60,23 +69,48 @@ public final class KeystrokesModule extends HudModule {
 		return q.size();
 	}
 
-	private void key(GuiGraphicsExtractor g, Font f, int i, int x, int y, int w, int h, String text, boolean down, float dt) {
-		Config.Keystrokes s = settings();
-		glow[i] += ((down ? 1f : 0f) - glow[i]) * Math.min(1f, dt * (down ? 30f : 8f));
-		int bg = Theme.lerpColor(s.keyColor, s.pressedColor, glow[i]);
-		g.fill(x, y, x + w, y + h, bg);
-		if (s.outline) g.outline(x, y, w, h, Theme.lerpColor(0x40FFFFFF, 0xC0FFFFFF, glow[i]));
-		int tc = Theme.lerpColor(s.color, s.pressedTextColor, glow[i]);
-		if (text.contains("\n")) {
-			String[] parts = text.split("\n");
-			g.centeredText(f, parts[0], x + w / 2, y + h / 2 - 8, tc);
-			g.pose().pushMatrix();
-			g.pose().translate(x + w / 2f, y + h / 2f + 2);
-			g.pose().scale(0.75f, 0.75f);
-			g.centeredText(f, parts[1], 0, 0, tc);
-			g.pose().popMatrix();
+	private void rect(GuiGraphicsExtractor g, int x, int y, int w, int h, int col) {
+		if (settings().rounded && w > 4 && h > 4) {
+			g.fill(x + 1, y, x + w - 1, y + h, col);
+			g.fill(x, y + 1, x + 1, y + h - 1, col);
+			g.fill(x + w - 1, y + 1, x + w, y + h - 1, col);
 		} else {
-			g.centeredText(f, text, x + w / 2, y + (h - 8) / 2 + 1, tc);
+			g.fill(x, y, x + w, y + h, col);
+		}
+	}
+
+	private void border(GuiGraphicsExtractor g, int x, int y, int w, int h, int col) {
+		if (settings().rounded) {
+			g.fill(x + 1, y, x + w - 1, y + 1, col);
+			g.fill(x + 1, y + h - 1, x + w - 1, y + h, col);
+			g.fill(x, y + 1, x + 1, y + h - 1, col);
+			g.fill(x + w - 1, y + 1, x + w, y + h - 1, col);
+		} else {
+			g.outline(x, y, w, h, col);
+		}
+	}
+
+	private float fade(int i, boolean down, float dt) {
+		float speed = Math.max(0.2f, settings().fadeSpeed);
+		glow[i] += ((down ? 1f : 0f) - glow[i]) * Math.min(1f, dt * (down ? 35f : 8f * speed));
+		return glow[i];
+	}
+
+	private void key(GuiGraphicsExtractor g, Font f, int i, int x, int y, int w, int h, String text, String sub, boolean down, float dt) {
+		Config.Keystrokes s = settings();
+		float gl = fade(i, down, dt);
+		rect(g, x, y, w, h, Theme.lerpColor(s.keyColor, s.pressedColor, gl));
+		if (s.outline) border(g, x, y, w, h, Theme.lerpColor(s.borderColor, 0xFFFFFFFF, gl * 0.6f));
+		int tc = Theme.lerpColor(s.color, s.pressedTextColor, gl);
+		if (sub != null) {
+			if (!text.isEmpty()) g.text(f, text, x + (w - f.width(text)) / 2, y + h / 2 - 8, tc, s.textShadow);
+			g.pose().pushMatrix();
+			g.pose().translate(x + w / 2f, y + h / 2f + (text.isEmpty() ? -3 : 1));
+			g.pose().scale(0.75f, 0.75f);
+			g.text(f, sub, -f.width(sub) / 2, 0, tc, s.textShadow);
+			g.pose().popMatrix();
+		} else if (!text.isEmpty()) {
+			g.text(f, text, x + (w - f.width(text)) / 2, y + (h - 8) / 2 + 1, tc, s.textShadow);
 		}
 	}
 
@@ -95,29 +129,35 @@ public final class KeystrokesModule extends HudModule {
 		if (r && !wasRight) right.addLast(now);
 		wasLeft = l;
 		wasRight = r;
+		int K = k(), G = gap(), full = 3 * K + 2 * G;
 		int y = 0;
-		key(g, f, 0, K + GAP, y, K, K, label(o.keyUp), o.keyUp.isDown(), dt);
-		y += K + GAP;
-		key(g, f, 1, 0, y, K, K, label(o.keyLeft), o.keyLeft.isDown(), dt);
-		key(g, f, 2, K + GAP, y, K, K, label(o.keyDown), o.keyDown.isDown(), dt);
-		key(g, f, 3, 2 * (K + GAP), y, K, K, label(o.keyRight), o.keyRight.isDown(), dt);
-		y += K + GAP;
-		int full = 3 * K + 2 * GAP;
+		key(g, f, 0, K + G, y, K, K, label(o.keyUp, "▲"), null, o.keyUp.isDown(), dt);
+		y += K + G;
+		key(g, f, 1, 0, y, K, K, label(o.keyLeft, "◀"), null, o.keyLeft.isDown(), dt);
+		key(g, f, 2, K + G, y, K, K, label(o.keyDown, "▼"), null, o.keyDown.isDown(), dt);
+		key(g, f, 3, 2 * (K + G), y, K, K, label(o.keyRight, "▶"), null, o.keyRight.isDown(), dt);
+		y += K + G;
 		if (s.showMouse) {
-			int half = (full - GAP) / 2;
-			String lt = s.showCps ? "LMB\n" + cps(left, now) + " CPS" : "LMB";
-			String rt = s.showCps ? "RMB\n" + cps(right, now) + " CPS" : "RMB";
-			key(g, f, 4, 0, y, half, K, lt, l, dt);
-			key(g, f, 5, half + GAP, y, full - half - GAP, K, rt, r, dt);
-			y += K + GAP;
+			int half = (full - G) / 2;
+			String lt = s.showLabelsOnMouse ? "LMB" : "", rt = s.showLabelsOnMouse ? "RMB" : "";
+			key(g, f, 4, 0, y, half, K, lt, s.showCps ? cps(left, now) + " CPS" : null, l, dt);
+			key(g, f, 5, half + G, y, full - half - G, K, rt, s.showCps ? cps(right, now) + " CPS" : null, r, dt);
+			y += K + G;
+		}
+		if (s.showSneakSprint) {
+			int h = Math.max(10, K * 2 / 3);
+			int half = (full - G) / 2;
+			key(g, f, 7, 0, y, half, h, "", "Sneak", o.keyShift.isDown(), dt);
+			key(g, f, 8, half + G, y, full - half - G, h, "", "Sprint", o.keySprint.isDown(), dt);
+			y += h + G;
 		}
 		if (s.showSpace) {
-			boolean sp = o.keyJump.isDown();
-			glow[6] += ((sp ? 1f : 0f) - glow[6]) * Math.min(1f, dt * (sp ? 30f : 8f));
-			g.fill(0, y, full, y + 10, Theme.lerpColor(s.keyColor, s.pressedColor, glow[6]));
-			if (s.outline) g.outline(0, y, full, 10, Theme.lerpColor(0x40FFFFFF, 0xC0FFFFFF, glow[6]));
+			int h = Math.max(8, K / 2);
+			float gl = fade(6, o.keyJump.isDown(), dt);
+			rect(g, 0, y, full, h, Theme.lerpColor(s.keyColor, s.pressedColor, gl));
+			if (s.outline) border(g, 0, y, full, h, Theme.lerpColor(s.borderColor, 0xFFFFFFFF, gl * 0.6f));
 			int bw = full / 3;
-			g.fill(full / 2 - bw / 2, y + 4, full / 2 + bw / 2, y + 6, Theme.lerpColor(s.color, s.pressedTextColor, glow[6]));
+			g.fill(full / 2 - bw / 2, y + h / 2 - 1, full / 2 + bw / 2, y + h / 2 + 1, Theme.lerpColor(s.color, s.pressedTextColor, gl));
 		}
 	}
 }

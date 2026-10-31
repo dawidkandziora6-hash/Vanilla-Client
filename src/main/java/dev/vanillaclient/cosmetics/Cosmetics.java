@@ -42,76 +42,44 @@ public final class Cosmetics {
 	public static final String NONE = "none";
 	public static final String CUSTOM = "custom";
 
+	/** A matching cape + wings + shield. */
+	public record Collection(String id, String name, String desc, int color, int accent) {}
+
+	public static final List<Collection> COLLECTIONS = List.of(
+			new Collection("inferno", "Inferno", "Living fire & demon wings", 0xFFE0401A, 0xFFFFB040),
+			new Collection("celestial", "Celestial", "Gold sun & angel wings", 0xFFF2C440, 0xFFFFF4C0),
+			new Collection("void", "Void", "Galaxy & ender energy", 0xFF8C3CDC, 0xFFD8A0FF));
+
 	public static final List<Design> CAPES = List.of(
 			new Design(NONE, "None", "No cape", 0xFF555555),
-			new Design("crimson", "Crimson Knight", "Sword & crown", 0xFFC8202C),
-			new Design("midnight", "Midnight", "✦ Twinkling stars", 0xFF1E285F),
-			new Design("aurora", "Aurora", "✦ Dancing lights", 0xFF3CC8AA),
-			new Design("inferno", "Inferno", "✦ Living flames", 0xFFE04010),
-			new Design("galaxy", "Galaxy", "✦ Spinning spiral", 0xFF6A3CD0),
-			new Design("ocean", "Ocean", "✦ Waves & trident", 0xFF2896D2),
-			new Design("ender", "Ender", "✦ Watching eye", 0xFF2A1240),
-			new Design("storm", "Thunderstorm", "✦ Lightning flashes", 0xFF4A5266),
-			new Design("magma", "Magma", "✦ Glowing cracks", 0xFFFF7A1A),
-			new Design("frost", "Frostbite", "✦ Snow & icicles", 0xFF9CC6E8),
-			new Design("cherry", "Cherry Blossom", "✦ Falling petals", 0xFFFF9EC3),
-			new Design("diamond", "Diamond", "✦ Sparkling gem", 0xFF6EE6E6),
-			new Design("sun", "Solar", "✦ Turning rays", 0xFFFFB020),
-			new Design("toxic", "Toxic", "✦ Bubbling goo", 0xFF7AFF2A),
-			new Design("redstone", "Redstone", "✦ Pulsing circuit", 0xFFFF2A1A),
-			new Design("rift", "Void Rift", "✦ Pulsing crack", 0xFF8C3CDC),
-			new Design("phantom", "Phantom", "✦ Glowing eyes", 0xFF5A6A90),
-			new Design("dragon", "Dragon Scale", "✦ Shifting colors", 0xFF5A1A7A),
-			new Design("prism", "Prism", "✦ Rainbow flow", 0xFFE070E0),
-			new Design("forest", "Forest", "✦ Fireflies", 0xFF3C8C3C),
-			new Design("royal", "Royal", "Crown & ermine", 0xFF7828A0),
-			new Design("creeper", "Creeper", "Sss…", 0xFF3A8A2A),
-			new Design("honey", "Honey", "Dripping comb", 0xFFFFC03A),
-			new Design("wanderer", "Wanderer", "Torn & patched", 0xFF7A6046),
+			new Design("inferno", "Inferno Cape", "✦ Rising flames", 0xFFE0401A),
+			new Design("celestial", "Celestial Cape", "✦ Turning sun", 0xFFF2C440),
+			new Design("void", "Void Cape", "✦ Spinning galaxy", 0xFF8C3CDC),
 			new Design(CUSTOM, "Your Image", "cosmetics/cape.png", 0xFFFFFFFF));
 
 	public static final List<Design> WINGS = List.of(
-			new Design(NONE, "Vanilla", "Normal elytra", 0xFF555555),
-			new Design("angel", "Angel", "Soft feathers", 0xFFF5F5F0),
-			new Design("archangel", "Archangel", "✦ Golden glow", 0xFFF6C945),
-			new Design("phoenix", "Phoenix", "✦ Burning feathers", 0xFFFFB030),
-			new Design("enderdragon", "Ender Dragon", "✦ Purple energy", 0xFFC050FF),
-			new Design("demon", "Demon", "✦ Lava veins", 0xFFA0140A),
-			new Design("crystal", "Crystal", "✦ Amethyst shards", 0xFFC89AFF),
-			new Design("frost", "Frost", "✦ Icicle edge", 0xFF9ACFF0),
-			new Design("storm", "Storm", "✦ Lightning", 0xFF5A6276),
-			new Design("fairy", "Fairy", "✦ Shimmering", 0xFFE0B0FF),
-			new Design("phantom", "Phantom", "✦ Glowing veins", 0xFF5A6A8C),
-			new Design("void", "Void", "✦ Starry night", 0xFF24103A),
-			new Design("mech", "Mech", "✦ Redstone core", 0xFFA8ACB4),
-			new Design("prism", "Prism", "✦ Rainbow", 0xFFE070E0),
-			new Design("dragon", "Dragon", "Bony membrane", 0xFF7A2AA8),
-			new Design("bat", "Bat", "Leather wings", 0xFF4A4250),
-			new Design("monarch", "Monarch", "Butterfly", 0xFFFF9620),
-			new Design("vine", "Overgrown", "Leaves & vines", 0xFF5AA040),
-			new Design(CUSTOM, "Your Image", "cosmetics/wings.png", 0xFFFFFFFF));
+			new Design(NONE, "None", "No wings", 0xFF555555),
+			new Design("inferno", "Inferno Wings", "✦ Lava veins · flapping", 0xFFE0401A),
+			new Design("celestial", "Celestial Wings", "✦ Golden feathers", 0xFFF2C440),
+			new Design("void", "Void Wings", "✦ Ender energy", 0xFF8C3CDC));
 
 	public static final List<Design> SHIELDS = List.of(
 			new Design(NONE, "Vanilla", "Normal shield", 0xFF555555),
-			new Design("knight", "Knight", "Heater & cross", 0xFFC8232D),
-			new Design("netherite", "Netherite", "✦ Gold-rimmed", 0xFF4A4246),
-			new Design("inferno", "Inferno", "✦ Flame crest", 0xFFD22A0A),
-			new Design("endereye", "Ender Eye", "✦ Pulsing eye", 0xFF1D8F74),
-			new Design("galaxy", "Galaxy", "✦ Round spiral", 0xFF5A3CD0),
-			new Design("sun", "Solar", "✦ Turning rays", 0xFFFFB020),
-			new Design("emerald", "Emerald", "✦ Glinting gem", 0xFF28AA5A),
-			new Design("frost", "Frost", "✦ Ice crystal", 0xFFC8EBFF),
-			new Design("obsidian", "Obsidian", "✦ Glowing runes", 0xFF3A2050),
-			new Design("ocean", "Ocean", "✦ Waves & trident", 0xFF2896D2),
-			new Design("amethyst", "Amethyst", "✦ Crystal spade", 0xFFC89AFF),
-			new Design("royal", "Royal", "Kite & crown", 0xFF2846AA),
-			new Design("spartan", "Spartan", "Bronze lambda", 0xFFE0A040),
-			new Design("viking", "Viking", "Round & painted", 0xFFC83A2A),
-			new Design("buckler", "Buckler", "Wood & iron", 0xFFA8783E),
-			new Design("dragon", "Dragon", "Scaled", 0xFF2A8A3A),
-			new Design("tower", "Tower", "Iron-banded", 0xFF78787F),
-			new Design("creeper", "Creeper", "Sss…", 0xFF3A8A2A),
+			new Design("inferno", "Inferno Shield", "✦ Flame crest", 0xFFE0401A),
+			new Design("celestial", "Celestial Shield", "✦ Golden sun", 0xFFF2C440),
+			new Design("void", "Void Shield", "✦ Ender eye", 0xFF8C3CDC),
 			new Design(CUSTOM, "Your Image", "cosmetics/shield.png", 0xFFFFFFFF));
+
+	/** Wears all three parts of a collection. */
+	public static void equip(Collection c) {
+		select(Kind.CAPE, c.id());
+		select(Kind.WINGS, c.id());
+		select(Kind.SHIELD, c.id());
+	}
+
+	public static boolean wearing(Collection c) {
+		return c.id().equals(selected(Kind.CAPE)) && c.id().equals(selected(Kind.WINGS)) && c.id().equals(selected(Kind.SHIELD));
+	}
 
 	/** A registered design. width/height are one frame; animated designs are vertical strips. */
 	public record Tex(Identifier id, int width, int height, int frames, ClientAsset.Texture asset) {}
@@ -169,6 +137,10 @@ public final class Cosmetics {
 			case SHIELD -> c.shield = id;
 		}
 		Config.save();
+	}
+
+	public static String effectiveId(Kind k) {
+		return effective(k);
 	}
 
 	private static String effective(Kind k) {
@@ -255,7 +227,8 @@ public final class Cosmetics {
 		Identifier texPath = Identifier.fromNamespaceAndPath("vanillaclient", "cosmetic/" + kind.prefix + "_" + id + suffix + ".png");
 		int w = img.getWidth();
 		int h = img.getHeight();
-		int frameH = (kind == Kind.CAPE || kind == Kind.WINGS) ? w / 2 : w;
+		int frameH = kind == Kind.CAPE ? w / 2 : kind == Kind.WINGS ? w * 3 / 2 : w;
+		if (id.endsWith("_preview")) frameH = h;
 		int frames = frameH > 0 && h > frameH && h % frameH == 0 ? h / frameH : 1;
 		DynamicTexture dyn;
 		if (frames > 1) {

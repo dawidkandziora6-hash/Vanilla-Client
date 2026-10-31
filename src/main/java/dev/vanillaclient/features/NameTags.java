@@ -7,7 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Player;
 
-/** Name tags with client rank ("♛ OWNER ┃ Name") and play-time rank symbol. */
+/** Name tags with the client rank: "♛ OWNER ┃ Name". */
 public final class NameTags {
 	private NameTags() {}
 
@@ -16,23 +16,17 @@ public final class NameTags {
 		if (!cfg.enabled) return original;
 		boolean self = p == Minecraft.getInstance().player;
 		String name = p.getName().getString();
-		ClientRanks.Rank cr = ClientRanks.rank(name, p.getUUID());
-		if (cr != null) {
-			MutableComponent out = ClientRanks.prefix(cr);
-			out.append(Component.literal(name).withColor(cr.nameColor()));
-			return out;
-		}
-		Ranks.Rank r = null;
+		String picked = null;
 		if (self) {
-			if (cfg.symbolInName) r = Ranks.current();
+			picked = cfg.display;
 		} else {
 			ClientSync.Remote rem = ClientSync.of(p);
-			if (rem != null && rem.rank() != null) {
-				for (Ranks.Rank x : Ranks.ALL) if (x.id().equals(rem.rank())) r = x;
-			}
+			if (rem != null) picked = rem.rank();
 		}
-		if (r == null) return original;
-		MutableComponent out = Component.literal(r.symbol() + " ").withColor(r.color() & 0xFFFFFF);
-		return out.append(original);
+		ClientRanks.Rank cr = ClientRanks.shown(name, p.getUUID(), picked);
+		if (cr == null || (self && !cfg.symbolInName)) return original;
+		MutableComponent out = ClientRanks.prefix(cr);
+		out.append(Component.literal(name).withColor(cr.nameColor()));
+		return out;
 	}
 }

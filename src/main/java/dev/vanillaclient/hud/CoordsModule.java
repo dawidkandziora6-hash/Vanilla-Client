@@ -41,7 +41,19 @@ public final class CoordsModule extends HudModule {
 		return custom == null || custom.isBlank() ? fallback : custom;
 	}
 
+	private long cachedFrame = -1;
+	private boolean cachedEditing;
+	private List<List<Seg>> cached;
+
 	private List<List<Seg>> lines(boolean editing) {
+		if (cached != null && cachedFrame == HudManager.frame && cachedEditing == editing && !editing) return cached;
+		cached = compute(editing);
+		cachedFrame = HudManager.frame;
+		cachedEditing = editing;
+		return cached;
+	}
+
+	private List<List<Seg>> compute(boolean editing) {
 		Config.Coords s = settings();
 		Minecraft mc = Minecraft.getInstance();
 		LocalPlayer p = mc.player;

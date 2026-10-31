@@ -35,8 +35,7 @@ public final class PlayerPreview {
 			av.capeLean = 10f + 6f * (float) Math.sin(t * 1.7);
 			av.capeLean2 = 2f * (float) Math.sin(t * 1.1);
 			av.capeFlap = 0f;
-			if (gear == Gear.WINGS) av.chestEquipment = Icons.stack(Items.ELYTRA);
-			else if (gear == Gear.CAPE) av.chestEquipment = ItemStack.EMPTY;
+			if (gear == Gear.WINGS || gear == Gear.CAPE) av.chestEquipment = ItemStack.EMPTY;
 		}
 		Vector3f translation = new Vector3f(0f, state.boundingBoxHeight / 2f + 0.0625f, 0f);
 		Quaternionf camera = new Quaternionf().rotateX(tilt * 20f * 0.017453292f);
