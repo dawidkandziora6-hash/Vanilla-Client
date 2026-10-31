@@ -74,6 +74,15 @@ public final class VanillaClient implements ClientModInitializer {
 		HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, CrosshairRenderer::wrap);
 
 		ScreenEvents.AFTER_INIT.register(VanillaClient::afterScreenInit);
+
+		// Developer check (CI only): force-apply every mixin, then quit.
+		if (Boolean.getBoolean("vanillaclient.audit")) {
+			net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+				org.spongepowered.asm.mixin.MixinEnvironment.getCurrentEnvironment().audit();
+				Config.LOG.info("VANILLACLIENT AUDIT OK");
+				Runtime.getRuntime().halt(0);
+			});
+		}
 	}
 
 	private static boolean isPauseScreen(Screen screen) {

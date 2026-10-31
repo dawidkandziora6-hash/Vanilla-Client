@@ -32,3 +32,15 @@ java {
 	sourceCompatibility = JavaVersion.VERSION_25
 	targetCompatibility = JavaVersion.VERSION_25
 }
+
+// CI-only: `./gradlew runClient -Paudit` force-applies all mixins once and exits.
+if (project.hasProperty('audit')) {
+	loom {
+		runs {
+			client {
+				vmArg "-Dvanillaclient.audit=true"
+				vmArg "-Dmixin.debug.verbose=true"
+			}
+		}
+	}
+}
