@@ -56,7 +56,7 @@ public class WorldTest implements FabricClientGameTest {
 			});
 			ctx.waitTicks(30);
 			ctx.takeScreenshot("w01_hud");
-			ctx.getInput().pressKey(ctx.computeOnClient(mc -> mc.options.keyScreenshot));
+			ctx.getInput().pressKey(o -> o.keyScreenshot);
 			ctx.waitTicks(40);
 			ctx.takeScreenshot("w01b_screenshot_popup");
 
