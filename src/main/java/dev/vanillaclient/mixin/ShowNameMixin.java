@@ -16,7 +16,7 @@ public class ShowNameMixin {
 	private void vc$ownName(LivingEntity entity, double distance, CallbackInfoReturnable<Boolean> cir) {
 		Minecraft mc = Minecraft.getInstance();
 		Config.Ranks r = Config.get().ranks;
-		if (entity == mc.player && r.ownNameTag && !mc.options.getCameraType().isFirstPerson() && !mc.options.hideGui
+		if (entity == mc.player && r.ownNameTag && !mc.options.getCameraType().isFirstPerson()
 				&& !entity.isInvisible()) {
 			cir.setReturnValue(true);
 		}

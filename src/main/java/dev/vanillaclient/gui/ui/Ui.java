@@ -687,7 +687,7 @@ public final class Ui {
 		/** Returns true if the key press was used. */
 		public static boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
 			if (listening == null) return false;
-			if (e.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) listening.set(com.mojang.blaze3d.platform.InputConstants.UNKNOWN);
+			if (e.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) listening.set(com.mojang.blaze3d.platform.InputConstants.UNKNOWN);
 			else listening.set(com.mojang.blaze3d.platform.InputConstants.getKey(e));
 			return true;
 		}
