@@ -94,7 +94,7 @@ public final class VanillaClient implements ClientModInitializer {
 					() -> new dev.vanillaclient.gui.WorldMapScreen(null), () -> new dev.vanillaclient.gui.GuideScreen(null),
 					() -> new dev.vanillaclient.gui.CrosshairEditorScreen(null),
 					() -> new dev.vanillaclient.gui.ColorPickerScreen(null, "Test", 0xFFFF0000, c -> {}));
-			int[] step = {0, 0};
+			int[] step = {0, -100};
 			ClientTickEvents.END_CLIENT_TICK.register(client -> {
 				if (++step[1] == 35 && step[0] > 0) {
 					try {
