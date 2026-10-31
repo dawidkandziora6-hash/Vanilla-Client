@@ -40,6 +40,6 @@ public final class Waypoints {
 		LocalPlayer p = Minecraft.getInstance().player;
 		if (p == null) return;
 		Config.Waypoint w = add("Waypoint " + (here().size() + 1), p.getBlockX(), p.getBlockY(), p.getBlockZ());
-		if (w != null) p.displayClientMessage(Component.literal("§a✔ §f" + w.name + " §7saved at " + w.x + " " + w.y + " " + w.z), true);
+		if (w != null) p.sendSystemMessage(Component.literal("§a✔ §f" + w.name + " §7saved at " + w.x + " " + w.y + " " + w.z));
 	}
 }

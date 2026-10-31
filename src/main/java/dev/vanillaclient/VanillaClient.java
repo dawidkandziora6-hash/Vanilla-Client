@@ -83,8 +83,7 @@ public final class VanillaClient implements ClientModInitializer {
 		HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
 				Identifier.fromNamespaceAndPath(MOD_ID, "hud"), HudManager::render);
 		HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, CrosshairRenderer::wrap);
-		HudElementRegistry.attachElementAfter(VanillaHudElements.INFO_BAR_FOREGROUND,
-				Identifier.fromNamespaceAndPath(MOD_ID, "waypoints"), dev.vanillaclient.hud.WaypointBar::render);
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "waypoints"), dev.vanillaclient.hud.WaypointBar::render);
 
 		ScreenEvents.AFTER_INIT.register(VanillaClient::afterScreenInit);
 
