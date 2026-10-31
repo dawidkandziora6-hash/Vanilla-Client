@@ -16,7 +16,7 @@ while read -r line; do
   [[ "$line" == *" -c" ]] && flags="-c"
   name=$(echo "$cls" | tr '/' '.')
   CP="$JAR"
-  if [[ "$cls" == net/fabricmc/* ]]; then CP="$JAR:$(find ~/.gradle -name 'fabric-client-gametest-api-v1*.jar' | head -1)"; fi
+  if [[ "$cls" == net/fabricmc/* ]]; then CP="$JAR:$(find ~/.gradle -name 'fabric-*.jar' -path '*fabric-api*' | tr '\n' ':')"; fi
   javap -p $flags -cp "$CP" "$name" > "probe/$(basename "$cls" | tr '$' '_').txt" 2>&1
 done < tools/probe-classes.txt
 grep -iE "$(paste -sd'|' tools/probe-patterns.txt)" probe/classes.txt > probe/matches.txt || true
