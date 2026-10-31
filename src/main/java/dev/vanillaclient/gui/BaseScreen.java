@@ -195,7 +195,7 @@ public abstract class BaseScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-		if (event.button() == 0) {
+		if (event.button() == Mouse.LEFT) {
 			for (Slider s : sliders) {
 				if (s.hit(event.x(), event.y())) {
 					dragging = s;

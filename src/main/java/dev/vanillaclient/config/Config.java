@@ -52,6 +52,22 @@ public final class Config {
 		public String label = "Day";
 	}
 
+	public static class Coords extends Hud {
+		public boolean compact = false;
+		public boolean showDirection = true;
+		/** Show the matching Nether / Overworld position. */
+		public boolean showOtherDimension = true;
+		public boolean showChunk = false;
+		public boolean coloredLabels = true;
+	}
+
+	public static class WorldMap {
+		public boolean enabled = true;
+		/** Chunks around you that get mapped. */
+		public int radius = 8;
+		public boolean showTasks = true;
+	}
+
 	public static class Todo extends Hud {
 		public String title = "Tasks";
 		public boolean showTitle = true;
@@ -93,12 +109,14 @@ public final class Config {
 		public boolean attackIndicator = true;
 		public boolean outline = false;
 		public int outlineColor = 0xFF000000;
+		public boolean thirdPerson = false;
 	}
 
 	public static class Cosmetics {
 		public String cape = "none";
 		public String wings = "none";
 		public String shield = "none";
+		public String totem = "none";
 	}
 
 	/** Smaller (or bigger) items in your own first-person hands. Purely visual. */
@@ -159,6 +177,8 @@ public final class Config {
 	}
 
 	public Days days = (Days) new Days().at(0.01f, 0.01f);
+	public Coords coords = (Coords) new Coords().at(0.01f, 0.08f);
+	public WorldMap worldMap = new WorldMap();
 	public Todo todo = (Todo) new Todo().at(0.99f, 0.02f);
 	public Armor armor = (Armor) new Armor().at(1.0f, 1.0f);
 	public Zoom zoom = new Zoom();
@@ -272,6 +292,8 @@ public final class Config {
 	private void repair() {
 		if (days == null) days = (Days) new Days().at(0.01f, 0.01f);
 		if (todo == null) todo = (Todo) new Todo().at(0.99f, 0.02f);
+		if (coords == null) coords = (Coords) new Coords().at(0.01f, 0.08f);
+		if (worldMap == null) worldMap = new WorldMap();
 		if (armor == null) armor = (Armor) new Armor().at(1.0f, 1.0f);
 		if (zoom == null) zoom = new Zoom();
 		if (crosshair == null) crosshair = new Crosshair();
@@ -311,6 +333,8 @@ public final class Config {
 		heldItems.totemScale = clamp(heldItems.totemScale, 0.3f, 1.5f);
 		heldItems.totemPopScale = clamp(heldItems.totemPopScale, 0.2f, 1.5f);
 		crosshair.size = Math.max(3, Math.min(31, crosshair.size));
+		crosshair.scale = Math.max(1, Math.min(5, Math.round(crosshair.scale)));
+		if (cosmetics.totem == null) cosmetics.totem = "none";
 		if (crosshair.pixels == null || crosshair.pixels.length() != crosshair.size * crosshair.size) {
 			crosshair.size = 15;
 			crosshair.pixels = CrosshairPresets.vanilla(15);

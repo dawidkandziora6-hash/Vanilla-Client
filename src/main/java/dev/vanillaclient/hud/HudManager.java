@@ -14,6 +14,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 /** Draws all HUD elements of the mod. */
 public final class HudManager {
 	public static final DaysModule DAYS = new DaysModule();
+	public static final CoordsModule COORDS = new CoordsModule();
 	public static final TodoModule TODO = new TodoModule();
 	public static final ArmorModule ARMOR = new ArmorModule();
 	private static final Map<String, ImageModule> IMAGES = new HashMap<>();
@@ -32,6 +33,7 @@ public final class HudManager {
 			out.add(m);
 		}
 		out.add(DAYS);
+		out.add(COORDS);
 		out.add(TODO);
 		out.add(ARMOR);
 		return out;

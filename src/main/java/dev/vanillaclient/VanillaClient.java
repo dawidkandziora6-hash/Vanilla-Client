@@ -51,6 +51,8 @@ public final class VanillaClient implements ClientModInitializer {
 				"key.vanillaclient.hud_editor", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
 		KeyMapping toggleTodo = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.vanillaclient.toggle_todo", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
+		KeyMapping mapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.vanillaclient.map", InputConstants.Type.KEYBOARD, InputConstants.KEY_M, category));
 		Zoom.init(zoom);
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -65,7 +67,11 @@ public final class VanillaClient implements ClientModInitializer {
 				t.enabled = !t.enabled;
 				Config.save();
 			}
+			while (mapKey.consumeClick()) {
+				if (client.gui.screen() == null) client.setScreenAndShow(new dev.vanillaclient.gui.WorldMapScreen(null));
+			}
 			Cosmetics.tick();
+			dev.vanillaclient.map.WorldMap.tick(client);
 		});
 
 		// Our HUD elements sit below the chat.
@@ -96,6 +102,10 @@ public final class VanillaClient implements ClientModInitializer {
 
 	/** New button in the pause menu, left of "Options…" – like the small vanilla icon buttons. */
 	private static void afterScreenInit(Minecraft client, Screen screen, int w, int h) {
+		if (screen instanceof net.minecraft.client.gui.screens.options.OptionsScreen) {
+			addGuideButton(client, screen);
+			return;
+		}
 		if (!Config.get().pauseMenuButton || !isPauseScreen(screen)) return;
 		List<AbstractWidget> widgets = Screens.getWidgets(screen);
 		if (widgets.isEmpty()) return; // pause menu hidden with F3+Esc
@@ -121,5 +131,15 @@ public final class VanillaClient implements ClientModInitializer {
 					.build();
 		}
 		widgets.add(button);
+	}
+
+	/** Small "UHC Guide" button in Minecraft's own Options screen (top left). */
+	private static void addGuideButton(Minecraft client, Screen screen) {
+		Button button = Button.builder(Component.empty(), b -> client.setScreenAndShow(new dev.vanillaclient.gui.GuideScreen(screen)))
+				.bounds(6, 6, 20, 20)
+				.tooltip(Tooltip.create(Component.literal("UHC Guide – villagers, enchants, brewing")))
+				.build();
+		Screens.getWidgets(screen).add(button);
+		ScreenEvents.afterExtract(screen).register((s, g, mx, my, delta) -> g.item(Icons.stack(Items.ENCHANTED_BOOK), 8, 8));
 	}
 }

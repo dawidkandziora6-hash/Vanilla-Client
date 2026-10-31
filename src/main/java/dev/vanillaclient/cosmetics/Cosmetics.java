@@ -23,7 +23,8 @@ import net.minecraft.resources.Identifier;
  */
 public final class Cosmetics {
 	public enum Kind {
-		CAPE("cape", "Capes", "cape.png"), WINGS("wings", "Wings", "wings.png"), SHIELD("shield", "Shields", "shield.png");
+		CAPE("cape", "Capes", "cape.png"), WINGS("wings", "Wings", "wings.png"), SHIELD("shield", "Shields", "shield.png"),
+		TOTEM("totem", "Totems", "totem.png");
 
 		public final String prefix;
 		public final String title;
@@ -78,6 +79,16 @@ public final class Cosmetics {
 			new Design("inferno", "Inferno", "Flames", 0xFFD22A0A),
 			new Design(CUSTOM, "Your Image", "cosmetics/shield.png", 0xFFFFFFFF));
 
+	public static final List<Design> TOTEMS = List.of(
+			new Design(NONE, "Vanilla", "Normal totem", 0xFF555555),
+			new Design("king", "Golden King", "Shiny gold", 0xFFF5C846),
+			new Design("diamond", "Diamond", "Ice-cold blue", 0xFF6EE6E6),
+			new Design("emerald", "Emerald", "Villager's favorite", 0xFF3CC864),
+			new Design("ender", "Ender", "Glowing eyes", 0xFF5A3C8C),
+			new Design("blood", "Blood Moon", "Deep red", 0xFFC81E28),
+			new Design("frost", "Frost", "Snow white", 0xFFDCF0FF),
+			new Design(CUSTOM, "Your Image", "cosmetics/totem.png", 0xFFFFFFFF));
+
 	public record Tex(Identifier id, int width, int height, ClientAsset.Texture asset) {}
 
 	private static final Map<String, Tex> CACHE = new HashMap<>();
@@ -99,6 +110,7 @@ public final class Cosmetics {
 			case CAPE -> CAPES;
 			case WINGS -> WINGS;
 			case SHIELD -> SHIELDS;
+			case TOTEM -> TOTEMS;
 		};
 	}
 
@@ -108,6 +120,7 @@ public final class Cosmetics {
 			case CAPE -> c.cape;
 			case WINGS -> c.wings;
 			case SHIELD -> c.shield;
+			case TOTEM -> c.totem;
 		};
 	}
 
@@ -117,6 +130,7 @@ public final class Cosmetics {
 			case CAPE -> c.cape = id;
 			case WINGS -> c.wings = id;
 			case SHIELD -> c.shield = id;
+			case TOTEM -> c.totem = id;
 		}
 		Config.save();
 	}
@@ -126,6 +140,7 @@ public final class Cosmetics {
 			case CAPE -> previewCape;
 			case WINGS -> previewWings;
 			case SHIELD -> previewShield;
+			case TOTEM -> null;
 		};
 		String id = p != null ? p : selected(k);
 		return id == null ? NONE : id;

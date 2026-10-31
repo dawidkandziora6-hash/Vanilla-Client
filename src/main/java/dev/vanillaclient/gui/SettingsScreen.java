@@ -5,357 +5,416 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dev.vanillaclient.config.Config;
-import dev.vanillaclient.cosmetics.Cosmetics;
 import dev.vanillaclient.crosshair.CrosshairRenderer;
+import dev.vanillaclient.gui.ui.Ui;
 import dev.vanillaclient.images.ImageManager;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-/** Main menu: sections on the left, settings on the right. */
+/** Main menu: categorized sidebar on the left, animated settings on the right. */
 public final class SettingsScreen extends BaseScreen {
-	private enum Tab {
-		MODULES("Modules"), DAYS("Days"), TASKS("Tasks"), ARMOR("Armor"), CROSSHAIR("Crosshair"),
-		ZOOM("Zoom"), IMAGES("Images"), COSMETICS("Cosmetics"), HELD("Held Items");
+	private enum Page {
+		HOME(null, "Home", Items.GRASS_BLOCK),
+		DAYS("HUD", "Days", Items.CLOCK),
+		COORDS("HUD", "Coordinates", Items.COMPASS),
+		ARMOR("HUD", "Armor", Items.DIAMOND_CHESTPLATE),
+		TASKLIST("HUD", "Task List", Items.WRITABLE_BOOK),
+		IMAGES("HUD", "Images", Items.PAINTING),
+		CROSSHAIR("VISUALS", "Crosshair", Items.TARGET),
+		ZOOM("VISUALS", "Zoom", Items.SPYGLASS),
+		HELD("VISUALS", "Held Items", Items.TOTEM_OF_UNDYING),
+		GENERAL("GENERAL", "Settings", Items.COMPARATOR);
 
+		final String group;
 		final String label;
+		final Item icon;
 
-		Tab(String label) {
+		Page(String group, String label, Item icon) {
+			this.group = group;
 			this.label = label;
-		}
-
-		Item icon() {
-			return switch (this) {
-				case MODULES -> Items.COMPARATOR;
-				case DAYS -> Items.CLOCK;
-				case TASKS -> Items.WRITABLE_BOOK;
-				case ARMOR -> Items.DIAMOND_CHESTPLATE;
-				case CROSSHAIR -> Items.TARGET;
-				case ZOOM -> Items.SPYGLASS;
-				case IMAGES -> Items.PAINTING;
-				case COSMETICS -> Items.ELYTRA;
-				case HELD -> Items.TOTEM_OF_UNDYING;
-			};
+			this.icon = icon;
 		}
 	}
 
-	private static Tab tab = Tab.MODULES;
-	private static int imagePage;
+	private static Page page = Page.HOME;
 
-	private static final int SIDEBAR = 100;
-	private static final int CONTENT = 220;
-	private static final int TOP = 40;
-	private static final int ROW = 24;
+	private static final int SIDEBAR = 106, GAP = 10, ENTRY = 17, HEADER = 13;
 
+	private final Logo logo = new Logo();
+	private final Ui.List_ list = new Ui.List_();
+	private long pageAt = System.currentTimeMillis();
+	private float indicatorY = -1;
+	private final float[] entryHover = new float[Page.values().length];
 	private String status = "";
-	private long statusUntil;
-	private long tabChangedAt = System.currentTimeMillis();
+	private long statusAt;
 
 	public SettingsScreen(Screen parent) {
 		super(Component.literal("Vanilla Client"), parent);
 	}
 
+	// ------------------------------------------------------------ layout
+
+	private int contentW() {
+		return Math.max(200, Math.min(270, this.width - SIDEBAR - GAP - 40));
+	}
+
 	private int left() {
-		return this.width / 2 - (SIDEBAR + 10 + CONTENT) / 2;
+		return this.width / 2 - (SIDEBAR + GAP + contentW()) / 2;
 	}
 
 	private int cx() {
-		return left() + SIDEBAR + 10;
+		return left() + SIDEBAR + GAP;
 	}
 
-	private int rowY(int i) {
-		return TOP + i * ROW;
+	private int top() {
+		return 44;
 	}
 
-	private int halfW() {
-		return (CONTENT - 4) / 2;
-	}
-
-	private int rightHalfX() {
-		return cx() + halfW() + 4;
-	}
-
-	private void say(String msg) {
-		status = msg;
-		statusUntil = System.currentTimeMillis() + 4000;
-	}
-
-	@Override
-	protected void init() {
-		super.init();
-		int y = TOP;
-		int tabH = Math.min(22, Math.max(20, (this.height - TOP - 40) / Tab.values().length));
-		for (Tab t : Tab.values()) {
-			Button b = iconAction(left(), y, SIDEBAR, Icons.stack(t.icon()), "    " + t.label, () -> {
-				tab = t;
-				tabChangedAt = System.currentTimeMillis();
-				rebuildWidgets();
-			});
-			b.active = t != tab;
-			y += tabH;
-		}
-		switch (tab) {
-			case MODULES -> modulesTab();
-			case DAYS -> daysTab();
-			case TASKS -> tasksTab();
-			case ARMOR -> armorTab();
-			case CROSSHAIR -> crosshairTab();
-			case ZOOM -> zoomTab();
-			case IMAGES -> imagesTab();
-			case COSMETICS -> cosmeticsTab();
-			case HELD -> heldTab();
-		}
-		action(this.width / 2 - 154, this.height - 28, 150, "✥ Edit HUD …", () -> this.minecraft.setScreenAndShow(new HudEditorScreen(this)));
-		action(this.width / 2 + 4, this.height - 28, 150, "Done", this::onClose);
+	private int bottom() {
+		return this.height - 34;
 	}
 
 	private Config cfg() {
 		return Config.get();
 	}
 
-	// ------------------------------------------------------------ sections
+	// ------------------------------------------------------------ build
 
-	private void modulesTab() {
-		Config c = cfg();
-		int x = cx();
-		int w = halfW();
-		toggle(x, rowY(0), w, "Days", () -> c.days.enabled, v -> c.days.enabled = v);
-		toggle(rightHalfX(), rowY(0), w, "Tasks", () -> c.todo.enabled, v -> c.todo.enabled = v);
-		toggle(x, rowY(1), w, "Armor", () -> c.armor.enabled, v -> c.armor.enabled = v);
-		toggle(rightHalfX(), rowY(1), w, "Crosshair", () -> c.crosshair.enabled, v -> c.crosshair.enabled = v);
-		toggle(x, rowY(2), w, "Zoom", () -> c.zoom.enabled, v -> c.zoom.enabled = v);
-		toggle(rightHalfX(), rowY(2), w, "Held Items", () -> c.heldItems.enabled, v -> c.heldItems.enabled = v);
-		long shown = c.images.stream().filter(i -> i.enabled).count();
-		iconAction(x, rowY(3), w, Icons.stack(Items.PAINTING), "   Images " + shown + "/" + c.images.size(), () -> switchTo(Tab.IMAGES));
-		iconAction(rightHalfX(), rowY(3), w, Icons.stack(Items.ELYTRA), "   Wardrobe", () -> this.minecraft.setScreenAndShow(new CosmeticsScreen(this)));
-		toggle(x, rowY(4), CONTENT, "Button in pause menu", () -> c.pauseMenuButton, v -> c.pauseMenuButton = v);
-		iconAction(x, rowY(5), CONTENT, Icons.stack(Items.WRITABLE_BOOK), "Open task planner …", () -> this.minecraft.setScreenAndShow(new TasksScreen(this)));
+	@Override
+	protected void init() {
+		super.init();
+		list.x = cx();
+		list.w = contentW();
+		list.top = top();
+		list.bottom = bottom();
+		buildPage();
+		action(this.width / 2 - 154, this.height - 26, 150, "✥ Edit HUD", () -> this.minecraft.setScreenAndShow(new HudEditorScreen(this)));
+		action(this.width / 2 + 4, this.height - 26, 150, "✔ Done", this::onClose);
 	}
 
-	private void switchTo(Tab t) {
-		tab = t;
-		tabChangedAt = System.currentTimeMillis();
-		rebuildWidgets();
+	private void go(Page p) {
+		if (page == p) return;
+		page = p;
+		pageAt = System.currentTimeMillis();
+		buildPage();
 	}
 
-	private void hudCommon(Config.Hud s, int firstRow, boolean colors) {
-		int x = cx();
-		if (colors) {
-			color(x, rowY(firstRow), halfW(), "Text color", () -> s.color, v -> s.color = v);
-			toggle(rightHalfX(), rowY(firstRow), halfW(), "Shadow", () -> s.shadow, v -> s.shadow = v);
-			firstRow++;
+	private ItemStack i(Item item) {
+		return Icons.stack(item);
+	}
+
+	private void open(Screen s) {
+		this.minecraft.setScreenAndShow(s);
+	}
+
+	private void colorPicker(Ui.ColorPick c) {
+		open(new ColorPickerScreen(this, c.label(), c.value(), c::apply));
+	}
+
+	private void buildPage() {
+		list.reset();
+		switch (page) {
+			case HOME -> home();
+			case DAYS -> days();
+			case COORDS -> coords();
+			case ARMOR -> armor();
+			case TASKLIST -> taskList();
+			case IMAGES -> images();
+			case CROSSHAIR -> crosshair();
+			case ZOOM -> zoom();
+			case HELD -> held();
+			case GENERAL -> general();
 		}
-		toggle(x, rowY(firstRow), halfW(), "Background", () -> s.background, v -> s.background = v);
-		color(rightHalfX(), rowY(firstRow), halfW(), "Backgr. color", () -> s.backgroundColor, v -> s.backgroundColor = v);
-		slider(x, rowY(firstRow + 1), CONTENT, 0.5, 3.0, 0.05, () -> s.scale, v -> s.scale = (float) v,
-				v -> "Size: " + Math.round(v * 100) + "%");
 	}
 
-	private void daysTab() {
+	private void home() {
+		Config c = cfg();
+		list.add(new Ui.Header("MODULES"));
+		list.add(new Ui.ModuleCard("Days", "Day & clock", i(Items.CLOCK), () -> c.days.enabled, v -> c.days.enabled = v, () -> go(Page.DAYS)));
+		list.add(new Ui.ModuleCard("Coordinates", "XYZ & facing", i(Items.COMPASS), () -> c.coords.enabled, v -> c.coords.enabled = v, () -> go(Page.COORDS)));
+		list.add(new Ui.ModuleCard("Armor", "Next to hotbar", i(Items.DIAMOND_CHESTPLATE), () -> c.armor.enabled, v -> c.armor.enabled = v, () -> go(Page.ARMOR)));
+		list.add(new Ui.ModuleCard("Task List", "On screen", i(Items.WRITABLE_BOOK), () -> c.todo.enabled, v -> c.todo.enabled = v, () -> go(Page.TASKLIST)));
+		list.add(new Ui.ModuleCard("Crosshair", "Your own pixels", i(Items.TARGET), () -> c.crosshair.enabled, v -> c.crosshair.enabled = v, () -> go(Page.CROSSHAIR)));
+		list.add(new Ui.ModuleCard("Zoom", "Hold C", i(Items.SPYGLASS), () -> c.zoom.enabled, v -> c.zoom.enabled = v, () -> go(Page.ZOOM)));
+		list.add(new Ui.ModuleCard("Held Items", "Smaller shield/totem", i(Items.TOTEM_OF_UNDYING), () -> c.heldItems.enabled, v -> c.heldItems.enabled = v, () -> go(Page.HELD)));
+		list.add(new Ui.ModuleCard("World Map", "Records explored land", i(Items.FILLED_MAP), () -> c.worldMap.enabled, v -> c.worldMap.enabled = v, () -> go(Page.GENERAL)));
+		list.add(new Ui.Header("TOOLS"));
+		list.add(new Ui.Tile("Task Planner", "Farms, builds, trips", i(Items.WRITABLE_BOOK), () -> open(new TasksScreen(this))));
+		list.add(new Ui.Tile("World Map", "Where you've been", i(Items.FILLED_MAP), () -> open(new WorldMapScreen(this))));
+		list.add(new Ui.Tile("UHC Guide", "Villagers, enchants", i(Items.ENCHANTED_BOOK), () -> open(new GuideScreen(this))));
+		list.add(new Ui.Tile("Wardrobe", "Capes, wings, totems", i(Items.ELYTRA), () -> open(new CosmeticsScreen(this))));
+	}
+
+	private void style(Config.Hud s, boolean text) {
+		list.add(new Ui.Header("STYLE"));
+		if (text) {
+			list.add(new Ui.ColorPick("Text color", () -> s.color, v -> s.color = v, this::colorPicker));
+			list.add(new Ui.Toggle("Text shadow", null, () -> s.shadow, v -> s.shadow = v));
+		}
+		list.add(new Ui.Toggle("Background", null, () -> s.background, v -> s.background = v));
+		list.add(new Ui.ColorPick("Background color", () -> s.backgroundColor, v -> s.backgroundColor = v, this::colorPicker));
+		list.add(new Ui.Slider("Size", 0.5, 3.0, 0.05, () -> s.scale, v -> s.scale = (float) v, v -> Math.round(v * 100) + "%"));
+		list.add(new Ui.Button("Move it in the HUD editor", i(Items.ITEM_FRAME), () -> open(new HudEditorScreen(this))));
+	}
+
+	private void days() {
 		Config.Days s = cfg().days;
-		int x = cx();
-		toggle(x, rowY(0), halfW(), "Show", () -> s.enabled, v -> s.enabled = v);
-		toggle(rightHalfX(), rowY(0), halfW(), "Clock", () -> s.showTime, v -> s.showTime = v);
-		toggle(x, rowY(1), halfW(), "Start at 1", () -> s.countFromOne, v -> s.countFromOne = v);
-		toggle(rightHalfX(), rowY(1), halfW(), "☀ Icon", () -> s.showIcon, v -> s.showIcon = v);
-		EditBox label = new EditBox(this.font, x + 1, rowY(2) + 1, CONTENT - 2, 18, Component.literal("Label"));
-		label.setMaxLength(16);
-		label.setValue(s.label);
-		label.setHint(Component.literal("Label (e.g. Day)"));
-		label.setResponder(t -> {
-			s.label = t;
-			changed();
-		});
-		addRenderableWidget(label);
-		hudCommon(s, 3, true);
+		list.add(new Ui.Header("DAYS"));
+		list.add(new Ui.Toggle("Show on screen", i(Items.CLOCK), () -> s.enabled, v -> s.enabled = v));
+		list.add(new Ui.Toggle("Show clock time", null, () -> s.showTime, v -> s.showTime = v));
+		list.add(new Ui.Toggle("Start counting at day 1", null, () -> s.countFromOne, v -> s.countFromOne = v));
+		list.add(new Ui.Toggle("Sun / moon icon", null, () -> s.showIcon, v -> s.showIcon = v));
+		list.add(new Ui.Cycle<>("Label", List.of("Day", "Survival Day", "Hardcore Day", "UHC Day", "Day #"), () -> s.label, v -> s.label = v, v -> v));
+		style(s, true);
 	}
 
-	private void tasksTab() {
+	private void coords() {
+		Config.Coords s = cfg().coords;
+		list.add(new Ui.Header("COORDINATES"));
+		list.add(new Ui.Toggle("Show on screen", i(Items.COMPASS), () -> s.enabled, v -> s.enabled = v));
+		list.add(new Ui.Toggle("One line (compact)", null, () -> s.compact, v -> s.compact = v));
+		list.add(new Ui.Toggle("Facing direction", null, () -> s.showDirection, v -> s.showDirection = v));
+		list.add(new Ui.Toggle("Nether ⇄ Overworld position", null, () -> s.showOtherDimension, v -> s.showOtherDimension = v));
+		list.add(new Ui.Toggle("Chunk position", null, () -> s.showChunk, v -> s.showChunk = v));
+		list.add(new Ui.Toggle("Gray labels", null, () -> s.coloredLabels, v -> s.coloredLabels = v));
+		style(s, true);
+	}
+
+	private void armor() {
+		Config.Armor s = cfg().armor;
+		list.add(new Ui.Header("ARMOR"));
+		list.add(new Ui.Toggle("Show on screen", i(Items.DIAMOND_CHESTPLATE), () -> s.enabled, v -> s.enabled = v));
+		list.add(new Ui.Toggle("Dock next to the hotbar", null, () -> s.attachToHotbar, v -> s.attachToHotbar = v));
+		list.add(new Ui.Cycle<>("Side", List.of(true, false), () -> s.rightSide, v -> s.rightSide = v, v -> v ? "Right" : "Left"));
+		list.add(new Ui.Cycle<>("Durability", List.of(0, 1, 2), () -> s.durabilityText, v -> s.durabilityText = v,
+				v -> switch (v) {
+					case 1 -> "Percent";
+					case 2 -> "Number";
+					default -> "Bar only";
+				}));
+		list.add(new Ui.Toggle("Also show held item", null, () -> s.showHeldItem, v -> s.showHeldItem = v));
+		list.add(new Ui.Toggle("Hide without armor", null, () -> s.hideWhenEmpty, v -> s.hideWhenEmpty = v));
+		list.add(new Ui.Slider("Size (undocked)", 0.5, 3.0, 0.05, () -> s.scale, v -> s.scale = (float) v, v -> Math.round(v * 100) + "%"));
+		list.add(new Ui.Info("Undock it to move it freely in the HUD editor."));
+	}
+
+	private void taskList() {
 		Config.Todo s = cfg().todo;
-		int x = cx();
-		iconAction(x, rowY(0), CONTENT, Icons.stack(Items.WRITABLE_BOOK), "Open task planner …", () -> this.minecraft.setScreenAndShow(new TasksScreen(this)));
-		toggle(x, rowY(1), halfW(), "Show", () -> s.enabled, v -> s.enabled = v);
-		toggle(rightHalfX(), rowY(1), halfW(), "Hide done", () -> s.hideDone, v -> s.hideDone = v);
-		toggle(x, rowY(2), halfW(), "Subtasks", () -> s.showSubtasks, v -> s.showSubtasks = v);
-		toggle(rightHalfX(), rowY(2), halfW(), "Coords", () -> s.showCoords, v -> s.showCoords = v);
+		list.add(new Ui.Button("Open the Task Planner", i(Items.WRITABLE_BOOK), () -> open(new TasksScreen(this)), 22));
+		list.add(new Ui.Header("ON-SCREEN LIST"));
+		list.add(new Ui.Toggle("Show on screen", i(Items.WRITABLE_BOOK), () -> s.enabled, v -> s.enabled = v));
+		list.add(new Ui.Toggle("Hide finished tasks", null, () -> s.hideDone, v -> s.hideDone = v));
+		list.add(new Ui.Toggle("Show subtasks", null, () -> s.showSubtasks, v -> s.showSubtasks = v));
+		list.add(new Ui.Toggle("Show coordinates", null, () -> s.showCoords, v -> s.showCoords = v));
+		list.add(new Ui.Toggle("Show title", null, () -> s.showTitle, v -> s.showTitle = v));
 		List<String> filters = new ArrayList<>();
 		filters.add("");
 		for (Config.Category c : cfg().taskCategories) filters.add(c.name);
-		cycle(x, rowY(3), halfW(), "Show", filters, () -> filters.contains(s.categoryFilter) ? s.categoryFilter : "",
-				v -> s.categoryFilter = v, v -> v.isEmpty() ? "All" : v);
-		slider(rightHalfX(), rowY(3), halfW(), 1, 20, 1, () -> s.maxLines, v -> s.maxLines = (int) v, v -> "Lines: " + (int) v);
-		hudCommon(s, 4, true);
+		list.add(new Ui.Cycle<>("Category", filters, () -> filters.contains(s.categoryFilter) ? s.categoryFilter : "",
+				v -> s.categoryFilter = v, v -> v.isEmpty() ? "All" : v));
+		list.add(new Ui.Slider("Max lines", 1, 20, 1, () -> s.maxLines, v -> s.maxLines = (int) v, v -> String.valueOf((int) v)));
+		style(s, true);
 	}
 
-	private void armorTab() {
-		Config.Armor s = cfg().armor;
-		int x = cx();
-		toggle(x, rowY(0), halfW(), "Show", () -> s.enabled, v -> s.enabled = v);
-		toggle(rightHalfX(), rowY(0), halfW(), "At hotbar", () -> s.attachToHotbar, v -> s.attachToHotbar = v);
-		cycle(x, rowY(1), halfW(), "Side", List.of(true, false), () -> s.rightSide, v -> s.rightSide = v, v -> v ? "Right" : "Left");
-		cycle(rightHalfX(), rowY(1), halfW(), "Durab.", List.of(0, 1, 2), () -> s.durabilityText, v -> s.durabilityText = v,
-				v -> switch (v) {
-					case 1 -> "%";
-					case 2 -> "Number";
-					default -> "Bar";
-				});
-		toggle(x, rowY(2), halfW(), "Held item", () -> s.showHeldItem, v -> s.showHeldItem = v);
-		toggle(rightHalfX(), rowY(2), halfW(), "Hide if empty", () -> s.hideWhenEmpty, v -> s.hideWhenEmpty = v);
-		slider(x, rowY(3), CONTENT, 0.5, 3.0, 0.05, () -> s.scale, v -> s.scale = (float) v,
-				v -> "Size (when free): " + Math.round(v * 100) + "%");
-	}
-
-	private void crosshairTab() {
-		Config.Crosshair s = cfg().crosshair;
-		int x = cx();
-		toggle(x, rowY(0), halfW(), "Custom", () -> s.enabled, v -> s.enabled = v);
-		action(rightHalfX(), rowY(0), halfW(), "✎ Paint …", () -> this.minecraft.setScreenAndShow(new CrosshairEditorScreen(this)));
-		color(x, rowY(1), halfW(), "Color", () -> s.color, v -> s.color = v);
-		toggle(rightHalfX(), rowY(1), halfW(), "Attack bar", () -> s.attackIndicator, v -> s.attackIndicator = v);
-		toggle(x, rowY(2), halfW(), "Outline", () -> s.outline, v -> s.outline = v);
-		color(rightHalfX(), rowY(2), halfW(), "Outline col.", () -> s.outlineColor, v -> s.outlineColor = v);
-		slider(x, rowY(3), CONTENT, 0.5, 4.0, 0.25, () -> s.scale, v -> s.scale = (float) v, v -> "Size: " + v + "×");
-	}
-
-	private void zoomTab() {
-		Config.Zoom z = cfg().zoom;
-		int x = cx();
-		toggle(x, rowY(0), halfW(), "Zoom", () -> z.enabled, v -> z.enabled = v);
-		toggle(rightHalfX(), rowY(0), halfW(), "Smooth", () -> z.smoothTransition, v -> z.smoothTransition = v);
-		slider(x, rowY(1), CONTENT, 1.5, 30, 0.5, () -> z.level, v -> z.level = (float) v, v -> "Zoom level: " + v + "×");
-		toggle(x, rowY(2), halfW(), "Scroll wheel", () -> z.scrollToAdjust, v -> z.scrollToAdjust = v);
-		toggle(rightHalfX(), rowY(2), halfW(), "Cinematic", () -> z.cinematicCamera, v -> z.cinematicCamera = v);
-		toggle(x, rowY(3), halfW(), "Hide hand", () -> z.hideHand, v -> z.hideHand = v);
-		toggle(rightHalfX(), rowY(3), halfW(), "Reset scroll", () -> z.resetLevelOnRelease, v -> z.resetLevelOnRelease = v);
-	}
-
-	private void imagesTab() {
+	private void images() {
 		Config c = cfg();
-		int x = cx();
-		action(x, rowY(0), halfW(), "Open folder", () -> Platform.open(Config.imagesDir()));
-		action(rightHalfX(), rowY(0), halfW(), "↻ Reload", () -> {
+		list.add(new Ui.Header("YOUR PICTURES"));
+		list.add(new Ui.Button("Open folder", i(Items.CHEST), () -> Platform.open(Config.imagesDir())));
+		list.add(new Ui.Button("Reload pictures", i(Items.CLOCK), () -> {
 			ImageManager.reload();
-			say(c.images.size() + " image(s) found");
-			rebuildWidgets();
-		});
-		int perPage = 4;
-		int pages = Math.max(1, (c.images.size() + perPage - 1) / perPage);
-		imagePage = Math.max(0, Math.min(imagePage, pages - 1));
-		for (int i = 0; i < perPage; i++) {
-			int idx = imagePage * perPage + i;
-			if (idx >= c.images.size()) break;
-			Config.Image img = c.images.get(idx);
-			String name = this.font.plainSubstrByWidth(img.file, 70);
-			if (!name.equals(img.file)) name += "…";
-			toggle(x, rowY(1 + i), 110, name, () -> img.enabled, v -> img.enabled = v);
-			slider(x + 114, rowY(1 + i), CONTENT - 114, 0.05, 1.0, 0.05, () -> ((img.tint >>> 24) & 0xFF) / 255.0,
-					v -> img.tint = (img.tint & 0x00FFFFFF) | ((int) Math.round(v * 255) << 24),
-					v -> "Opacity " + Math.round(v * 100) + "%");
+			say("✔ " + c.images.size() + " picture(s) found");
+			buildPage();
+		}));
+		if (c.images.isEmpty()) {
+			list.add(new Ui.Info("No pictures yet.", "Drag PNG / JPG files into this window!"));
 		}
-		if (pages > 1) {
-			action(x, rowY(5), 30, "◀", () -> {
-				imagePage--;
-				rebuildWidgets();
-			}).active = imagePage > 0;
-			action(x + CONTENT - 30, rowY(5), 30, "▶", () -> {
-				imagePage++;
-				rebuildWidgets();
-			}).active = imagePage < pages - 1;
+		for (Config.Image img : c.images) {
+			String name = this.font.plainSubstrByWidth(img.file, contentW() - 60);
+			list.add(new Ui.Toggle(name, i(Items.PAINTING), () -> img.enabled, v -> img.enabled = v));
+			list.add(new Ui.Slider("  Opacity", 0.05, 1.0, 0.05, () -> ((img.tint >>> 24) & 0xFF) / 255.0,
+					v -> img.tint = (img.tint & 0x00FFFFFF) | ((int) Math.round(v * 255) << 24), v -> Math.round(v * 100) + "%"));
 		}
+		list.add(new Ui.Info("Place & resize them in the HUD editor."));
 	}
 
-	private void cosmeticsTab() {
-		int x = cx();
-		iconAction(x, rowY(0), CONTENT, Icons.stack(Items.ELYTRA), "✦ Open Wardrobe …", () -> this.minecraft.setScreenAndShow(new CosmeticsScreen(this)));
-		action(x, rowY(1), halfW(), "Open folder", () -> Platform.open(Config.cosmeticsDir()));
-		action(rightHalfX(), rowY(1), halfW(), "↻ Reload own", () -> {
-			Cosmetics.reloadCustom();
-			say("Your images were reloaded");
-		});
+	private void crosshair() {
+		Config.Crosshair s = cfg().crosshair;
+		list.add(new Ui.Header("CROSSHAIR"));
+		list.add(new Ui.Toggle("Use my crosshair", i(Items.TARGET), () -> s.enabled, v -> s.enabled = v));
+		list.add(new Ui.Button("Paint it …", i(Items.FEATHER), () -> open(new CrosshairEditorScreen(this))));
+		list.add(new Ui.Custom(64, (g, x, y, w, h, mx, my, a) -> {
+			int px = x + w / 2, py = y + h / 2;
+			g.fill(x, y, x + w, y + h / 2, Theme.alpha(0xFF7BA4E0, a));
+			g.fill(x, y + h / 2, x + w, y + h, Theme.alpha(0xFF5E8C3A, a));
+			g.outline(x, y, w, h, Theme.alpha(0x60FFFFFF, a));
+			CrosshairRenderer.draw(g, s, px, py, Math.max(1, Math.round(s.scale)));
+		}));
+		list.add(new Ui.ColorPick("Color", () -> s.color, v -> s.color = v, this::colorPicker));
+		list.add(new Ui.Slider("Size", 1, 5, 1, () -> s.scale, v -> s.scale = (float) v, v -> (int) v + "×"));
+		list.add(new Ui.Toggle("Outline", null, () -> s.outline, v -> s.outline = v));
+		list.add(new Ui.ColorPick("Outline color", () -> s.outlineColor, v -> s.outlineColor = v, this::colorPicker));
+		list.add(new Ui.Toggle("Attack cooldown bar", null, () -> s.attackIndicator, v -> s.attackIndicator = v));
+		list.add(new Ui.Toggle("Also in third person", null, () -> s.thirdPerson, v -> s.thirdPerson = v));
+		list.add(new Ui.Info("Tip: the color's opacity makes it see-through."));
 	}
 
-	private void heldTab() {
+	private void zoom() {
+		Config.Zoom z = cfg().zoom;
+		list.add(new Ui.Header("ZOOM"));
+		list.add(new Ui.Toggle("Zoom enabled", i(Items.SPYGLASS), () -> z.enabled, v -> z.enabled = v));
+		list.add(new Ui.Slider("Zoom level", 1.5, 30, 0.5, () -> z.level, v -> z.level = (float) v, v -> v + "×"));
+		list.add(new Ui.Toggle("Smooth transition", null, () -> z.smoothTransition, v -> z.smoothTransition = v));
+		list.add(new Ui.Toggle("Scroll to adjust", null, () -> z.scrollToAdjust, v -> z.scrollToAdjust = v));
+		list.add(new Ui.Toggle("Reset scroll when released", null, () -> z.resetLevelOnRelease, v -> z.resetLevelOnRelease = v));
+		list.add(new Ui.Toggle("Cinematic camera", null, () -> z.cinematicCamera, v -> z.cinematicCamera = v));
+		list.add(new Ui.Toggle("Hide hand while zooming", null, () -> z.hideHand, v -> z.hideHand = v));
+		list.add(new Ui.Info("Key: C (change it in Options › Controls)."));
+	}
+
+	private void held() {
 		Config.HeldItems h = cfg().heldItems;
-		int x = cx();
-		toggle(x, rowY(0), CONTENT, "Change held item size", () -> h.enabled, v -> h.enabled = v);
-		slider(x, rowY(1), CONTENT, 0.3, 1.5, 0.05, () -> h.shieldScale, v -> h.shieldScale = (float) v,
-				v -> "⛨ Shield: " + Math.round(v * 100) + "%");
-		slider(x, rowY(2), CONTENT, 0.3, 1.5, 0.05, () -> h.totemScale, v -> h.totemScale = (float) v,
-				v -> "❤ Totem in hand: " + Math.round(v * 100) + "%");
-		slider(x, rowY(3), CONTENT, 0.2, 1.5, 0.05, () -> h.totemPopScale, v -> h.totemPopScale = (float) v,
-				v -> "✦ Totem pop animation: " + Math.round(v * 100) + "%");
+		list.add(new Ui.Header("HELD ITEMS"));
+		list.add(new Ui.Toggle("Change sizes", i(Items.TOTEM_OF_UNDYING), () -> h.enabled, v -> h.enabled = v));
+		list.add(new Ui.Slider("Shield", 0.3, 1.5, 0.05, () -> h.shieldScale, v -> h.shieldScale = (float) v, v -> Math.round(v * 100) + "%"));
+		list.add(new Ui.Slider("Totem in hand", 0.3, 1.5, 0.05, () -> h.totemScale, v -> h.totemScale = (float) v, v -> Math.round(v * 100) + "%"));
+		list.add(new Ui.Slider("Totem pop", 0.2, 1.5, 0.05, () -> h.totemPopScale, v -> h.totemPopScale = (float) v, v -> Math.round(v * 100) + "%"));
+		list.add(new Ui.Custom(56, (g, x, y, w, hh, mx, my, a) -> {
+			float bob = (float) Math.sin(Theme.time() * 2.0) * 2f;
+			float s1 = 2f * (h.enabled ? h.shieldScale : 1f);
+			float s2 = 2f * (h.enabled ? h.totemScale : 1f);
+			Icons.scaled(g, i(Items.SHIELD), x + w / 4f - 8 * s1, y + 26 - 8 * s1 + bob, s1);
+			Icons.scaled(g, i(Items.TOTEM_OF_UNDYING), x + w * 3 / 4f - 8 * s2, y + 26 - 8 * s2 - bob, s2);
+		}));
+		list.add(new Ui.Info("Only changes how they look in your hands."));
 	}
 
-	// ------------------------------------------------------------ drawing
+	private void general() {
+		Config c = cfg();
+		list.add(new Ui.Header("MENU"));
+		list.add(new Ui.Toggle("Button in the pause menu", i(Items.WRITABLE_BOOK), () -> c.pauseMenuButton, v -> c.pauseMenuButton = v));
+		list.add(new Ui.Header("WORLD MAP"));
+		list.add(new Ui.Toggle("Record explored land", i(Items.FILLED_MAP), () -> c.worldMap.enabled, v -> c.worldMap.enabled = v));
+		list.add(new Ui.Slider("Map radius", 2, 16, 1, () -> c.worldMap.radius, v -> c.worldMap.radius = (int) v, v -> (int) v + " chunks"));
+		list.add(new Ui.Toggle("Show tasks on the map", null, () -> c.worldMap.showTasks, v -> c.worldMap.showTasks = v));
+		list.add(new Ui.Button("Open the world map", i(Items.FILLED_MAP), () -> open(new WorldMapScreen(this))));
+		list.add(new Ui.Header("FILES"));
+		list.add(new Ui.Button("Open settings folder", i(Items.CHEST), () -> Platform.open(Config.dir())));
+		list.add(new Ui.Header("KEYS"));
+		list.add(new Ui.Info("Right Shift  ·  open this menu", "M  ·  world map", "C  ·  zoom (hold)", "Change keys in Options › Controls"));
+	}
+
+	private void say(String s) {
+		status = s;
+		statusAt = System.currentTimeMillis();
+	}
+
+	// ------------------------------------------------------------ sidebar
+
+	private record Entry(Page page, String header, int y) {}
+
+	private List<Entry> sidebar() {
+		List<Entry> out = new ArrayList<>();
+		int y = top();
+		String group = null;
+		for (Page p : Page.values()) {
+			if (p.group != null && !p.group.equals(group)) {
+				group = p.group;
+				out.add(new Entry(null, group, y));
+				y += HEADER;
+			}
+			out.add(new Entry(p, null, y));
+			y += ENTRY;
+		}
+		return out;
+	}
+
+	private void drawSidebar(GuiGraphicsExtractor g, int mx, int my) {
+		int x = left();
+		Theme.panel(g, x - 4, top() - 4, SIDEBAR + 8, bottom() - top() + 6);
+		float targetY = 0;
+		for (Entry e : sidebar()) if (e.page() == page) targetY = e.y();
+		if (indicatorY < 0) indicatorY = targetY;
+		indicatorY += (targetY - indicatorY) * 0.25f;
+		g.fill(x - 2, Math.round(indicatorY), x + SIDEBAR + 2, Math.round(indicatorY) + ENTRY - 1, 0x40FFFFFF);
+		g.fill(x - 2, Math.round(indicatorY), x, Math.round(indicatorY) + ENTRY - 1, Theme.ACCENT);
+		long now = System.currentTimeMillis();
+		int idx = 0;
+		for (Entry e : sidebar()) {
+			float t = Theme.easeOut((now - openedAt - idx * 25L) / 250f);
+			idx++;
+			int off = Math.round((1f - t) * -12f);
+			if (e.header() != null) {
+				g.text(this.font, e.header(), x + 2 + off, e.y() + 3, Theme.alpha(0xFF808080, t), false);
+				continue;
+			}
+			Page p = e.page();
+			boolean hover = mx >= x && mx < x + SIDEBAR && my >= e.y() && my < e.y() + ENTRY;
+			entryHover[p.ordinal()] += ((hover ? 1f : 0f) - entryHover[p.ordinal()]) * 0.3f;
+			int slide = Math.round(entryHover[p.ordinal()] * 3f) + off;
+			Icons.small(g, Icons.stack(p.icon), x + 4 + slide, e.y() + 4);
+			int col = p == page ? Theme.ACCENT : Theme.lerpColor(0xFFC8C8C8, 0xFFFFFFFF, entryHover[p.ordinal()]);
+			g.text(this.font, p.label, x + 16 + slide, e.y() + 4, Theme.alpha(col, t), false);
+		}
+	}
+
+	// ------------------------------------------------------------ drawing & input
+
+	@Override
+	public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+		super.extractBackground(g, mouseX, mouseY, delta);
+	}
 
 	@Override
 	protected void extractForeground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
 		float in = intro();
-		int titleY = 10 + Math.round((1 - in) * -6);
-		g.centeredText(this.font, "§l✦ Vanilla Client ✦", this.width / 2, titleY, Theme.alpha(Theme.ACCENT, in));
-		g.centeredText(this.font, "§7" + tab.label + " · everything stays vanilla", this.width / 2, titleY + 12, 0xFFFFFFFF);
-		// animated underline below the active tab
-		float t = Theme.easeOut((System.currentTimeMillis() - tabChangedAt) / 200f);
-		int x = cx();
-		g.fill(x, TOP - 4, x + Math.round(CONTENT * t), TOP - 3, Theme.alpha(Theme.ACCENT, 0.8f));
+		logo.draw(g, this.font, this.width / 2, 6, 1f, in);
+		// breadcrumb with typewriter animation
+		String crumb = (page.group == null ? "" : page.group.charAt(0) + page.group.substring(1).toLowerCase() + " › ") + page.label;
+		int chars = (int) Math.min(crumb.length(), (System.currentTimeMillis() - pageAt) / 18);
+		String shown = crumb.substring(0, chars) + (chars < crumb.length() ? "_" : "");
+		g.centeredText(this.font, "§7" + shown, this.width / 2, 29, 0xFFFFFFFF);
 
-		switch (tab) {
-			case MODULES -> hint(g, x, rowY(6), "Tip: \"Edit HUD\" lets you drag everything,", "scroll to resize. Right Shift opens this menu.");
-			case ARMOR -> hint(g, x, rowY(4), "\"At hotbar\" off = free to move", "in the HUD editor.");
-			case CROSSHAIR -> crosshairPreview(g, x);
-			case ZOOM -> hint(g, x, rowY(4), "Key: §eC§r§7 (change in Controls).", "While zooming: scroll = closer / further.");
-			case IMAGES -> hint(g, x, rowY(cfg().images.size() > 4 ? 6 : 1 + Math.max(1, cfg().images.size())),
-					"Drag PNG/JPG files into this window.", "Place them in the HUD editor.");
-			case COSMETICS -> cosmeticsSummary(g, x);
-			case HELD -> heldPreview(g, x);
-			default -> {}
-		}
-		if (System.currentTimeMillis() < statusUntil) {
-			g.centeredText(this.font, status, this.width / 2, this.height - 42, Theme.ACCENT);
+		drawSidebar(g, mouseX, mouseY);
+		Theme.panel(g, cx() - 4, top() - 4, contentW() + 10, bottom() - top() + 6);
+		list.render(g, this.font, mouseX, mouseY);
+
+		if (System.currentTimeMillis() - statusAt < 4000) {
+			float a = 1f - Math.max(0f, (System.currentTimeMillis() - statusAt - 3500) / 500f);
+			g.centeredText(this.font, status, this.width / 2, this.height - 40, Theme.alpha(Theme.ACCENT, a));
 		}
 	}
 
-	private void crosshairPreview(GuiGraphicsExtractor g, int x) {
-		int px = x + CONTENT / 2;
-		int py = rowY(4) + 34;
-		g.fill(px - 40, py - 28, px + 40, py + 28, 0xFF7BA4E0);
-		g.fill(px - 40, py + 6, px + 40, py + 28, 0xFF5E8C3A);
-		g.outline(px - 40, py - 28, 80, 56, 0x60FFFFFF);
-		CrosshairRenderer.draw(g, cfg().crosshair, px, py, cfg().crosshair.scale);
-	}
-
-	private void cosmeticsSummary(GuiGraphicsExtractor g, int x) {
-		int y = rowY(2) + 6;
-		for (Cosmetics.Kind k : Cosmetics.Kind.values()) {
-			String id = Cosmetics.selected(k);
-			Cosmetics.Design d = Cosmetics.designs(k).stream().filter(e -> e.id().equals(id)).findFirst().orElse(Cosmetics.designs(k).get(0));
-			g.fill(x, y + 1, x + 6, y + 7, d.color());
-			g.text(this.font, "§7" + k.title + ": §f" + d.name(), x + 10, y, 0xFFFFFFFF, false);
-			y += 12;
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (super.mouseClicked(event, doubleClick)) return true;
+		double mx = event.x(), my = event.y();
+		if (mx >= left() && mx < left() + SIDEBAR) {
+			for (Entry e : sidebar()) {
+				if (e.page() != null && my >= e.y() && my < e.y() + ENTRY) {
+					Ui.click();
+					go(e.page());
+					return true;
+				}
+			}
 		}
-		hint(g, x, rowY(4) + 8, "Only you can see them.", "Cape hides with elytra, wings need an elytra.");
+		return list.mouseDown(mx, my, event.button());
 	}
 
-	private void heldPreview(GuiGraphicsExtractor g, int x) {
-		Config.HeldItems h = cfg().heldItems;
-		int y = rowY(4) + 8;
-		float bob = (float) Math.sin(Theme.time() * 2.0) * 2f;
-		float s1 = 2f * (h.enabled ? h.shieldScale : 1f);
-		float s2 = 2f * (h.enabled ? h.totemScale : 1f);
-		int cx1 = x + CONTENT / 4;
-		int cx2 = x + CONTENT * 3 / 4;
-		Icons.scaled(g, Icons.stack(Items.SHIELD), cx1 - 8 * s1, y + 20 - 8 * s1 + bob, s1);
-		Icons.scaled(g, Icons.stack(Items.TOTEM_OF_UNDYING), cx2 - 8 * s2, y + 20 - 8 * s2 - bob, s2);
-		g.centeredText(this.font, "§7Only in your own hands", x + CONTENT / 2, y + 48, 0xFFFFFFFF);
+	@Override
+	public boolean mouseReleased(MouseButtonEvent event) {
+		list.mouseUp();
+		return super.mouseReleased(event);
 	}
 
-	private void hint(GuiGraphicsExtractor g, int x, int y, String a, String b) {
-		g.text(this.font, "§7" + a, x, y + 4, 0xFFFFFFFF, false);
-		if (!b.isEmpty()) g.text(this.font, "§7" + b, x, y + 15, 0xFFFFFFFF, false);
+	@Override
+	public boolean mouseScrolled(double mx, double my, double h, double v) {
+		if (list.scroll(mx, my, v)) return true;
+		return super.mouseScrolled(mx, my, h, v);
 	}
 
 	/** Import pictures by drag & drop from the file explorer. */
@@ -363,9 +422,9 @@ public final class SettingsScreen extends BaseScreen {
 	public void onFilesDrop(List<Path> paths) {
 		int n = ImageManager.importFiles(paths);
 		if (n > 0) {
-			tab = Tab.IMAGES;
-			say("✔ " + n + " image(s) added – place them in the HUD editor");
-			rebuildWidgets();
+			go(Page.IMAGES);
+			buildPage();
+			say("✔ " + n + " picture(s) added – place them in the HUD editor");
 		} else {
 			say("§cOnly PNG or JPG files");
 		}

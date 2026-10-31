@@ -1,79 +1,149 @@
 package dev.vanillaclient.gui;
 
-import dev.vanillaclient.config.CrosshairPresets;
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 import dev.vanillaclient.config.Config;
+import dev.vanillaclient.config.CrosshairPresets;
 import dev.vanillaclient.crosshair.CrosshairRenderer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 /**
- * Pixel paint tool for the crosshair. Left click paints, right click erases,
- * mirror paints into all four quarters at once.
+ * Pixel paint tool for the crosshair: pencil, eraser, line and fill,
+ * four mirror modes, undo (Ctrl+Z) and a live preview at real size.
  */
 public final class CrosshairEditorScreen extends BaseScreen {
-	private static boolean mirror = true;
+	private enum Tool {
+		PENCIL("✎ Pencil"), ERASER("⌫ Eraser"), LINE("╱ Line"), FILL("▣ Fill");
+
+		final String label;
+
+		Tool(String label) {
+			this.label = label;
+		}
+	}
+
+	private enum Mirror {
+		OFF("Off"), H("↔"), V("↕"), BOTH("✥ Both");
+
+		final String label;
+
+		Mirror(String label) {
+			this.label = label;
+		}
+	}
+
+	private static Tool tool = Tool.PENCIL;
+	private static Mirror mirror = Mirror.BOTH;
 	private static int presetIndex;
 
 	private final Config.Crosshair c = Config.get().crosshair;
 	private char[] pixels;
-	private int paintValue = -1; // -1 = not painting, else '0' or '1'
+	private final Deque<String> undo = new ArrayDeque<>();
+	private boolean painting;
+	private char paintValue;
+	private int lineStartX = -1, lineStartY = -1;
+	private int lastMouseX, lastMouseY;
+	private long changedAt;
 
 	public CrosshairEditorScreen(Screen parent) {
 		super(Component.literal("Paint Crosshair"), parent);
 		pixels = c.pixels.toCharArray();
 	}
 
+	// ------------------------------------------------------------ layout
+
 	private int cell() {
-		int avail = Math.min(Math.min(this.height - 90, this.width / 2 - 20), 200);
-		return Math.max(4, Math.min(14, avail / c.size));
+		int avail = Math.min(Math.min(this.height - 80, this.width / 2 - 30), 220);
+		return Math.max(3, avail / c.size);
+	}
+
+	private int gridSize() {
+		return cell() * c.size;
 	}
 
 	private int gridX() {
-		return this.width / 2 - 8 - c.size * cell();
+		return this.width / 2 - 14 - gridSize();
 	}
 
 	private int gridY() {
-		return 34;
+		return 34 + Math.max(0, (this.height - 80 - gridSize()) / 2);
 	}
+
+	private int panelX() {
+		return this.width / 2 + 6;
+	}
+
+	// ------------------------------------------------------------ widgets
 
 	@Override
 	protected void init() {
 		super.init();
-		int x = this.width / 2 + 8;
+		int x = panelX();
 		int y = 34;
-		int w = 110;
-		action(x, y, 53, "Size −", () -> resize(c.size - 2)).active = c.size > 3;
-		action(x + 57, y, 53, "Size +", () -> resize(c.size + 2)).active = c.size < 31;
-		action(x, y + 24, w, "Preset: " + CrosshairPresets.NAMES.get(presetIndex), () -> {
+		int w = 150;
+		int half = (w - 4) / 2;
+		// tools
+		int tw = (w - 6) / 4;
+		for (Tool t : Tool.values()) {
+			Button b = action(x + t.ordinal() * (tw + 2), y, tw, t.label.substring(0, 1), () -> {
+				tool = t;
+				lineStartX = -1;
+				rebuildWidgets();
+			});
+			b.active = t != tool;
+			b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(t.label)));
+		}
+		y += 24;
+		cycle(x, y, w, "Mirror", java.util.List.of(Mirror.values()), () -> mirror, v -> mirror = v, v -> v.label);
+		y += 24;
+		action(x, y, half, "Grid −", () -> resize(c.size - 2)).active = c.size > 3;
+		action(x + half + 4, y, half, "Grid +", () -> resize(c.size + 2)).active = c.size < 31;
+		y += 24;
+		action(x, y, w, "Preset: " + CrosshairPresets.NAMES.get(presetIndex), () -> {
 			presetIndex = (presetIndex + 1) % CrosshairPresets.NAMES.size();
+			push();
 			pixels = CrosshairPresets.build(CrosshairPresets.NAMES.get(presetIndex), c.size).toCharArray();
 			store();
 			rebuildWidgets();
 		});
-		toggle(x, y + 48, w, "Mirror", () -> mirror, v -> mirror = v);
-		action(x, y + 72, 53, "Clear", () -> {
-			pixels = CrosshairPresets.empty(c.size).toCharArray();
-			store();
-		});
-		action(x + 57, y + 72, 53, "Invert", () -> {
+		y += 24;
+		action(x, y, half, "↶ Undo", this::undo).active = !undo.isEmpty();
+		action(x + half + 4, y, half, "Invert", () -> {
+			push();
 			for (int i = 0; i < pixels.length; i++) pixels[i] = pixels[i] == '1' ? '0' : '1';
 			store();
 		});
-		color(x, y + 96, w, "Color", () -> c.color, v -> c.color = v);
-		toggle(x, y + 120, w, "Use it", () -> c.enabled, v -> c.enabled = v);
-		action(this.width / 2 - 100, this.height - 28, 200, "✔ Done", this::onClose);
+		y += 24;
+		action(x, y, half, "Clear", () -> {
+			push();
+			pixels = CrosshairPresets.empty(c.size).toCharArray();
+			store();
+		});
+		color(x + half + 4, y, half, "Color", () -> c.color, v -> c.color = v);
+		y += 24;
+		slider(x, y, w, 1, 5, 1, () -> c.scale, v -> c.scale = (float) v, v -> "In-game size: " + (int) v + "×");
+		y += 24;
+		toggle(x, y, half, "Outline", () -> c.outline, v -> c.outline = v);
+		color(x + half + 4, y, half, "Edge", () -> c.outlineColor, v -> c.outlineColor = v);
+		y += 24;
+		toggle(x, y, w, "Use custom crosshair", () -> c.enabled, v -> c.enabled = v);
+		action(this.width / 2 - 100, this.height - 26, 200, "✔ Done", this::onClose);
 	}
 
 	private void resize(int newSize) {
 		newSize = Math.max(3, Math.min(31, newSize));
+		push();
 		char[] next = CrosshairPresets.empty(newSize).toCharArray();
 		int off = (newSize - c.size) / 2;
 		for (int y = 0; y < c.size; y++) {
 			for (int x = 0; x < c.size; x++) {
-				int nx = x + off;
-				int ny = y + off;
+				int nx = x + off, ny = y + off;
 				if (nx >= 0 && ny >= 0 && nx < newSize && ny < newSize) next[ny * newSize + nx] = pixels[y * c.size + x];
 			}
 		}
@@ -83,8 +153,26 @@ public final class CrosshairEditorScreen extends BaseScreen {
 		rebuildWidgets();
 	}
 
+	// ------------------------------------------------------------ editing
+
+	private void push() {
+		undo.push(c.size + ":" + new String(pixels));
+		while (undo.size() > 50) undo.removeLast();
+	}
+
+	private void undo() {
+		if (undo.isEmpty()) return;
+		String s = undo.pop();
+		int i = s.indexOf(':');
+		c.size = Integer.parseInt(s.substring(0, i));
+		pixels = s.substring(i + 1).toCharArray();
+		store();
+		rebuildWidgets();
+	}
+
 	private void store() {
 		c.pixels = new String(pixels);
+		changedAt = System.currentTimeMillis();
 		Config.save();
 	}
 
@@ -96,101 +184,177 @@ public final class CrosshairEditorScreen extends BaseScreen {
 		return new int[] {gx, gy};
 	}
 
-	private void paint(int x, int y) {
+	private void set(int x, int y, char v) {
 		int n = c.size;
-		char v = (char) paintValue;
-		set(x, y, v);
-		if (mirror) {
-			set(n - 1 - x, y, v);
-			set(x, n - 1 - y, v);
-			set(n - 1 - x, n - 1 - y, v);
+		if (x < 0 || y < 0 || x >= n || y >= n) return;
+		pixels[y * n + x] = v;
+		boolean h = mirror == Mirror.H || mirror == Mirror.BOTH;
+		boolean vv = mirror == Mirror.V || mirror == Mirror.BOTH;
+		if (h) pixels[y * n + (n - 1 - x)] = v;
+		if (vv) pixels[(n - 1 - y) * n + x] = v;
+		if (h && vv) pixels[(n - 1 - y) * n + (n - 1 - x)] = v;
+	}
+
+	private void line(int x0, int y0, int x1, int y1, char v) {
+		int dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
+		int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+		int err = dx + dy;
+		while (true) {
+			set(x0, y0, v);
+			if (x0 == x1 && y0 == y1) break;
+			int e2 = 2 * err;
+			if (e2 >= dy) {
+				err += dy;
+				x0 += sx;
+			}
+			if (e2 <= dx) {
+				err += dx;
+				y0 += sy;
+			}
 		}
 	}
 
-	private void set(int x, int y, char v) {
-		pixels[y * c.size + x] = v;
+	private void fill(int x, int y, char v) {
+		int n = c.size;
+		char target = pixels[y * n + x];
+		if (target == v) return;
+		Deque<int[]> q = new ArrayDeque<>();
+		q.add(new int[] {x, y});
+		while (!q.isEmpty()) {
+			int[] p = q.poll();
+			if (p[0] < 0 || p[1] < 0 || p[0] >= n || p[1] >= n || pixels[p[1] * n + p[0]] != target) continue;
+			set(p[0], p[1], v);
+			q.add(new int[] {p[0] + 1, p[1]});
+			q.add(new int[] {p[0] - 1, p[1]});
+			q.add(new int[] {p[0], p[1] + 1});
+			q.add(new int[] {p[0], p[1] - 1});
+		}
 	}
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		int[] at = cellAt(event.x(), event.y());
-		if (at != null && (event.button() == 0 || event.button() == 1)) {
-			paintValue = event.button() == 0 ? '1' : '0';
-			paint(at[0], at[1]);
+		if (at != null && (event.button() == Mouse.LEFT || event.button() == Mouse.RIGHT)) {
+			boolean erase = event.button() == Mouse.RIGHT || tool == Tool.ERASER;
+			paintValue = erase ? '0' : '1';
+			push();
+			switch (tool) {
+				case FILL -> {
+					fill(at[0], at[1], paintValue);
+					store();
+				}
+				case LINE -> {
+					lineStartX = at[0];
+					lineStartY = at[1];
+					painting = true;
+				}
+				default -> {
+					set(at[0], at[1], paintValue);
+					painting = true;
+					lastMouseX = at[0];
+					lastMouseY = at[1];
+				}
+			}
 			return true;
 		}
 		return super.mouseClicked(event, doubleClick);
 	}
 
 	@Override
-	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
-		if (paintValue >= 0) {
-			int[] at = cellAt(event.x(), event.y());
-			if (at != null) paint(at[0], at[1]);
-			return true;
-		}
-		return super.mouseDragged(event, dx, dy);
-	}
-
-	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
-		if (paintValue >= 0) {
-			paintValue = -1;
+		if (painting) {
+			if (tool == Tool.LINE && lineStartX >= 0) {
+				int[] at = cellAt(event.x(), event.y());
+				if (at != null) line(lineStartX, lineStartY, at[0], at[1], paintValue);
+				lineStartX = -1;
+			}
+			painting = false;
 			store();
+			rebuildWidgets();
 			return true;
 		}
 		return super.mouseReleased(event);
 	}
 
 	@Override
+	public boolean keyPressed(KeyEvent event) {
+		if (event.key() == com.mojang.blaze3d.platform.InputConstants.KEY_Z && event.hasControlDown()) {
+			undo();
+			return true;
+		}
+		return super.keyPressed(event);
+	}
+
+	// ------------------------------------------------------------ drawing
+
+	@Override
 	protected void extractForeground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
-		g.centeredText(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
-		int s = cell();
-		int gx = gridX();
-		int gy = gridY();
-		int n = c.size;
-		int size = n * s;
-		g.fill(gx - 1, gy - 1, gx + size + 1, gy + size + 1, 0xFF000000);
+		float in = intro();
+		g.centeredText(this.font, "§l✎ Paint Crosshair", this.width / 2, 8, Theme.alpha(Theme.ACCENT, in));
+		g.centeredText(this.font, "§7Left: paint · Right: erase · Ctrl+Z: undo", this.width / 2, 19, 0xFFFFFFFF);
+
+		// keep painting while the mouse is held (pencil/eraser), interpolated
+		int[] at = cellAt(mouseX, mouseY);
+		if (painting && tool != Tool.LINE && at != null && (at[0] != lastMouseX || at[1] != lastMouseY)) {
+			line(lastMouseX, lastMouseY, at[0], at[1], paintValue);
+			lastMouseX = at[0];
+			lastMouseY = at[1];
+		}
+
+		int s = cell(), gx = gridX(), gy = gridY(), n = c.size, size = gridSize();
+		g.fill(gx - 2, gy - 2, gx + size + 2, gy + size + 2, 0xFF000000);
+		g.outline(gx - 3, gy - 3, size + 6, size + 6, 0x60FFFFFF);
+		int col = c.color | 0xFF000000;
 		for (int y = 0; y < n; y++) {
 			for (int x = 0; x < n; x++) {
 				boolean on = pixels[y * n + x] == '1';
-				int checker = ((x + y) & 1) == 0 ? 0xFF2A2A2A : 0xFF333333;
-				int px = gx + x * s;
-				int py = gy + y * s;
-				g.fill(px, py, px + s, py + s, on ? (c.color | 0xFF000000) : checker);
+				int checker = ((x + y) & 1) == 0 ? 0xFF262626 : 0xFF303030;
+				g.fill(gx + x * s, gy + y * s, gx + (x + 1) * s, gy + (y + 1) * s, on ? col : checker);
 			}
 		}
-		// Center lines for orientation
+		// center cross
 		int mid = gx + (n / 2) * s;
-		g.fill(mid, gy, mid + 1, gy + size, 0x40FFFFFF);
-		g.fill(mid + s - 1, gy, mid + s, gy + size, 0x40FFFFFF);
+		g.fill(mid, gy, mid + 1, gy + size, 0x30FFFFFF);
+		g.fill(mid + s - 1, gy, mid + s, gy + size, 0x30FFFFFF);
 		int midY = gy + (n / 2) * s;
-		g.fill(gx, midY, gx + size, midY + 1, 0x40FFFFFF);
-		g.fill(gx, midY + s - 1, gx + size, midY + s, 0x40FFFFFF);
-		int[] at = cellAt(mouseX, mouseY);
+		g.fill(gx, midY, gx + size, midY + 1, 0x30FFFFFF);
+		g.fill(gx, midY + s - 1, gx + size, midY + s, 0x30FFFFFF);
+		// hover ghost incl. mirrored cells
 		if (at != null) {
-			int px = gx + at[0] * s;
-			int py = gy + at[1] * s;
-			g.fill(px, py, px + s, py + 1, 0xFFFFFFFF);
-			g.fill(px, py + s - 1, px + s, py + s, 0xFFFFFFFF);
-			g.fill(px, py, px + 1, py + s, 0xFFFFFFFF);
-			g.fill(px + s - 1, py, px + s, py + s, 0xFFFFFFFF);
+			int hx = at[0], hy = at[1];
+			int ghost = Theme.alpha(0xFFFFFFFF, 0.5f + 0.3f * Theme.pulse(6f));
+			ghost(g, hx, hy, ghost);
+			if (mirror == Mirror.H || mirror == Mirror.BOTH) ghost(g, n - 1 - hx, hy, 0x60FFFFFF);
+			if (mirror == Mirror.V || mirror == Mirror.BOTH) ghost(g, hx, n - 1 - hy, 0x60FFFFFF);
+			if (mirror == Mirror.BOTH) ghost(g, n - 1 - hx, n - 1 - hy, 0x60FFFFFF);
+			if (tool == Tool.LINE && painting && lineStartX >= 0) {
+				g.text(this.font, "§7line " + (Math.abs(hx - lineStartX) + 1) + "×" + (Math.abs(hy - lineStartY) + 1), gx, gy + size + 6, 0xFFFFFFFF, false);
+			}
 		}
+		g.text(this.font, "§7" + n + "×" + n + " · " + tool.label, gx, gy - 12, 0xFFFFFFFF, false);
 
-		// Real-size preview over sky and grass
-		int vx = this.width / 2 + 8;
-		int vy = 34 + 148;
-		int vw = 110;
-		int vh = Math.max(30, Math.min(60, this.height - 40 - vy));
-		g.fill(vx, vy, vx + vw, vy + vh, 0xFF7BA4E0);
-		g.fill(vx, vy + vh / 2, vx + vw, vy + vh, 0xFF5E8C3A);
-		Config.Crosshair preview = new Config.Crosshair();
-		preview.size = n;
-		preview.pixels = new String(pixels);
-		preview.color = c.color;
-		preview.outline = c.outline;
-		preview.outlineColor = c.outlineColor;
-		CrosshairRenderer.draw(g, preview, vx + vw / 2, vy + vh / 2, c.scale);
-		g.text(this.font, "§7Left: paint · Right: erase", gx, gy + size + 6, 0xFFFFFFFF, false);
+		// real-size preview over sky & grass
+		int vx = panelX();
+		int vy = 34 + 24 * 9 + 2;
+		int vw = 150;
+		int vh = Math.max(36, Math.min(70, this.height - 34 - vy));
+		if (vy + 30 < this.height - 30) {
+			g.fill(vx, vy, vx + vw, vy + vh, 0xFF7BA4E0);
+			g.fill(vx, vy + vh / 2, vx + vw, vy + vh, 0xFF5E8C3A);
+			g.fill(vx, vy + vh / 2, vx + vw, vy + vh / 2 + 2, 0xFF4A7A2C);
+			g.outline(vx, vy, vw, vh, 0x60FFFFFF);
+			String p = new String(pixels);
+			int scale = Math.max(1, Math.round(c.scale));
+			float flash = 1f - Math.min(1f, (System.currentTimeMillis() - changedAt) / 300f);
+			CrosshairRenderer.draw(g, n, p, c.color, c.outline, c.outlineColor, vx + vw / 2, vy + vh / 2, scale);
+			if (flash > 0) g.outline(vx, vy, vw, vh, Theme.alpha(Theme.ACCENT, flash));
+			g.text(this.font, "§7preview " + scale + "×", vx + 3, vy + 3, 0xFFFFFFFF, false);
+		}
+	}
+
+	private void ghost(GuiGraphicsExtractor g, int x, int y, int color) {
+		int s = cell();
+		int px = gridX() + x * s, py = gridY() + y * s;
+		g.outline(px, py, s, s, color);
 	}
 }

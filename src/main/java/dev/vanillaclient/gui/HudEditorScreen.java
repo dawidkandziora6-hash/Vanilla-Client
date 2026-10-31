@@ -150,14 +150,14 @@ public final class HudEditorScreen extends BaseScreen {
 			return super.mouseClicked(event, doubleClick);
 		}
 		selected = m;
-		if (event.button() == 1) {
+		if (event.button() == Mouse.RIGHT) {
 			if (m.canScale()) {
 				m.settings().scale = m instanceof ImageModule ? -1f : 1f;
 				Config.save();
 			}
 			return true;
 		}
-		if (event.button() == 0 && !m.fixedPosition()) {
+		if (event.button() == Mouse.LEFT && !m.fixedPosition()) {
 			dragged = m;
 			grabX = (int) event.x() - m.bx;
 			grabY = (int) event.y() - m.by;
