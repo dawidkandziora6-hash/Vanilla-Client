@@ -7,20 +7,25 @@ changes no game mechanics – it only shows things. Cosmetics are only visible t
 
 | Module | What it does |
 |---|---|
-| **Days** | "☀ Day 37 · 14:20" on screen (sun turns into a moon at night) |
-| **Coordinates** | XYZ, facing direction, matching Nether/Overworld position, chunk |
+| **Days** | "Day 37" on screen, counted from day 1, your own label |
+| **Coordinates** | XYZ, facing, Nether/Overworld position, chunk – every label editable |
+| **Info lines** | FPS, ping, biome, real time, speed, light level, session time, rank, potion effects, item counter (totems, gapples, pearls …) |
+| **Ranks** | Earned with play time (Newcomer → Immortal); symbol in front of your own name tag in F5 |
+| **Chests** | "Sort" and "Store" buttons next to chests and shulker boxes (+ optional sort key) |
+| **Advancements** | Every advancement in one checklist (also hidden ones), what's still missing, short hints |
+| **Statistics** | Overview cards + most mined / killed / killed by / crafted |
 | **World Map** | Press **M** – biome-colored map of everything loaded/explored, saved per world; tasks show as markers |
-| **Waypoints** | Press **B** (or right-click the map) – shown on the world map and as dots in the XP bar or a compass bar at the top |
+| **Waypoints** | Press **B** (or right-click the map) – icons, any color, drag to move; dots on the XP bar or a compass bar |
 | **UHC Guide** | Exact villager trades (what you pay → what you get) for every level, best enchantments, brewing table with ingredients – also in Minecraft's Options |
 | **Tasks** | Task planner with categories + icons, priorities, coordinates ("Here" button), subtasks / material lists, progress bars |
 | **Armor** | Armor + durability in the real hotbar look, right next to the hotbar (or free to move) |
-| **Crosshair** | Paint your own pixel crosshair (pencil, eraser, line, fill, mirror, undo, presets), color, crisp 1–5× size, outline |
+| **Crosshair** | Paint your own pixel crosshair, crisp 1–5× size, CS/Valorant-style outline (1–3 px, opacity), vanilla inverting blend, color on targets |
 | **Zoom** | Hold **C**. Zoom level, smooth transition, scroll to adjust, cinematic camera, hide hand |
 | **Images** | PNG/JPG from your PC as overlays (e.g. build plans). Drag them into the menu |
-| **Wardrobe** | 14 capes, 10 wings, 10 shields, 8 totems – custom shapes (V-cut, rags, scallops, round/kite shields), animated designs (✦) and a 3D statue totem; plus your own PNG (just drop it in) |
-| **Held Items** | Make the shield / totem in your hand and the totem pop animation smaller |
+| **Wardrobe** | 24 capes, 17 wings, 18 shields in HD – custom shapes, glow, 12-frame animations (✦); plus your own PNG |
+| **Held Items** | Size of items in your hand per category (swords, food, blocks …) or per single item; totem pop size |
 
-**Menu:** In the pause menu, left of "Options…", there's a new button with a book icon (or press **Right Shift**).
+**Menu:** In the pause menu next to the small icon row: "Vanilla Client" (left) and "Wardrobe" (right) – or press **Right Shift**. All keys can be changed in Vanilla Client › Controls.
 **Edit HUD:** drag everything with the mouse, scroll to resize, right-click to reset, snaps to edges and center.
 
 ## Install
@@ -37,4 +42,4 @@ published as the `latest` release.
 
 - `config.json` – all settings and tasks
 - `images/` – your overlay pictures
-- `cosmetics/` – your own cosmetics: `cape.png` / `wings.png` (Minecraft cape layout, 64×32 or 128×64), `shield.png` (shield layout, 64×64 or 128×128), `totem.png` (16×16 or 32×32). Transparent pixels cut the shape; a tall image (frames stacked vertically) is animated at 10 fps
+- `cosmetics/` – your own cosmetics: `cape.png` / `wings.png` (Minecraft cape layout, 64×32 or 128×64), `shield.png` (shield layout, 64×64 or 128×128), Transparent pixels cut the shape; a tall image (frames stacked vertically) is animated at 10 fps
