@@ -32,6 +32,17 @@ public class WorldTest implements FabricClientGameTest {
 			c.crosshair.outlineThickness = 2;
 			c.keystrokes.enabled = true;
 			dev.vanillaclient.features.ClientRanks.put("Player0", "owner");
+			// coins + everything except the void shield (so the shop shows a price)
+			dev.vanillaclient.features.Shop.wallet().coins = 50000;
+			for (var col : dev.vanillaclient.cosmetics.Cosmetics.COLLECTIONS)
+				for (var k : dev.vanillaclient.cosmetics.Cosmetics.Kind.values())
+					if (!(col.id().equals("void") && k == dev.vanillaclient.cosmetics.Cosmetics.Kind.SHIELD)) dev.vanillaclient.features.Shop.buy(k, col.id());
+			c.cosmetics.shield = "inferno";
+			c.ranks.nameColor = 0xFFFF5555;
+			c.ranks.nameColor2 = 0xFFFFD966;
+			c.ranks.animatedName = true;
+			c.ranks.boldName = true;
+			c.ranks.badge = "⚡";
 		});
 		try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
 			ctx.waitTicks(120);
@@ -142,6 +153,9 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.setScreen(() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, dev.vanillaclient.cosmetics.Cosmetics.Kind.WINGS));
 			ctx.waitTicks(30);
 			ctx.takeScreenshot("w13b_wardrobe_wings");
+			ctx.setScreen(() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, dev.vanillaclient.cosmetics.Cosmetics.Kind.SHIELD));
+			ctx.waitTicks(30);
+			ctx.takeScreenshot("w13c_wardrobe_shields");
 			ctx.setScreen(() -> new dev.vanillaclient.gui.TasksScreen(null));
 			ctx.waitTicks(10);
 			ctx.takeScreenshot("w14_tasks");

@@ -230,8 +230,8 @@ public final class SettingsScreen extends BaseScreen {
 		} catch (RuntimeException ignored) {
 			// no skin yet
 		}
-		net.minecraft.network.chat.MutableComponent line = cr != null ? dev.vanillaclient.features.ClientRanks.prefix(cr)
-				.append(Component.literal(user.getName()).withColor(cr.nameColor())) : Component.literal(user.getName()).withColor(0xFFFFFF);
+		net.minecraft.network.chat.MutableComponent line = cr != null ? dev.vanillaclient.features.NameStyle.mine().build(user.getName(), cr, (float) Theme.time())
+				: Component.literal(user.getName()).withColor(0xFFFFFF);
 		g.text(this.font, line, x + 33, y + 7, Theme.alpha(0xFFFFFFFF, a), true);
 		String sub = cr == null ? "§7No rank yet · ranks are not available yet"
 				: "§7" + dev.vanillaclient.features.Ranks.formatHours(dev.vanillaclient.features.Ranks.hours()) + " played with Vanilla Client";
@@ -582,6 +582,7 @@ public final class SettingsScreen extends BaseScreen {
 			card.span = 2;
 			list.add(card);
 		}
+		perks(r, owner);
 		list.add(new Ui.Header("NAME TAG"));
 		list.add(new Ui.Toggle("Show your name in F5 (third person)", i(Items.NAME_TAG), () -> r.ownNameTag, v -> r.ownNameTag = v));
 		list.add(new Ui.Toggle("Rank in front of your name", null, () -> r.symbolInName, v -> r.symbolInName = v));
@@ -592,6 +593,65 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Toggle("Load the rank list from GitHub", null, () -> r.onlineRanks, v -> r.onlineRanks = v));
 		list.add(new Ui.Info("Ranks can't be bought or earned yet.",
 				"Cosmetics are shared on LAN worlds and servers with Vanilla Client."));
+	}
+
+	private void perks(Config.Ranks r, boolean owner) {
+		dev.vanillaclient.features.ClientRanks.Rank mine = dev.vanillaclient.features.ClientRanks.mine();
+		list.add(new Ui.Header("RANK PERKS  §8· " + (mine == null ? "get a rank to unlock" : "unlocked by " + mine.tag())));
+		// live preview of your name tag
+		Ui.Custom preview = new Ui.Custom(30, (g, x, y, w, h, mx, my, a) -> {
+			g.fillGradient(x, y, x + w, y + 28, Theme.alpha(0xC0181820, a), Theme.alpha(0x80000000, a));
+			g.outline(x, y, w, 28, Theme.alpha(0x30FFFFFF, a));
+			dev.vanillaclient.features.ClientRanks.Rank rk = dev.vanillaclient.features.ClientRanks.mine();
+			net.minecraft.network.chat.Component name = rk == null ? Component.literal(this.minecraft.getUser().getName())
+					: dev.vanillaclient.features.NameStyle.mine().build(this.minecraft.getUser().getName(), rk, (float) Theme.time());
+			int nw = this.font.width(name) + 8;
+			int nx = x + w / 2 - nw / 2;
+			g.fill(nx, y + 9, nx + nw, y + 21, Theme.alpha(0x60000000, a));
+			g.text(this.font, name, nx + 4, y + 11, Theme.alpha(0xFFFFFFFF, a), false);
+			g.text(this.font, "§8preview", x + 5, y + 3, Theme.alpha(0xFFFFFFFF, a), false);
+		});
+		preview.span = 2;
+		list.add(preview);
+		for (dev.vanillaclient.features.ClientRanks.Perk p : dev.vanillaclient.features.ClientRanks.Perk.values()) {
+			if (!dev.vanillaclient.features.ClientRanks.has(mine, p)) {
+				dev.vanillaclient.features.ClientRanks.Rank need = dev.vanillaclient.features.ClientRanks.ALL.get(p.tier);
+				list.add(new Ui.Custom(20, (g, x, y, w, h, mx, my, a) -> {
+					g.fill(x, y, x + w, y + 18, Theme.alpha(0x40000000, a));
+					g.text(this.font, "§8✖ §7" + p.label, x + 6, y + 5, Theme.alpha(0xFFFFFFFF, a), false);
+					net.minecraft.network.chat.MutableComponent t = Component.literal("§8needs ").append(dev.vanillaclient.features.ClientRanks.tag(need));
+					g.text(this.font, t, x + w - 6 - this.font.width(t), y + 5, Theme.alpha(0xFFFFFFFF, a), false);
+				}));
+				continue;
+			}
+			switch (p) {
+				case COLOR -> list.add(new Ui.ColorPick("Name color", () -> r.nameColor == 0 ? 0xFF000000 | mine.nameColor() : r.nameColor,
+						v -> r.nameColor = v, this::colorPicker));
+				case BOLD -> {
+					list.add(new Ui.Toggle("Bold name", null, () -> r.boldName, v -> r.boldName = v));
+					list.add(new Ui.Toggle("Italic name", null, () -> r.italicName, v -> r.italicName = v));
+				}
+				case GRADIENT -> list.add(new Ui.ColorPick("Gradient to (second color)", () -> r.nameColor2 == 0 ? 0xFF000000 | mine.to() : r.nameColor2,
+						v -> r.nameColor2 = v, this::colorPicker));
+				case ANIMATED -> list.add(new Ui.Toggle("Animated gradient", null, () -> r.animatedName, v -> r.animatedName = v));
+				case FONT -> list.add(new Ui.Cycle<>("Name font", java.util.List.of(dev.vanillaclient.features.ClientRanks.FONTS), () -> r.nameFont,
+						v -> r.nameFont = v, dev.vanillaclient.features.ClientRanks::fontName));
+				case BADGE -> {
+					java.util.List<String> b = new java.util.ArrayList<>();
+					b.add("");
+					b.addAll(java.util.List.of(dev.vanillaclient.features.ClientRanks.BADGES));
+					list.add(new Ui.Cycle<>("Badge in front of your name", b, () -> r.badge, v -> r.badge = v, v -> v.isEmpty() ? "Rank symbol" : v));
+				}
+			}
+		}
+		if (mine != null) list.add(new Ui.Toggle("Show rank title (e.g. OWNER) in the name", null, () -> r.showRankTitle, v -> r.showRankTitle = v));
+		if (mine != null) list.add(new Ui.Button("Reset name look", i(Items.BARRIER), () -> {
+			r.nameColor = r.nameColor2 = 0;
+			r.animatedName = r.boldName = r.italicName = false;
+			r.nameFont = "default";
+			r.badge = "";
+			Config.save();
+		}));
 	}
 
 	private void controls() {

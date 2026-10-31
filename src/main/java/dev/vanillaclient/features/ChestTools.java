@@ -9,14 +9,11 @@ import java.util.Set;
 import dev.vanillaclient.config.Config;
 import dev.vanillaclient.mixin.ContainerScreenAccessor;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.gui.screens.inventory.ShulkerBoxScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.BlockItem;
@@ -38,13 +35,15 @@ public final class ChestTools {
 	public static void addButtons(Screen screen, java.util.List<net.minecraft.client.gui.components.AbstractWidget> widgets) {
 		if (!Config.get().chestButtons || !supported(screen)) return;
 		ContainerScreenAccessor acc = (ContainerScreenAccessor) screen;
-		int x = acc.vc$left() + acc.vc$width() + 3;
-		int y = acc.vc$top() + 4;
 		AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
-		widgets.add(Button.builder(Component.literal("⇅ Sort"), b -> sort(cs.getMenu()))
-				.bounds(x, y, 54, 16).tooltip(Tooltip.create(Component.literal("Sort this chest: merge stacks, group items"))).build());
-		widgets.add(Button.builder(Component.literal("⇩ Store"), b -> store(cs.getMenu()))
-				.bounds(x, y + 18, 54, 16).tooltip(Tooltip.create(Component.literal("Move items from your inventory that this chest already has"))).build());
+		// two small icons in the top right corner of the chest, on the title row
+		int size = 11;
+		int x = acc.vc$left() + acc.vc$width() - 7 - size * 2 - 2;
+		int y = acc.vc$top() + 4;
+		widgets.add(new dev.vanillaclient.gui.IconButton(x, y, size, new ItemStack(net.minecraft.world.item.Items.COMPARATOR),
+				"Sort this chest (merge stacks, group items)", () -> sort(cs.getMenu())));
+		widgets.add(new dev.vanillaclient.gui.IconButton(x + size + 2, y, size, new ItemStack(net.minecraft.world.item.Items.HOPPER),
+				"Store: move items this chest already has from your inventory", () -> store(cs.getMenu())));
 	}
 
 	/** Called by the sort key while a chest is open. */
