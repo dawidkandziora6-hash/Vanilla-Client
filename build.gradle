@@ -44,3 +44,16 @@ if (project.hasProperty('audit')) {
 		}
 	}
 }
+
+// CI-only: `./gradlew runClientGameTest -Pworldtest` loads a real world and takes screenshots.
+if (project.hasProperty('worldtest')) {
+	fabricApi {
+		configureTests {
+			createSourceSet = true
+			modId = "vanillaclient-worldtest"
+			enableGameTests = false
+			enableClientGameTests = true
+			eula = true
+		}
+	}
+}

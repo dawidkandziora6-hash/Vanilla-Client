@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "vanillaclient-worldtest",
+  "version": "1.0.0",
+  "name": "Vanilla Client world test",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-client-gametest": ["dev.vanillaclient.test.WorldTest"]
+  },
+  "depends": {"vanillaclient": "*"}
+}
