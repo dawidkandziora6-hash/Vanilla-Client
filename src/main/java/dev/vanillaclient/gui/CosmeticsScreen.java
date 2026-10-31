@@ -477,7 +477,7 @@ public final class CosmeticsScreen extends BaseScreen {
 				g.text(this.font, "§7" + this.font.plainSubstrByWidth(d.desc(), w - 8), x + 5, y + h - 11, Theme.alpha(0xFFFFFFFF, appear), false);
 			}
 		}
-		if (!none) badge(g, o, x, y, w, h);
+		if (!none && !(o instanceof Design dd && dd.id().equals(Cosmetics.CUSTOM))) badge(g, o, x, y, w, h);
 		if (o == flashed && System.currentTimeMillis() - flashAt < 450) {
 			g.fill(x, y, x + w, y + h, Theme.alpha(0xFFFFFFFF, 0.3f * (1f - (System.currentTimeMillis() - flashAt) / 450f)));
 		}
