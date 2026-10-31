@@ -10,7 +10,10 @@ changes no game mechanics – it only shows things. Cosmetics are only visible t
 | **Days** | "Day 37" on screen, counted from day 1, your own label |
 | **Coordinates** | XYZ, facing, Nether/Overworld position, chunk – every label editable |
 | **Info lines** | FPS, ping, biome, real time, speed, light level, session time, rank, potion effects, item counter (totems, gapples, pearls …) |
-| **Ranks** | Earned with play time (Newcomer → Immortal); symbol in front of your own name tag in F5 |
+| **Ranks** | Earned with play time (Newcomer → Immortal); client ranks (Owner, Admin, Dev, Mod, VIP …) given by name in [`ranks.json`](ranks.json) |
+| **Shared cosmetics** | On LAN worlds and servers with Vanilla Client everyone sees each other's capes, wings, shields and ranks |
+| **Keystrokes** | W A S D, mouse buttons with CPS, space bar |
+| **Gallery** | Screenshot popup + nicer chat message ([View] [Open] [Folder]), in-game screenshot viewer, HUD pictures with previews |
 | **Chests** | "Sort" and "Store" buttons next to chests and shulker boxes (+ optional sort key) |
 | **Advancements** | Every advancement in one checklist (also hidden ones), what's still missing, short hints |
 | **Statistics** | Overview cards + most mined / killed / killed by / crafted |
@@ -43,3 +46,9 @@ published as the `latest` release.
 - `config.json` – all settings and tasks
 - `images/` – your overlay pictures
 - `cosmetics/` – your own cosmetics: `cape.png` / `wings.png` (Minecraft cape layout, 64×32 or 128×64), `shield.png` (shield layout, 64×64 or 128×128), Transparent pixels cut the shape; a tall image (frames stacked vertically) is animated at 10 fps
+
+## Ranks
+
+Edit [`ranks.json`](ranks.json) on GitHub to give someone a rank (`owner`, `admin`, `dev`, `mod`, `partner`, `vip`, `friend`, `tester`).
+Every Vanilla Client downloads the list at start and every 10 minutes. Optional `cape` / `wings` / `shield` entries show
+those designs to everyone, even on servers without the mod.
