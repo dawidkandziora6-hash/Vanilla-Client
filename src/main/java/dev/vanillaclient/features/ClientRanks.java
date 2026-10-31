@@ -29,7 +29,7 @@ import net.minecraft.network.chat.Style;
 public final class ClientRanks {
 	public record Rank(String id, String tag, String symbol, int from, int to, int nameColor) {}
 
-	public record Entry(String rank, String cape, String wings, String shield) {}
+	public record Entry(String rank, String cape, String wings, String shield, long coins) {}
 
 	/** Lowest to highest. Not obtainable yet – only the owner account can wear them. */
 	public static final List<Rank> ALL = List.of(
@@ -44,6 +44,38 @@ public final class ClientRanks {
 			new Rank("mod", "MOD", "⚔", 0x5CFF7A, 0x1FB58F, 0xA8FFB8),
 			new Rank("admin", "ADMIN", "✪", 0xFF4F6A, 0xFF6AD5, 0xFF9AC8),
 			new Rank("owner", "OWNER", "♛", 0xFF3B3B, 0xFFC21A, 0xFFD966));
+
+	/** Perks in the order they unlock (VIP gets the first, staff ranks get all). */
+	public enum Perk {
+		COLOR("Name color", 0), BOLD("Bold / italic name", 1), GRADIENT("Two-color gradient name", 2),
+		ANIMATED("Animated gradient", 3), FONT("Name font", 4), BADGE("Own badge symbol", 5);
+
+		public final String label;
+		public final int tier;
+
+		Perk(String label, int tier) {
+			this.label = label;
+			this.tier = tier;
+		}
+	}
+
+	public static boolean has(Rank r, Perk p) {
+		if (r == null) return false;
+		int i = ALL.indexOf(r);
+		return i >= 6 || i >= p.tier; // media, partner, mod, admin, owner: everything
+	}
+
+	public static final String[] BADGES = {"✦", "★", "♛", "❖", "❤", "⚡", "☀", "✿", "♦", "☯", "⚔", "☾", "♪", "✪"};
+	public static final String[] FONTS = {"default", "uniform", "alt", "illageralt"};
+
+	public static String fontName(String f) {
+		return switch (f) {
+			case "uniform" -> "Smooth";
+			case "alt" -> "Galactic";
+			case "illageralt" -> "Illager";
+			default -> "Minecraft";
+		};
+	}
 
 	public static Rank byId(String id) {
 		if (id == null) return null;
@@ -115,7 +147,8 @@ public final class ClientRanks {
 		Map<String, Entry> next = new ConcurrentHashMap<>();
 		for (var e : players.entrySet()) {
 			JsonObject o = e.getValue().getAsJsonObject();
-			next.put(e.getKey().toLowerCase(Locale.ROOT), new Entry(str(o, "rank"), str(o, "cape"), str(o, "wings"), str(o, "shield")));
+			long coins = o.has("coins") ? o.get("coins").getAsLong() : 0L;
+			next.put(e.getKey().toLowerCase(Locale.ROOT), new Entry(str(o, "rank"), str(o, "cape"), str(o, "wings"), str(o, "shield"), coins));
 		}
 		PLAYERS.clear();
 		PLAYERS.putAll(next);
@@ -127,7 +160,7 @@ public final class ClientRanks {
 
 	/** Adds a rank locally (used by the CI world test). */
 	public static void put(String name, String rank) {
-		PLAYERS.put(name.toLowerCase(Locale.ROOT), new Entry(rank, null, null, null));
+		PLAYERS.put(name.toLowerCase(Locale.ROOT), new Entry(rank, null, null, null, 0L));
 	}
 
 	/** Entry by name or UUID (as text). */
@@ -162,11 +195,11 @@ public final class ClientRanks {
 		return out;
 	}
 
-	/** "♛ OWNER ┃ " prefix for a name tag. */
+	/** Name tag prefix in client style: a small badge (and the title only if wanted). */
 	public static MutableComponent prefix(Rank r) {
-		MutableComponent out = Component.literal(r.symbol() + " ").withColor(r.from());
+		MutableComponent out = Component.literal("✦ ").withColor(r.from());
 		out.append(gradient(r.tag(), r.from(), r.to(), true));
-		out.append(Component.literal(" ┃ ").withColor(0x808080));
+		out.append(Component.literal(" ").withColor(0x808080));
 		return out;
 	}
 }

@@ -5,6 +5,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import dev.vanillaclient.config.Config;
+import dev.vanillaclient.cosmetics.Cosmetics;
 import dev.vanillaclient.features.ClientRanks;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -15,7 +16,7 @@ import net.minecraft.world.entity.player.Player;
 /** Sends your cosmetics to the server (if it has the mod) and keeps everyone else's. */
 public final class ClientSync {
 	/** What another player wears. Null fields = nothing. */
-	public record Remote(String cape, String wings, String shield, String rank) {}
+	public record Remote(String cape, String wings, String shield, String rank, String style) {}
 
 	private static final Map<UUID, Remote> REMOTE = new ConcurrentHashMap<>();
 	private static String lastSent = "";
@@ -43,7 +44,7 @@ public final class ClientSync {
 				REMOTE.remove(id);
 				return;
 			}
-			REMOTE.put(id, new Remote(nz(p[1]), nz(p[2]), nz(p[3]), nz(p[4])));
+			REMOTE.put(id, new Remote(nz(p[1]), nz(p[2]), nz(p[3]), nz(p[4]), p.length > 5 ? p[5] : null));
 		} catch (IllegalArgumentException ignored) {
 			// bad data
 		}
@@ -59,7 +60,8 @@ public final class ClientSync {
 		if (ticks % 12000 == 0) ClientRanks.refresh();
 		if (!Config.get().ranks.shareCosmetics) return;
 		Config.Cosmetics c = Config.get().cosmetics;
-		String data = c.cape + "|" + c.wings + "|" + c.shield + "|" + Config.get().ranks.display;
+		String data = owned(Cosmetics.Kind.CAPE, c.cape) + "|" + owned(Cosmetics.Kind.WINGS, c.wings) + "|" + owned(Cosmetics.Kind.SHIELD, c.shield)
+				+ "|" + Config.get().ranks.display + "|" + dev.vanillaclient.features.NameStyle.mine().encode();
 		if (data.equals(lastSent)) return;
 		try {
 			if (!ClientPlayNetworking.canSend(SyncPayload.TYPE)) return;
@@ -70,13 +72,17 @@ public final class ClientSync {
 		}
 	}
 
+	private static String owned(Cosmetics.Kind k, String id) {
+		return dev.vanillaclient.features.Shop.owns(k, id) ? id : "none";
+	}
+
 	/** Cosmetics of another player: from the server sync, otherwise from ranks.json. */
 	public static Remote of(Player p) {
 		if (p == null) return null;
 		Remote r = REMOTE.get(p.getUUID());
 		if (r != null) return r;
 		ClientRanks.Entry e = ClientRanks.entry(p.getName().getString(), p.getUUID());
-		if (e != null && (e.cape() != null || e.wings() != null || e.shield() != null)) return new Remote(e.cape(), e.wings(), e.shield(), null);
+		if (e != null && (e.cape() != null || e.wings() != null || e.shield() != null)) return new Remote(e.cape(), e.wings(), e.shield(), null, null);
 		return null;
 	}
 

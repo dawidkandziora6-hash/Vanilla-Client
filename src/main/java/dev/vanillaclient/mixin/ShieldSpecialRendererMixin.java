@@ -33,6 +33,9 @@ public class ShieldSpecialRendererMixin {
 	private ShieldModel model;
 
 	@Unique
+	private static dev.vanillaclient.cosmetics.RoundShieldModel vc$round;
+
+	@Unique
 	private static final UvMapping VC_IDENTITY = new UvMapping() {
 		@Override
 		public float getU(float u) {
@@ -63,7 +66,9 @@ public class ShieldSpecialRendererMixin {
 			BannerPatternLayers patterns = data.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
 			if (!patterns.layers().isEmpty() || data.get(DataComponents.BASE_COLOR) != null) return;
 		}
-		collector.submitModel(this.model, Unit.INSTANCE, pose,
+		boolean custom = tex.getPath().contains("_custom");
+		if (vc$round == null) vc$round = new dev.vanillaclient.cosmetics.RoundShieldModel();
+		collector.submitModel(custom ? this.model : vc$round, Unit.INSTANCE, pose,
 				foil ? RenderTypes.armorCutoutNoCullGlint(tex) : RenderTypes.entityCutout(tex),
 				light, overlay, -1, VC_IDENTITY, outline);
 		ci.cancel();

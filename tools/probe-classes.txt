@@ -1,4 +1,4 @@
-net/minecraft/network/chat/Style
-net/minecraft/network/chat/FontDescription
-net/minecraft/network/chat/FontDescription$Resource
-net/minecraft/client/renderer/entity/layers/WingsLayer
+net/minecraft/client/gui/components/AbstractButton
+net/minecraft/client/gui/components/Button
+net/minecraft/client/gui/components/AbstractWidget
+net/fabricmc/fabric/api/client/screen/v1/ScreenEvents

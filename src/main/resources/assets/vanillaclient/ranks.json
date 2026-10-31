@@ -1,6 +1,12 @@
 {
-  "_info": "Vanilla Client ranks. Edit this file on GitHub to give players a rank (by in-game name or UUID). Optional: cape / wings / shield = design id, shown to everyone with the mod.",
+  "_info": "Vanilla Client ranks. Edit on GitHub: rank = vip, vip+, mvp, mvp+, elite, legend, media, partner, mod, admin, owner (by in-game name or UUID). coins = coins given to that account. cape / wings / shield = design shown to everyone.",
   "players": {
-    "Pileczek": { "rank": "owner", "cape": "galaxy", "shield": "galaxy" }
+    "Pileczek": {
+      "rank": "owner",
+      "coins": 1000000,
+      "cape": "void",
+      "wings": "void",
+      "shield": "void"
+    }
   }
 }

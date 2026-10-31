@@ -19,6 +19,9 @@ import net.minecraft.world.item.Items;
 /** Draws cosmetic wings on players (you, and other Vanilla Client players). Hidden while wearing an elytra. */
 public final class WingsLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
 	private static WingsModel model;
+	/** Smoothed animation per player: phase, strength, fold, last time. */
+	private static final java.util.Map<Integer, float[]> ANIM = new java.util.HashMap<>();
+	private static long lastCleanup;
 
 	public WingsLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent) {
 		super(parent);
@@ -42,18 +45,36 @@ public final class WingsLayer extends RenderLayer<AvatarRenderState, PlayerModel
 		return t == null ? null : t.id();
 	}
 
+	/** True if wings should be drawn for this player state (also used to hide the vanilla elytra). */
+	public static boolean showsWings(AvatarRenderState s) {
+		if (s.isInvisibleToPlayer || textureFor(s) == null) return false;
+		boolean elytra = s.chestEquipment.is(Items.ELYTRA);
+		return Config.get().cosmetics.wingsOnlyWithElytra ? elytra : !elytra || Config.get().cosmetics.wingsReplaceElytra;
+	}
+
 	@Override
 	public void submit(PoseStack pose, SubmitNodeCollector collector, int light, AvatarRenderState s, float yRot, float xRot) {
-		if (s.isInvisibleToPlayer || s.chestEquipment.is(Items.ELYTRA)) return;
+		if (!showsWings(s)) return;
 		Identifier tex = textureFor(s);
 		if (tex == null) return;
 		if (model == null) model = new WingsModel();
-		float time = (System.currentTimeMillis() % 3_600_000L) / 1000f + (s.id % 97) * 0.37f;
-		float flap = s.isFallFlying ? 1f : Math.min(0.6f, s.walkAnimationSpeed * 0.8f);
-		float fold = s.isCrouching ? 1f : 0f;
+		long now = System.nanoTime();
+		float[] a = ANIM.computeIfAbsent(s.id, k -> new float[] {k * 0.7f, 0f, 0f, 0f});
+		float dt = a[3] == 0 ? 0f : Math.min(0.1f, (now / 1e9f) - a[3]);
+		a[3] = now / 1e9f;
+		// targets: gentle idle, a bit more while walking, full flaps while gliding
+		float target = s.isFallFlying ? 1f : Math.min(0.35f, s.walkAnimationSpeed * 0.5f);
+		a[1] += (target - a[1]) * Math.min(1f, dt * 2.5f);
+		a[2] += ((s.isCrouching ? 1f : 0f) - a[2]) * Math.min(1f, dt * 6f);
+		a[0] += dt * (1.4f + a[1] * 5.5f); // phase only ever moves forward: no jumps, no jitter
+		if (a[0] > 1000f) a[0] -= (float) (Math.PI * 2 * 159);
+		if (System.currentTimeMillis() - lastCleanup > 30_000) {
+			lastCleanup = System.currentTimeMillis();
+			ANIM.entrySet().removeIf(e -> now / 1e9f - e.getValue()[3] > 30f);
+		}
 		pose.pushPose();
 		getParentModel().body.translateAndRotate(pose);
-		collector.submitModel(model, new WingsModel.Pose(time, flap, fold), pose, RenderTypes.entityCutout(tex),
+		collector.submitModel(model, new WingsModel.Pose(a[0], a[1], a[2]), pose, RenderTypes.entityCutout(tex),
 				light, OverlayTexture.NO_OVERLAY, s.outlineColor);
 		pose.popPose();
 	}

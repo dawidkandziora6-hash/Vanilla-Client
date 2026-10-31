@@ -251,7 +251,9 @@ def cape_void(t):
     return cape_frame(cv, C("#0c0616"))
 
 
-# ======================================================================== SHIELDS (24x44)
+# ======================================================================== SHIELDS (round, 36x36 plate)
+SD = 36
+
 
 def shield_frame(cv, wood):
     img = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
@@ -259,54 +261,68 @@ def shield_frame(cv, wood):
     handle = np.zeros((24, 32, 4), np.uint8)
     handle[..., :3] = (np.array(wood) * 0.75 * 255).astype(np.uint8)
     handle[..., 3] = 255
-    put(img, handle, 52, 0)
+    put(img, handle, 0, 40)
     return img
 
 
-def rim(cv, col, k=2, rivets=True):
+def round_canvas():
+    cv = Canvas(SD, SD)
+    c = (SD - 1) / 2
+    cv.r = np.hypot(cv.X - c, cv.Y - c)
+    cv.a = cv.r < SD / 2 - 0.2
+    return cv
+
+
+def rim(cv, col, k=3, rivets=True, glow=0.0):
     e = cv.edge(k)
-    sh = (1.15 - 0.3 * cv.Y / cv.h)[..., None]
-    cv.c = np.where(e[..., None], col * sh, cv.c)
+    light = (1.2 - 0.45 * (cv.X + cv.Y) / (2 * SD))[..., None]  # lit from the top left
+    cv.c = np.where(e[..., None], col * light, cv.c)
     inner = cv.edge(k + 1) & ~e
-    cv.c = np.where(inner[..., None], cv.c * 0.55, cv.c)
+    cv.c = np.where(inner[..., None], cv.c * 0.5, cv.c)
+    cv.c = np.where(cv.edge(1)[..., None], cv.c * 0.6, cv.c)
+    if glow:
+        cv.e += e[..., None] * col * glow
     if rivets:
-        for x, y in ((3, 3), (20, 3), (3, 40), (20, 40), (3, 21), (20, 21)):
-            cv.px(x, y, C("#f0f0f0"))
+        c = (SD - 1) / 2
+        for i in range(8):
+            a = TAU * i / 8 + TAU / 16
+            cv.px(c + math.cos(a) * (SD / 2 - 2.2), c + math.sin(a) * (SD / 2 - 2.2), C("#f4f4f4"))
 
 
 def shield_inferno(t):
-    cv = Canvas(24, 44)
-    cv.c = mix(C("#5a120c"), C("#2a0806"), cv.Y / 43)
-    cv.c *= (1 + 0.12 * (noise(44, 24, 4, 7) - 0.5))[..., None]
-    flames(cv, t, 8, 0.35)
-    flame_icon(cv, 12, 19, 8, t)
-    embers(cv, t, 9, 5, C("#ffb040"))
-    rim(cv, C("#5c5c62"))
+    cv = round_canvas()
+    cv.c = mix(C("#6a160e"), C("#2a0806"), cv.Y / SD)
+    cv.c *= (1 + 0.15 * (noise(SD, SD, 4, 7) - 0.5))[..., None]
+    flames(cv, t, 8, 0.45)
+    flame_icon(cv, 17.5, 15, 8, t)
+    embers(cv, t, 9, 6, C("#ffb040"))
+    cv.e *= (cv.r < SD / 2 - 5)[..., None]  # no glow over the metal rim
+    rim(cv, C("#5c5c66"))
     return shield_frame(cv, C("#3a2a22"))
 
 
 def shield_celestial(t):
-    cv = Canvas(24, 44)
-    cv.c = mix(C("#fffdf6"), C("#e9dfc8"), cv.Y / 43)
-    sun(cv, 12, 18, 4.5, t, C("#fff2b0"), C("#f2c440"), rays=10)
-    for k in range(3):
-        y = 31 + k * 3
-        cv.c[y, 6:18] = mix(cv.c[y, 6:18], C("#e2b23e"), 0.7)
+    cv = round_canvas()
+    cv.c = mix(C("#fffdf6"), C("#e6dbc2"), cv.r / (SD / 2))
+    for k in range(2):
+        ring = np.abs(cv.r - (11 + k * 3)) < 0.6
+        cv.c = np.where(ring[..., None], mix(cv.c, C("#e2b23e"), 0.6), cv.c)
+    sun(cv, 17.5, 17.5, 5, t, C("#ffdf6a"), C("#e8a820"), rays=12, glow=0.4)
     twinkle(cv, t, 10, 8, C("#ffd75a"))
-    rim(cv, C("#e2b23e"))
+    rim(cv, C("#e8b83e"))
     return shield_frame(cv, C("#cfc2a6"))
 
 
 def shield_void(t):
-    cv = Canvas(24, 44)
-    cv.c = mix(C("#1a0f26"), C("#07040c"), cv.Y / 43)
-    cv.c *= (0.85 + 0.3 * noise(44, 24, 5, 11))[..., None]
+    cv = round_canvas()
+    cv.c = mix(C("#1e1230"), C("#06030c"), cv.r / (SD / 2))
+    cv.c *= (0.85 + 0.3 * noise(SD, SD, 5, 11))[..., None]
     pulse = 0.55 + 0.45 * math.sin(TAU * t)
-    cv.paint(cv.cov(lambda d, s: d.ellipse([3 * s, 13 * s, 21 * s, 27 * s], fill=255)), C("#1d8f74"))
-    cv.paint(cv.cov(lambda d, s: d.ellipse([5 * s, 14.5 * s, 19 * s, 25.5 * s], fill=255)), mix(C("#2a9f84"), C("#6cffd0"), pulse), 0.9 * pulse)
-    cv.paint(cv.cov(lambda d, s: d.ellipse([10.2 * s, 15 * s, 13.8 * s, 25 * s], fill=255)), C("#04140f"))
+    cv.paint(cv.cov(lambda d, s: d.ellipse([6 * s, 10 * s, 30 * s, 26 * s], fill=255)), C("#1d8f74"))
+    cv.paint(cv.cov(lambda d, s: d.ellipse([8.5 * s, 11.5 * s, 27.5 * s, 24.5 * s], fill=255)), mix(C("#2a9f84"), C("#6cffd0"), pulse), 0.9 * pulse)
+    cv.paint(cv.cov(lambda d, s: d.ellipse([15.5 * s, 12 * s, 20 * s, 24 * s], fill=255)), C("#04140f"))
     twinkle(cv, t, 12, 10, C("#d8a0ff"))
-    rim(cv, mix(C("#3a2050"), C("#9a50e0"), pulse), rivets=False)
+    rim(cv, mix(C("#3a2050"), C("#a050f0"), pulse), rivets=False, glow=0.3 * pulse)
     return shield_frame(cv, C("#1a1024"))
 
 

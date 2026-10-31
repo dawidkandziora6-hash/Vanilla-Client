@@ -150,7 +150,10 @@ public final class Cosmetics {
 			case SHIELD -> previewShield;
 		};
 		String id = p != null ? p : selected(k);
-		return id == null ? NONE : id;
+		if (id == null) return NONE;
+		// only things you own are worn (trying on in the wardrobe is always allowed)
+		if (p == null && !dev.vanillaclient.features.Shop.owns(k, id)) return NONE;
+		return id;
 	}
 
 	public static ClientAsset.Texture capeTexture() {

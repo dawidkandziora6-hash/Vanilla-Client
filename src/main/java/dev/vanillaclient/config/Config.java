@@ -120,6 +120,20 @@ public final class Config {
 		public boolean symbolInName = true;
 		/** Rank the owner account wears ("" = Owner). */
 		public String display = "";
+		// ---- name perks (only work with a rank that unlocks them)
+		/** Name color (0 = rank color). */
+		public int nameColor = 0;
+		/** Second color for a gradient name (0 = off). */
+		public int nameColor2 = 0;
+		public boolean animatedName = false;
+		public boolean boldName = false;
+		public boolean italicName = false;
+		/** default, uniform, alt (galactic), illageralt */
+		public String nameFont = "default";
+		/** Badge in front of the name ("" = the rank's badge). */
+		public String badge = "";
+		/** Also show the rank's title in the name tag. */
+		public boolean showRankTitle = false;
 		/** Show Owner / Admin … ranks from the online list. */
 		public boolean showClientRanks = true;
 		/** Download the rank list from GitHub. */
@@ -227,6 +241,10 @@ public final class Config {
 		public String wings = "none";
 		public String shield = "none";
 		public String totem = "none";
+		/** Wings only appear while you wear an elytra (they replace its look). */
+		public boolean wingsOnlyWithElytra = false;
+		/** With an elytra on: show the wings instead of the elytra. */
+		public boolean wingsReplaceElytra = true;
 	}
 
 	/** Smaller (or bigger) items in your own first-person hands. Purely visual. */
@@ -301,6 +319,15 @@ public final class Config {
 	public Counter counter;
 	public Ranks ranks = new Ranks();
 	public Keystrokes keystrokes;
+	/** Coins and bought cosmetics, per Minecraft account. */
+	public Map<String, Wallet> wallets = new java.util.HashMap<>();
+
+	public static class Wallet {
+		public long coins;
+		public List<String> owned = new ArrayList<>();
+		/** Coins already given by ranks.json. */
+		public long granted;
+	}
 	public Coords coords = (Coords) new Coords().at(0.01f, 0.08f);
 	public WorldMap worldMap = new WorldMap();
 	public Todo todo = (Todo) new Todo().at(0.99f, 0.02f);
@@ -434,6 +461,9 @@ public final class Config {
 		if (waypointHud == null) waypointHud = new WaypointHud();
 		if (todos == null) todos = new ArrayList<>();
 		if (ranks == null) ranks = new Ranks();
+		if (wallets == null) wallets = new java.util.HashMap<>();
+		if (ranks.nameFont == null) ranks.nameFont = "default";
+		if (ranks.badge == null) ranks.badge = "";
 		if (keystrokes == null) {
 			keystrokes = new Keystrokes();
 			keystrokes.enabled = false;
