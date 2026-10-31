@@ -85,8 +85,26 @@ public final class VanillaClient implements ClientModInitializer {
 		if (Boolean.getBoolean("vanillaclient.audit")) {
 			net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
 				org.spongepowered.asm.mixin.MixinEnvironment.getCurrentEnvironment().audit();
-				Config.LOG.info("VANILLACLIENT AUDIT OK");
-				Runtime.getRuntime().halt(0);
+				Config.LOG.info("VANILLACLIENT AUDIT MIXINS OK");
+			});
+			// then open every menu for a moment and render it
+			java.util.List<java.util.function.Supplier<Screen>> tour = java.util.List.of(
+					() -> new SettingsScreen(null), () -> new HudEditorScreen(null),
+					() -> new dev.vanillaclient.gui.TasksScreen(null), () -> new dev.vanillaclient.gui.CosmeticsScreen(null),
+					() -> new dev.vanillaclient.gui.WorldMapScreen(null), () -> new dev.vanillaclient.gui.GuideScreen(null),
+					() -> new dev.vanillaclient.gui.CrosshairEditorScreen(null),
+					() -> new dev.vanillaclient.gui.ColorPickerScreen(null, "Test", 0xFFFF0000, c -> {}));
+			int[] step = {0, 0};
+			ClientTickEvents.END_CLIENT_TICK.register(client -> {
+				if (++step[1] < 40) return;
+				step[1] = 0;
+				if (step[0] < tour.size()) {
+					Config.LOG.info("VANILLACLIENT AUDIT opening screen {}", step[0]);
+					client.setScreenAndShow(tour.get(step[0]++).get());
+				} else {
+					Config.LOG.info("VANILLACLIENT AUDIT OK");
+					Runtime.getRuntime().halt(0);
+				}
 			});
 		}
 	}
