@@ -42,7 +42,7 @@ public final class GuideScreen extends BaseScreen {
 	}
 
 	private int panelW() {
-		return Math.min(340, this.width - 20);
+		return Math.min(380, this.width - 20);
 	}
 
 	private int px() {
@@ -84,6 +84,40 @@ public final class GuideScreen extends BaseScreen {
 		action(x + panelW() - 100, this.height - 28, 100, "✔ Done", this::onClose);
 	}
 
+	/** Wraps a line (keeps § colors) to the given width. */
+	private java.util.List<String> wrap(String text, int width) {
+		java.util.List<String> out = new java.util.ArrayList<>();
+		String[] words = text.split(" ");
+		StringBuilder line = new StringBuilder();
+		String color = "";
+		for (String w : words) {
+			String test = line.length() == 0 ? color + w : line + " " + w;
+			if (this.font.width(test) > width && line.length() > 0) {
+				out.add(line.toString());
+				// carry the last color code to the next line
+				String l = line.toString();
+				int idx = l.lastIndexOf('§');
+				color = idx >= 0 && idx + 1 < l.length() ? l.substring(idx, idx + 2) : color;
+				line = new StringBuilder(color + w);
+			} else {
+				line = new StringBuilder(test);
+			}
+		}
+		if (line.length() > 0) out.add(line.toString());
+		return out;
+	}
+
+	private record Row(GuideData.Line line, java.util.List<String> parts) {}
+
+	private java.util.List<Row> rows(GuideData.Entry e) {
+		java.util.List<Row> rows = new java.util.ArrayList<>();
+		for (GuideData.Line l : e.lines()) {
+			int width = panelW() - 32 - (l.icon() != null ? 11 : 0);
+			rows.add(new Row(l, wrap(l.text(), width)));
+		}
+		return rows;
+	}
+
 	private boolean matches(GuideData.Entry e) {
 		if (filter.isEmpty()) return true;
 		StringBuilder b = new StringBuilder(e.title()).append(' ').append(e.sub());
@@ -119,7 +153,10 @@ public final class GuideScreen extends BaseScreen {
 		int start = y;
 		for (GuideData.Entry e : entries()) {
 			if (!matches(e)) continue;
-			int h = 22 + e.lines().size() * 11;
+			java.util.List<Row> rows = rows(e);
+			int lineCount = 0;
+			for (Row r : rows) lineCount += r.parts().size();
+			int h = 22 + lineCount * 10;
 			float t = Theme.easeOut((now - tabAt - i * 35L) / 260f);
 			int off = Math.round((1f - t) * 16f);
 			i++;
@@ -137,15 +174,16 @@ public final class GuideScreen extends BaseScreen {
 					g.text(this.font, sub, x + w - 6 - this.font.width(sub), y + 4, Theme.alpha(0xFFFFFFFF, t), false);
 				}
 				int ly = y + 18;
-				for (GuideData.Line l : e.lines()) {
+				for (Row r : rows) {
 					int lx = x + 26;
-					if (l.icon() != null) {
-						Icons.small(g, Icons.stack(l.icon()), lx, ly);
+					if (r.line().icon() != null) {
+						Icons.small(g, Icons.stack(r.line().icon()), lx, ly);
 						lx += 11;
 					}
-					String text = this.font.plainSubstrByWidth(l.text(), x + w - 6 - lx);
-					g.text(this.font, text, lx, ly, Theme.alpha(0xFFFFFFFF, t), false);
-					ly += 11;
+					for (String part : r.parts()) {
+						g.text(this.font, part, lx, ly, Theme.alpha(0xFFFFFFFF, t), false);
+						ly += 10;
+					}
 				}
 				g.pose().popMatrix();
 			}

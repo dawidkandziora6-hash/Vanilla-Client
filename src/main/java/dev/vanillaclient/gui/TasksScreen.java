@@ -168,16 +168,11 @@ public final class TasksScreen extends BaseScreen {
 		// middle: add + filter
 		int mx = xm() + 4;
 		int mwi = mw() - 8;
-		addBox = new EditBox(this.font, mx + 1, TOP + 25, mwi - 70, 18, Component.literal("New task"));
+		addBox = new EditBox(this.font, mx + 1, TOP + 25, mwi - 26, 18, Component.literal("New task"));
 		addBox.setMaxLength(64);
 		addBox.setHint(Component.literal("+ Add a task … (Enter)"));
 		addRenderableWidget(addBox);
-		action(mx + mwi - 66, TOP + 24, 20, "+", this::addTask);
-		cycle(mx + mwi - 44, TOP + 24, 44, "", List.of(Show.values()), () -> show, v -> {
-			show = v;
-			taskScroll = 0;
-			rebuildWidgets();
-		}, v -> v.label);
+		action(mx + mwi - 20, TOP + 24, 20, "+", this::addTask);
 
 		// right: details
 		if (selected != null) detailWidgets(selected);
@@ -370,6 +365,15 @@ public final class TasksScreen extends BaseScreen {
 		if (super.mouseClicked(event, doubleClick)) return true;
 		double mx = event.x();
 		double my = event.y();
+		// "Show: …" filter in the task header
+		if (mx >= xm() + mw() / 2 && mx < xm() + mw() && my >= TOP + 2 && my < TOP + 14) {
+			Show[] all = Show.values();
+			show = all[(show.ordinal() + (event.button() == Mouse.RIGHT ? all.length - 1 : 1)) % all.length];
+			taskScroll = 0;
+			dev.vanillaclient.gui.ui.Ui.click();
+			rebuildWidgets();
+			return true;
+		}
 		// categories
 		if (mx >= xl() && mx < xl() + lw() && my >= TOP + 16 && my < catRowsBottom()) {
 			int i = (int) ((my - (TOP + 16)) / CAT_ROW);
@@ -492,8 +496,14 @@ public final class TasksScreen extends BaseScreen {
 		g.item(c == null ? Icons.stack(Items.BOOK) : Icons.categoryIcon(c.icon), x + 4, TOP + 2);
 		g.text(this.font, "§l" + (category == null ? "All tasks" : category), x + 23, TOP + 4, 0xFFFFFFFF, false);
 		int d = done(catTasks);
-		String cnt = d + "/" + catTasks.size() + " done";
-		g.text(this.font, "§7" + cnt, x + w - 5 - this.font.width(cnt), TOP + 4, 0xFFFFFFFF, false);
+		String filterText = "Show: " + show.label + " ▸";
+		int fw = this.font.width(filterText);
+		int fx = x + w - 5 - fw;
+		boolean fh = mouseX >= fx - 2 && mouseX < x + w && mouseY >= TOP + 2 && mouseY < TOP + 14;
+		g.text(this.font, filterText, fx, TOP + 4, fh ? Theme.ACCENT : Theme.MUTED, false);
+		String cnt = "§7" + d + "/" + catTasks.size();
+		int titleEnd = x + 23 + this.font.width("§l" + (category == null ? "All tasks" : category)) + 6;
+		if (titleEnd + this.font.width(cnt) < fx - 4) g.text(this.font, cnt, titleEnd, TOP + 4, 0xFFFFFFFF, false);
 		float target = catTasks.isEmpty() ? 0f : d / (float) catTasks.size();
 		if (shownProgress < 0) shownProgress = target;
 		shownProgress += (target - shownProgress) * 0.15f;

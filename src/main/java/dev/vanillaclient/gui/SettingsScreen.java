@@ -43,7 +43,7 @@ public final class SettingsScreen extends BaseScreen {
 
 	private static Page page = Page.HOME;
 
-	private static final int SIDEBAR = 106, GAP = 10, ENTRY = 17, HEADER = 13;
+	private static final int SIDEBAR = 106, GAP = 10, HEADER = 12;
 
 	private final Logo logo = new Logo();
 	private final Ui.List_ list = new Ui.List_();
@@ -317,7 +317,14 @@ public final class SettingsScreen extends BaseScreen {
 
 	private record Entry(Page page, String header, int y) {}
 
+	/** Entry height shrinks on small windows so everything fits. */
+	private int entryH() {
+		int avail = bottom() - top() - 3 * HEADER;
+		return Math.max(12, Math.min(17, avail / Page.values().length));
+	}
+
 	private List<Entry> sidebar() {
+		int ENTRY = entryH();
 		List<Entry> out = new ArrayList<>();
 		int y = top();
 		String group = null;
@@ -334,6 +341,7 @@ public final class SettingsScreen extends BaseScreen {
 	}
 
 	private void drawSidebar(GuiGraphicsExtractor g, int mx, int my) {
+		int ENTRY = entryH();
 		int x = left();
 		Theme.panel(g, x - 4, top() - 4, SIDEBAR + 8, bottom() - top() + 6);
 		float targetY = 0;
@@ -349,16 +357,17 @@ public final class SettingsScreen extends BaseScreen {
 			idx++;
 			int off = Math.round((1f - t) * -12f);
 			if (e.header() != null) {
-				g.text(this.font, e.header(), x + 2 + off, e.y() + 3, Theme.alpha(0xFF808080, t), false);
+				g.text(this.font, e.header(), x + 2 + off, e.y() + 2, Theme.alpha(0xFF808080, t), false);
 				continue;
 			}
 			Page p = e.page();
 			boolean hover = mx >= x && mx < x + SIDEBAR && my >= e.y() && my < e.y() + ENTRY;
 			entryHover[p.ordinal()] += ((hover ? 1f : 0f) - entryHover[p.ordinal()]) * 0.3f;
 			int slide = Math.round(entryHover[p.ordinal()] * 3f) + off;
-			Icons.small(g, Icons.stack(p.icon), x + 4 + slide, e.y() + 4);
+			int ty = e.y() + (ENTRY - 8) / 2;
+			Icons.small(g, Icons.stack(p.icon), x + 4 + slide, ty);
 			int col = p == page ? Theme.ACCENT : Theme.lerpColor(0xFFC8C8C8, 0xFFFFFFFF, entryHover[p.ordinal()]);
-			g.text(this.font, p.label, x + 16 + slide, e.y() + 4, Theme.alpha(col, t), false);
+			g.text(this.font, p.label, x + 16 + slide, ty, Theme.alpha(col, t), false);
 		}
 	}
 
@@ -395,7 +404,7 @@ public final class SettingsScreen extends BaseScreen {
 		double mx = event.x(), my = event.y();
 		if (mx >= left() && mx < left() + SIDEBAR) {
 			for (Entry e : sidebar()) {
-				if (e.page() != null && my >= e.y() && my < e.y() + ENTRY) {
+				if (e.page() != null && my >= e.y() && my < e.y() + entryH()) {
 					Ui.click();
 					go(e.page());
 					return true;

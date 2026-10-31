@@ -99,39 +99,38 @@ public final class CrosshairEditorScreen extends BaseScreen {
 			b.active = t != tool;
 			b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(t.label)));
 		}
-		y += 24;
-		cycle(x, y, w, "Mirror", java.util.List.of(Mirror.values()), () -> mirror, v -> mirror = v, v -> v.label);
-		y += 24;
-		action(x, y, half, "Grid −", () -> resize(c.size - 2)).active = c.size > 3;
-		action(x + half + 4, y, half, "Grid +", () -> resize(c.size + 2)).active = c.size < 31;
-		y += 24;
-		action(x, y, w, "Preset: " + CrosshairPresets.NAMES.get(presetIndex), () -> {
+		y += 22;
+		cycle(x, y, half, "", java.util.List.of(Mirror.values()), () -> mirror, v -> mirror = v, v -> "Mirror " + v.label);
+		action(x + half + 4, y, half, CrosshairPresets.NAMES.get(presetIndex), () -> {
 			presetIndex = (presetIndex + 1) % CrosshairPresets.NAMES.size();
 			push();
 			pixels = CrosshairPresets.build(CrosshairPresets.NAMES.get(presetIndex), c.size).toCharArray();
 			store();
 			rebuildWidgets();
-		});
-		y += 24;
+		}).setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Preset (click for the next one)")));
+		y += 22;
+		action(x, y, half, "Grid −", () -> resize(c.size - 2)).active = c.size > 3;
+		action(x + half + 4, y, half, "Grid +", () -> resize(c.size + 2)).active = c.size < 31;
+		y += 22;
 		action(x, y, half, "↶ Undo", this::undo).active = !undo.isEmpty();
 		action(x + half + 4, y, half, "Invert", () -> {
 			push();
 			for (int i = 0; i < pixels.length; i++) pixels[i] = pixels[i] == '1' ? '0' : '1';
 			store();
 		});
-		y += 24;
+		y += 22;
 		action(x, y, half, "Clear", () -> {
 			push();
 			pixels = CrosshairPresets.empty(c.size).toCharArray();
 			store();
 		});
 		color(x + half + 4, y, half, "Color", () -> c.color, v -> c.color = v);
-		y += 24;
-		slider(x, y, w, 1, 5, 1, () -> c.scale, v -> c.scale = (float) v, v -> "In-game size: " + (int) v + "×");
-		y += 24;
+		y += 22;
 		toggle(x, y, half, "Outline", () -> c.outline, v -> c.outline = v);
 		color(x + half + 4, y, half, "Edge", () -> c.outlineColor, v -> c.outlineColor = v);
-		y += 24;
+		y += 22;
+		slider(x, y, w, 1, 5, 1, () -> c.scale, v -> c.scale = (float) v, v -> "In-game size: " + (int) v + "×");
+		y += 22;
 		toggle(x, y, w, "Use custom crosshair", () -> c.enabled, v -> c.enabled = v);
 		action(this.width / 2 - 100, this.height - 26, 200, "✔ Done", this::onClose);
 	}
@@ -332,10 +331,20 @@ public final class CrosshairEditorScreen extends BaseScreen {
 			}
 		}
 		g.text(this.font, "§7" + n + "×" + n + " · " + tool.label, gx, gy - 12, 0xFFFFFFFF, false);
+		// small real-size preview next to the grid (always visible)
+		int box = Math.max(28, n * Math.max(1, Math.round(c.scale)) + 10);
+		int bx = gx - box - 10;
+		if (bx > 4) {
+			g.fill(bx, gy, bx + box, gy + box / 2, 0xFF7BA4E0);
+			g.fill(bx, gy + box / 2, bx + box, gy + box, 0xFF5E8C3A);
+			g.outline(bx, gy, box, box, 0x60FFFFFF);
+			CrosshairRenderer.draw(g, n, new String(pixels), c.color, c.outline, c.outlineColor, bx + box / 2, gy + box / 2, Math.max(1, Math.round(c.scale)));
+			g.text(this.font, "§7real size", bx, gy + box + 3, 0xFFFFFFFF, false);
+		}
 
 		// real-size preview over sky & grass
 		int vx = panelX();
-		int vy = 34 + 24 * 9 + 2;
+		int vy = 34 + 22 * 8 + 2;
 		int vw = 150;
 		int vh = Math.max(36, Math.min(70, this.height - 34 - vy));
 		if (vy + 30 < this.height - 30) {

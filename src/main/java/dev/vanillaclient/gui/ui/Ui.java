@@ -477,8 +477,9 @@ public final class Ui {
 			g.outline(x, y, w, 30, Theme.alpha(Theme.lerpColor(0x30FFFFFF, 0x90FFFFFF, hover), alpha));
 			float bob = hovered ? (float) Math.sin(Theme.time() * 6) * 1.5f : 0f;
 			Icons.scaled(g, icon, x + 6, y + 7 + bob, 1f);
-			g.text(font, name, x + 26, y + 6, Theme.alpha(0xFFFFFFFF, alpha), false);
-			g.text(font, on ? "§a" + sub : "§8off", x + 26, y + 17, Theme.alpha(0xFFFFFFFF, alpha), false);
+			int tw = w - 26 - 30;
+			g.text(font, font.plainSubstrByWidth(name, tw), x + 26, y + 6, Theme.alpha(0xFFFFFFFF, alpha), false);
+			g.text(font, on ? "§a" + font.plainSubstrByWidth(sub, tw) : "§8off", x + 26, y + 17, Theme.alpha(0xFFFFFFFF, alpha), false);
 			int sw = 18, sh = 8;
 			int sx = x + w - sw - 6, sy = y + 11;
 			g.fill(sx, sy, sx + sw, sy + sh, Theme.alpha(Theme.lerpColor(0xFF4A4A4A, 0xFF3FA34D, knob), alpha));
@@ -530,8 +531,9 @@ public final class Ui {
 			g.outline(x, yy, w, 38, Theme.alpha(Theme.lerpColor(0x40FFFFFF, Theme.ACCENT, hover), alpha));
 			float s = 1.25f + hover * 0.15f;
 			Icons.scaled(g, icon, x + 8 - (s - 1.25f) * 8, yy + 9 - (s - 1.25f) * 8, s);
-			g.text(font, "§l" + name, x + 34, yy + 9, Theme.alpha(0xFFFFFFFF, alpha), false);
-			g.text(font, "§7" + sub, x + 34, yy + 21, Theme.alpha(0xFFFFFFFF, alpha), false);
+			int tw = w - 34 - 12;
+			g.text(font, "§l" + font.plainSubstrByWidth(name, tw - 6), x + 34, yy + 9, Theme.alpha(0xFFFFFFFF, alpha), false);
+			g.text(font, "§7" + font.plainSubstrByWidth(sub, tw), x + 34, yy + 21, Theme.alpha(0xFFFFFFFF, alpha), false);
 			g.text(font, "›", x + w - 10 + Math.round(hover * 3), yy + 15, Theme.alpha(hovered ? Theme.ACCENT : 0xFF707070, alpha), false);
 		}
 
