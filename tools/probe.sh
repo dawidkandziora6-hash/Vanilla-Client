@@ -15,7 +15,9 @@ while read -r line; do
   cls=${line%% *}; flags=""
   [[ "$line" == *" -c" ]] && flags="-c"
   name=$(echo "$cls" | tr '/' '.')
-  javap -p $flags -cp "$JAR" "$name" > "probe/$(basename "$cls" | tr '$' '_').txt" 2>&1
+  CP="$JAR"
+  if [[ "$cls" == net/fabricmc/* ]]; then CP="$JAR:$(find ~/.gradle -name 'fabric-client-gametest-api-v1*.jar' | head -1)"; fi
+  javap -p $flags -cp "$CP" "$name" > "probe/$(basename "$cls" | tr '$' '_').txt" 2>&1
 done < tools/probe-classes.txt
 grep -iE "$(paste -sd'|' tools/probe-patterns.txt)" probe/classes.txt > probe/matches.txt || true
 unzip -l "$JAR" | awk '{print $4}' | grep -E "totem|textures/gui/sprites/widget/|textures/item/compass|textures/gui/title" > probe/assets.txt || true
@@ -24,3 +26,4 @@ while read -r a; do [ -z "$a" ] && continue; unzip -p "$JAR" "$a" > "probe/asset
 unzip -l "$JAR" | awk '{print $4}' | grep -E "sprites/hud/(crosshair|locator|experience)" > probe/hud-sprites.txt || true
 # who uses ItemActivation / displayItemActivation
 mkdir -p /tmp/x && cd /tmp/x && unzip -qo "$JAR" 'net/minecraft/client/*' && grep -rl "ItemActivation" . > "$OLDPWD/probe/itemactivation-users.txt" || true
+GT=$(find ~/.gradle -name "fabric-client-gametest-api-v1*.jar" | head -1); [ -n "$GT" ] && unzip -l "$GT" | awk "{print \$4}" | grep "\.class$" > "$OLDPWD/probe/gametest-classes.txt" 2>/dev/null; unzip -l "$GT" | awk "{print \$4}" | grep "\.class$" > probe/gametest-classes.txt 2>/dev/null || true
