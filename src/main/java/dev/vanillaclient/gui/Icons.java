@@ -21,6 +21,30 @@ public final class Icons {
 	 * create item stacks yet ("components not bound") – then this returns EMPTY,
 	 * which simply draws nothing.
 	 */
+	/** Item name that also works on the title screen (before item components exist). */
+	public static String name(Item item) {
+		if (item == null) return "";
+		try {
+			ItemStack st = stack(item);
+			if (!st.isEmpty()) return st.getHoverName().getString();
+		} catch (RuntimeException ignored) {
+			// components not bound yet – fall through to the language file
+		}
+		net.minecraft.resources.Identifier id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
+		net.minecraft.locale.Language lang = net.minecraft.locale.Language.getInstance();
+		for (String prefix : new String[] {"item.", "block."}) {
+			String key = prefix + id.getNamespace() + "." + id.getPath();
+			if (lang.has(key)) return lang.getOrDefault(key);
+		}
+		StringBuilder b = new StringBuilder();
+		for (String part : id.getPath().split("_")) {
+			if (part.isEmpty()) continue;
+			if (b.length() > 0) b.append(' ');
+			b.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+		}
+		return b.toString();
+	}
+
 	public static ItemStack stack(Item item) {
 		ItemStack cached = CACHE.get(item);
 		if (cached != null) return cached;

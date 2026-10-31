@@ -249,7 +249,7 @@ public final class GuideScreen extends BaseScreen {
 		slot(g, tr.out(), tr.cOut(), xx, y);
 		xx += 22;
 		String name = tr.note() != null && tr.in1() == null ? tr.note()
-				: Icons.stack(tr.out()).getHoverName().getString() + (tr.note() != null ? " §b(" + tr.note() + ")" : "");
+				: Icons.name(tr.out()) + (tr.note() != null ? " §b(" + tr.note() + ")" : "");
 		g.text(this.font, this.font.plainSubstrByWidth(name, x + w - xx - 2), xx, y + 5, Theme.alpha(0xFFE0E0E0, a), false);
 	}
 
@@ -344,7 +344,7 @@ public final class GuideScreen extends BaseScreen {
 		y += 11;
 		int i = 0;
 		for (GuideData.Potion p : GuideData.potions()) {
-			String all = (p.effect() + " " + p.source() + " " + p.base() + " " + Icons.stack(p.ingredient()).getHoverName().getString()).toLowerCase(Locale.ROOT);
+			String all = (p.effect() + " " + p.source() + " " + p.base() + " " + Icons.name(p.ingredient())).toLowerCase(Locale.ROOT);
 			if (!filter.isEmpty() && !all.contains(filter)) continue;
 			float t = appear(i);
 			int off = Math.round((1f - t) * 14f);
@@ -354,7 +354,7 @@ public final class GuideScreen extends BaseScreen {
 			i++;
 			slot(g, p.ingredient(), null, cIng + off, y + 2);
 			g.text(this.font, p.effect(), cName + off, y + 3, p.color(), true);
-			String ing = Icons.stack(p.ingredient()).getHoverName().getString();
+			String ing = Icons.name(p.ingredient());
 			String from = "§7" + ing + " + " + p.base() + " §8· " + p.source();
 			g.text(this.font, this.font.plainSubstrByWidth(from, cTime - cName - 6), cName + off, y + 13, 0xFFFFFFFF, false);
 			g.text(this.font, "§f" + p.time(), cTime, y + 8, 0xFFFFFFFF, false);

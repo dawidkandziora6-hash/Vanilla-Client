@@ -346,8 +346,15 @@ public final class CosmeticsScreen extends BaseScreen {
 			g.fill(cx, cy, cx + CARD_W, cy + CARD_H, hover ? 0xC0303030 : 0xA0181818);
 			g.fill(cx, cy, cx + CARD_W, cy + 2, d.color() | 0xFF000000);
 			drawThumb(g, d, cx + 1, cy + 4, CARD_W - 2, 48);
-			String name = this.font.plainSubstrByWidth(d.name(), CARD_W - 4);
-			g.centeredText(this.font, name, cx + CARD_W / 2, cy + CARD_H - 11, chosen ? Theme.ACCENT : 0xFFE0E0E0);
+			// long names shrink to fit instead of being cut off
+			int nameW = this.font.width(d.name());
+			float ns = Math.max(0.6f, Math.min(1f, (CARD_W - 4) / (float) Math.max(1, nameW)));
+			String name = ns > 0.6f ? d.name() : this.font.plainSubstrByWidth(d.name(), Math.round((CARD_W - 4) / ns));
+			g.pose().pushMatrix();
+			g.pose().translate(cx + CARD_W / 2f, cy + CARD_H - 11 + (1f - ns) * 4f);
+			g.pose().scale(ns, ns);
+			g.centeredText(this.font, name, 0, 0, chosen ? Theme.ACCENT : 0xFFE0E0E0);
+			g.pose().popMatrix();
 
 			int outline = chosen ? Theme.ACCENT : hover ? 0xFFFFFFFF : 0x40FFFFFF;
 			g.outline(cx, cy, CARD_W, CARD_H, outline);
