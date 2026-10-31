@@ -19,5 +19,8 @@ while read -r line; do
 done < tools/probe-classes.txt
 grep -iE "$(paste -sd'|' tools/probe-patterns.txt)" probe/classes.txt > probe/matches.txt || true
 unzip -l "$JAR" | awk '{print $4}' | grep -E "totem|textures/gui/sprites/widget/|textures/item/compass|textures/gui/title" > probe/assets.txt || true
+mkdir -p probe/assets
+while read -r a; do [ -z "$a" ] && continue; unzip -p "$JAR" "$a" > "probe/assets/$(echo $a | tr '/' '_')" 2>/dev/null; done < tools/probe-assets.txt
+unzip -l "$JAR" | awk '{print $4}' | grep -E "sprites/hud/(crosshair|locator|experience)" > probe/hud-sprites.txt || true
 # who uses ItemActivation / displayItemActivation
 mkdir -p /tmp/x && cd /tmp/x && unzip -qo "$JAR" 'net/minecraft/client/*' && grep -rl "ItemActivation" . > "$OLDPWD/probe/itemactivation-users.txt" || true

@@ -1,0 +1,5 @@
+assets/minecraft/models/item/totem_of_undying.json
+assets/minecraft/items/totem_of_undying.json
+assets/minecraft/models/item/generated.json
+assets/minecraft/models/item/handheld.json
+assets/minecraft/models/block/lantern.json
