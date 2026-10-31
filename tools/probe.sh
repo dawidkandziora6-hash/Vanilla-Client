@@ -8,6 +8,7 @@ JAR=$(find ~/.gradle /home/runner/work -name "*.jar" -size +15M 2>/dev/null | wh
 done | head -1)
 echo "jar: $JAR" > probe/info.txt
 [ -z "$JAR" ] && exit 0
+unzip -p "$JAR" version.json > probe/version.json 2>/dev/null; find ~/.gradle -name "26.3*.json" -path "*version*" 2>/dev/null | head -3 >> probe/info.txt
 unzip -l "$JAR" | awk '{print $4}' | grep '\.class$' | sed 's/\.class$//' | sort > probe/classes.txt
 while read -r line; do
   [ -z "$line" ] && continue
