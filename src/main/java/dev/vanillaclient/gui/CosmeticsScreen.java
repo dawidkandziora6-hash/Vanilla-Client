@@ -89,7 +89,7 @@ public final class CosmeticsScreen extends BaseScreen {
 		super.init();
 		int x = gridX();
 		int tw = (gridW() - 8) / 3;
-		ItemStack[] icons = {Icons.stack(Items.RED_BANNER), Icons.stack(Items.ELYTRA), Icons.stack(Items.SHIELD)};
+		ItemStack[] icons = {Icons.stack(Items.LEATHER), Icons.stack(Items.ELYTRA), Icons.stack(Items.SHIELD)};
 		for (Kind k : Kind.values()) {
 			Button b = iconAction(x + k.ordinal() * (tw + 4), top(), tw, icons[k.ordinal()], "    " + k.title, () -> {
 				kind = k;
