@@ -49,7 +49,15 @@ public class ShieldSpecialRendererMixin {
 			at = @At("HEAD"), cancellable = true)
 	private void vc$shieldSkin(DataComponentMap data, PoseStack pose, SubmitNodeCollector collector,
 			int light, int overlay, boolean foil, int outline, CallbackInfo ci) {
-		Identifier tex = Cosmetics.shieldTexture();
+		Identifier tex;
+		net.minecraft.world.entity.player.Player holder = dev.vanillaclient.net.ClientSync.renderingPlayer();
+		if (holder != null && holder != net.minecraft.client.Minecraft.getInstance().player) {
+			dev.vanillaclient.net.ClientSync.Remote r = dev.vanillaclient.net.ClientSync.of(holder);
+			Cosmetics.Tex t = r == null || !dev.vanillaclient.config.Config.get().ranks.showOthers ? null : Cosmetics.texture(Cosmetics.Kind.SHIELD, r.shield());
+			tex = t == null ? null : t.id();
+		} else {
+			tex = Cosmetics.shieldTexture();
+		}
 		if (tex == null) return;
 		if (data != null) {
 			BannerPatternLayers patterns = data.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);

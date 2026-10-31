@@ -20,15 +20,21 @@ public class AbstractClientPlayerMixin {
 	@Inject(method = "getSkin", at = @At("RETURN"), cancellable = true)
 	private void vc$cosmetics(CallbackInfoReturnable<PlayerSkin> cir) {
 		AbstractClientPlayer self = (AbstractClientPlayer) (Object) this;
-		if (self != Minecraft.getInstance().player) {
-			return;
-		}
 		PlayerSkin skin = cir.getReturnValue();
 		if (skin == null) {
 			return;
 		}
-		ClientAsset.Texture cape = Cosmetics.capeTexture();
-		ClientAsset.Texture wings = Cosmetics.wingsTexture();
+		ClientAsset.Texture cape, wings;
+		if (self == Minecraft.getInstance().player) {
+			cape = Cosmetics.capeTexture();
+			wings = Cosmetics.wingsTexture();
+		} else {
+			// other Vanilla Client players (server sync or ranks.json)
+			dev.vanillaclient.net.ClientSync.Remote r = dev.vanillaclient.net.ClientSync.of(self);
+			if (r == null || !dev.vanillaclient.config.Config.get().ranks.showOthers) return;
+			cape = Cosmetics.assetOf(Cosmetics.Kind.CAPE, r.cape());
+			wings = Cosmetics.assetOf(Cosmetics.Kind.WINGS, r.wings());
+		}
 		if (cape == null && wings == null) {
 			return;
 		}

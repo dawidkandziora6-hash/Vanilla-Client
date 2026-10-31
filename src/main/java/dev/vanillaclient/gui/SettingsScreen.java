@@ -24,7 +24,8 @@ public final class SettingsScreen extends BaseScreen {
 		COORDS("HUD", "Coordinates", Items.COMPASS),
 		ARMOR("HUD", "Armor", Items.DIAMOND_CHESTPLATE),
 		TASKLIST("HUD", "Task List", Items.WRITABLE_BOOK),
-		IMAGES("HUD", "Images", Items.PAINTING),
+		KEYS("HUD", "Keystrokes", Items.STONE_BUTTON),
+		IMAGES("HUD", "Pictures", Items.PAINTING),
 		WAYPOINTS("HUD", "Waypoints", Items.RECOVERY_COMPASS),
 		INFO("HUD", "Info Lines", Items.REDSTONE),
 		CROSSHAIR("VISUALS", "Crosshair", Items.TARGET),
@@ -142,6 +143,7 @@ public final class SettingsScreen extends BaseScreen {
 			case ARMOR -> armor();
 			case TASKLIST -> taskList();
 			case IMAGES -> images();
+			case KEYS -> keystrokes();
 			case WAYPOINTS -> waypoints();
 			case INFO -> info();
 			case CROSSHAIR -> crosshair();
@@ -168,6 +170,7 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Chip("Held Items", i(Items.TOTEM_OF_UNDYING), () -> c.heldItems.enabled, v -> c.heldItems.enabled = v, () -> go(Page.HELD)));
 		list.add(new Ui.Chip("World Map", i(Items.FILLED_MAP), () -> c.worldMap.enabled, v -> c.worldMap.enabled = v, () -> go(Page.GENERAL)));
 		list.add(new Ui.Chip("Name Tag", i(Items.NAME_TAG), () -> c.ranks.ownNameTag, v -> c.ranks.ownNameTag = v, () -> go(Page.RANK)));
+		list.add(new Ui.Chip("Keystrokes", i(Items.STONE_BUTTON), () -> c.keystrokes.enabled, v -> c.keystrokes.enabled = v, () -> go(Page.KEYS)));
 		java.util.List<dev.vanillaclient.hud.HudModule> info = dev.vanillaclient.hud.HudManager.INFO;
 		for (int k = 0; k < info.size(); k++) {
 			final int idx = k;
@@ -184,6 +187,7 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Tile("UHC Guide", "Trades, enchants, brewing", i(Items.ENCHANTED_BOOK), () -> open(new GuideScreen(this))));
 		list.add(new Ui.Tile("Advancements", "Every one, what to do", i(Items.GOLDEN_APPLE), () -> open(new AdvancementsChecklistScreen(this))));
 		list.add(new Ui.Tile("Statistics", "Your world in numbers", i(Items.BOOK), () -> open(new StatsOverviewScreen(this))));
+		list.add(new Ui.Tile("Gallery", "Screenshots & pictures", i(Items.PAINTING), () -> open(new GalleryScreen(this))));
 	}
 
 	private void drawRankBanner(GuiGraphicsExtractor g, int x, int y, int w, float a) {
@@ -199,7 +203,11 @@ public final class SettingsScreen extends BaseScreen {
 		g.pose().scale(2f, 2f);
 		g.text(this.font, r.symbol(), 0, 0, Theme.alpha(r.color(), a), true);
 		g.pose().popMatrix();
-		g.text(this.font, "§f" + name + " §7· " + r.name(), x + 28, y + 6, Theme.alpha(r.color(), a), false);
+		dev.vanillaclient.features.ClientRanks.Rank cr = dev.vanillaclient.features.ClientRanks.rank(name, this.minecraft.getUser().getProfileId());
+		net.minecraft.network.chat.MutableComponent line = cr != null ? dev.vanillaclient.features.ClientRanks.prefix(cr)
+				.append(Component.literal(name).withColor(cr.nameColor())) : Component.literal(name).withColor(0xFFFFFF);
+		line.append(Component.literal(" · " + r.name()).withColor(r.color() & 0xFFFFFF));
+		g.text(this.font, line, x + 28, y + 6, Theme.alpha(0xFFFFFFFF, a), false);
 		String sub = "§7" + dev.vanillaclient.features.Ranks.formatHours(h) + " played"
 				+ (next == null ? " §6· max rank!" : " §8· next: " + next.symbol() + " " + next.name() + " at " + next.hours() + "h");
 		g.text(this.font, this.font.plainSubstrByWidth(sub, w - 34), x + 28, y + 17, Theme.alpha(0xFFFFFFFF, a), false);
@@ -300,7 +308,18 @@ public final class SettingsScreen extends BaseScreen {
 
 	private void images() {
 		Config c = cfg();
-		list.add(new Ui.Header("YOUR PICTURES"));
+		list.add(new Ui.Button("Open the gallery (screenshots + pictures)", i(Items.PAINTING), () -> open(new GalleryScreen(this)), 22));
+		list.add(new Ui.Header("SCREENSHOTS"));
+		list.add(new Ui.Toggle("Nicer chat message with [View] [Open]", null, () -> c.screenshotMessage, v -> c.screenshotMessage = v));
+		list.add(new Ui.Toggle("Preview popup after F2", null, () -> c.screenshotPopup, v -> c.screenshotPopup = v));
+		java.util.List<java.nio.file.Path> shots = dev.vanillaclient.images.Screenshots.all();
+		if (!shots.isEmpty()) {
+			list.add(new Ui.Custom(46, (g, x, y, w, h, mx, my, a) -> {
+				int n = Math.min(shots.size(), Math.max(1, (w + 4) / 74));
+				for (int k = 0; k < n; k++) thumb(g, shots.get(k), x + k * 74, y, 70, 42, 160);
+			}, () -> open(new GalleryScreen(this))));
+		}
+		list.add(new Ui.Header("HUD PICTURES  §8· drop PNG / JPG files into this window"));
 		list.add(new Ui.Button("Open folder", i(Items.CHEST), () -> Platform.open(Config.imagesDir())));
 		list.add(new Ui.Button("Reload pictures", i(Items.CLOCK), () -> {
 			ImageManager.reload();
@@ -311,12 +330,55 @@ public final class SettingsScreen extends BaseScreen {
 			list.add(new Ui.Info("No pictures yet.", "Drag PNG / JPG files into this window!"));
 		}
 		for (Config.Image img : c.images) {
-			String name = this.font.plainSubstrByWidth(img.file, contentW() - 60);
-			list.add(new Ui.Toggle(name, i(Items.PAINTING), () -> img.enabled, v -> img.enabled = v));
+			java.nio.file.Path f = Config.imagesDir().resolve(img.file);
+			list.add(new Ui.Custom(40, (g, x, y, w, h, mx, my, a) -> {
+				g.fill(x, y, x + w, y + 38, Theme.alpha(img.enabled ? 0x30306030 : 0x20000000, a));
+				thumb(g, f, x + 3, y + 3, 56, 32, 128);
+				g.text(this.font, "§f" + this.font.plainSubstrByWidth(img.file, w - 72), x + 64, y + 8, Theme.alpha(0xFFFFFFFF, a), false);
+				g.text(this.font, img.enabled ? "§a● on screen" : "§8○ hidden · click to show", x + 64, y + 22, Theme.alpha(0xFFFFFFFF, a), false);
+			}, () -> {
+				img.enabled = !img.enabled;
+				Config.save();
+			}));
 			list.add(new Ui.Slider("  Opacity", 0.05, 1.0, 0.05, () -> ((img.tint >>> 24) & 0xFF) / 255.0,
 					v -> img.tint = (img.tint & 0x00FFFFFF) | ((int) Math.round(v * 255) << 24), v -> Math.round(v * 100) + "%"));
 		}
 		list.add(new Ui.Info("Place & resize them in the HUD editor."));
+	}
+
+	private void thumb(GuiGraphicsExtractor g, java.nio.file.Path f, int x, int y, int w, int h, int max) {
+		g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0xFF000000);
+		dev.vanillaclient.images.Thumbs.Thumb t = dev.vanillaclient.images.Thumbs.get(f, max);
+		if (t == null) {
+			g.fill(x, y, x + w, y + h, 0xFF1A1A1A);
+			return;
+		}
+		float k = Math.min(w / (float) t.w(), h / (float) t.h());
+		int dw = Math.max(1, Math.round(t.w() * k)), dh = Math.max(1, Math.round(t.h() * k));
+		g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, t.id(), x + (w - dw) / 2, y + (h - dh) / 2, 0f, 0f, dw, dh, t.w(), t.h(), t.w(), t.h());
+	}
+
+	private void keystrokes() {
+		Config.Keystrokes k = cfg().keystrokes;
+		list.add(new Ui.Header("KEYSTROKES"));
+		list.add(new Ui.Toggle("Show on screen", i(Items.STONE_BUTTON), () -> k.enabled, v -> k.enabled = v));
+		list.add(new Ui.Custom(80, (g, x, y, w, h, mx, my, a) -> {
+			dev.vanillaclient.hud.KeystrokesModule m = dev.vanillaclient.hud.HudManager.KEYSTROKES;
+			g.pose().pushMatrix();
+			g.pose().translate(x + w / 2f - m.width(true) / 2f, y + 2);
+			m.draw(g, true);
+			g.pose().popMatrix();
+		}));
+		list.add(new Ui.Toggle("Mouse buttons", null, () -> k.showMouse, v -> k.showMouse = v));
+		list.add(new Ui.Toggle("Clicks per second", null, () -> k.showCps, v -> k.showCps = v));
+		list.add(new Ui.Toggle("Space bar", null, () -> k.showSpace, v -> k.showSpace = v));
+		list.add(new Ui.Toggle("Outline", null, () -> k.outline, v -> k.outline = v));
+		list.add(new Ui.ColorPick("Key color", () -> k.keyColor, v -> k.keyColor = v, this::colorPicker));
+		list.add(new Ui.ColorPick("Pressed color", () -> k.pressedColor, v -> k.pressedColor = v, this::colorPicker));
+		list.add(new Ui.ColorPick("Text color", () -> k.color, v -> k.color = v, this::colorPicker));
+		list.add(new Ui.ColorPick("Pressed text color", () -> k.pressedTextColor, v -> k.pressedTextColor = v, this::colorPicker));
+		list.add(new Ui.Slider("Size", 0.5, 3.0, 0.05, () -> k.scale, v -> k.scale = (float) v, v -> Math.round(v * 100) + "%"));
+		list.add(new Ui.Button("Move it in the HUD editor", i(Items.ITEM_FRAME), () -> open(new HudEditorScreen(this))));
 	}
 
 	private void waypoints() {
@@ -462,6 +524,25 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Toggle("Show your name in F5 (third person)", i(Items.NAME_TAG), () -> r.ownNameTag, v -> r.ownNameTag = v));
 		list.add(new Ui.Toggle("Rank symbol in front of your name", null, () -> r.symbolInName, v -> r.symbolInName = v));
 		list.add(new Ui.Toggle("Rank line on screen", i(Items.NETHER_STAR), () -> cfg().rankHud.enabled, v -> cfg().rankHud.enabled = v));
+		list.add(new Ui.Header("CLIENT RANKS & OTHER PLAYERS"));
+		var me = this.minecraft.getUser();
+		dev.vanillaclient.features.ClientRanks.Rank cr = dev.vanillaclient.features.ClientRanks.rank(me.getName(), me.getProfileId());
+		list.add(new Ui.Custom(22, (g, x, y, w, h, mx, my, a) -> {
+			g.fill(x, y, x + w, y + 20, Theme.alpha(0x30000000, a));
+			if (cr != null) {
+				net.minecraft.network.chat.MutableComponent t = dev.vanillaclient.features.ClientRanks.prefix(cr)
+						.append(net.minecraft.network.chat.Component.literal(me.getName()).withColor(cr.nameColor()));
+				g.text(this.font, t, x + 6, y + 6, 0xFFFFFFFF, true);
+			} else {
+				g.text(this.font, "§7No client rank for §f" + me.getName(), x + 6, y + 6, 0xFFFFFFFF, false);
+			}
+		}));
+		list.add(new Ui.Toggle("Show Owner / Admin … ranks", null, () -> r.showClientRanks, v -> r.showClientRanks = v));
+		list.add(new Ui.Toggle("Load the rank list from GitHub", null, () -> r.onlineRanks, v -> r.onlineRanks = v));
+		list.add(new Ui.Toggle("Share my cosmetics with other players", null, () -> r.shareCosmetics, v -> r.shareCosmetics = v));
+		list.add(new Ui.Toggle("Show other players' cosmetics", null, () -> r.showOthers, v -> r.showOthers = v));
+		list.add(new Ui.Info("Ranks are given by name in ranks.json on GitHub.",
+				"Cosmetics are shared on LAN worlds and servers that run Vanilla Client."));
 		list.add(new Ui.Header("RANKS  §8· click an unlocked one to wear it"));
 		for (dev.vanillaclient.features.Ranks.Rank rk : dev.vanillaclient.features.Ranks.ALL) {
 			list.add(new Ui.Custom(20, (g, x, y, w, h, mx, my, a) -> {

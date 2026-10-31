@@ -3,16 +3,26 @@
   "id": "vanillaclient",
   "version": "${version}",
   "name": "Vanilla Client",
-  "description": "A clean, client-side helper for Hardcore/UHC: days, tasks, armor status, zoom, custom crosshair, images and cosmetics – without changing the game.",
-  "authors": ["Dawid"],
+  "description": "A clean helper for Hardcore/UHC: HUD, map, waypoints, tasks, guide, crosshair, cosmetics and ranks. Client-side; on servers/LAN worlds with the mod, players see each other's cosmetics.",
+  "authors": [
+    "Dawid"
+  ],
   "license": "MIT",
   "icon": "assets/vanillaclient/icon.png",
-  "environment": "client",
+  "environment": "*",
   "entrypoints": {
-    "client": ["dev.vanillaclient.VanillaClient"]
+    "main": [
+      "dev.vanillaclient.net.CommonInit"
+    ],
+    "client": [
+      "dev.vanillaclient.VanillaClient"
+    ]
   },
   "mixins": [
-    { "config": "vanillaclient.mixins.json", "environment": "client" }
+    {
+      "config": "vanillaclient.mixins.json",
+      "environment": "client"
+    }
   ],
   "depends": {
     "fabricloader": ">=0.19.5",

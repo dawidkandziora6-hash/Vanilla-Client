@@ -345,13 +345,9 @@ def sides(img, arr, fx, fy, side, cap, dark=0.65):
     left = np.repeat(arr[:, :1], side, 1).copy()
     right = np.repeat(arr[:, -1:], side, 1).copy()
     top = np.repeat(arr[:1], cap, 0).copy()
-    bottom = np.zeros((cap, w, 4), np.uint8)
-    last = np.zeros((w, 4), np.uint8)
-    for x in range(w):
-        ys = np.nonzero(arr[:, x, 3])[0]
-        if len(ys):
-            last[x] = arr[ys[-1], x]
-    bottom[:] = last[None]
+    # bottom face = the face's own last row: transparent where the shape is cut,
+    # so no stray strip floats under V-cuts, rags or round shields
+    bottom = np.repeat(arr[-1:], cap, 0).copy()
     for part, xx, yy in ((left, fx - side, fy), (right, fx + w, fy), (top, fx, fy - cap), (bottom, fx + w, fy - cap)):
         part[..., :3] = (part[..., :3] * dark).astype(np.uint8)
         put(img, part, xx, yy)
@@ -374,15 +370,26 @@ def cape_frame(face, lining):
     return img
 
 
+def wing_silhouette(face):
+    """Real wing outline: rounded shoulder, tapering tip – applied to every wing design."""
+    w, h = face.w, face.h
+    X, Y = face.X, face.Y
+    shoulder = ~((X < 3) & (Y < 3 - X)) & ~((X > w - 4) & (Y < X - (w - 4)))
+    tip_r = 18
+    tip = (Y < h - tip_r) | (((X - (w - 1) / 2) / (w / 2)) ** 2 + ((Y - (h - tip_r)) / tip_r) ** 2 < 1)
+    face.shape(shoulder & tip)
+
+
 def wing_frame(face):
     img = Image.new("RGBA", (256, 128), (0, 0, 0, 0))
+    wing_silhouette(face)
+    face.outline(None, 0.35)
     arr = face.rgba()
     put(img, arr, 96, 8)
     back = arr.copy()
-    back[..., :3] = (back[..., :3] * 0.8).astype(np.uint8)
+    back[..., :3] = (back[..., :3] * 0.88).astype(np.uint8)
     put(img, back, 144, 8, mirror=True)
-    sides(img, arr, 96, 8, 8, 8)
-    # cape area too (only used if someone wears these wings without a cape design)
+    # no side/top/bottom faces: the wing reads as a thin, flat sheet instead of a thick slab
     put(img, arr[8:72], 4, 4)
     return img
 

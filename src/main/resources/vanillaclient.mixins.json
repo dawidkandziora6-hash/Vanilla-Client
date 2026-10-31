@@ -5,6 +5,7 @@
   "client": [
     "AbstractClientPlayerMixin",
     "CapeLayerMixin",
+    "ChatComponentMixin",
     "ClientClockManagerAccessor",
     "ClockInstanceAccessor",
     "ContainerScreenAccessor",
@@ -13,6 +14,7 @@
     "InventoryScreenInvoker",
     "MouseHandlerMixin",
     "NameTagMixin",
+    "RenderContextMixin",
     "ScreenEffectRendererMixin",
     "ShieldSpecialRendererMixin",
     "ShowNameMixin"

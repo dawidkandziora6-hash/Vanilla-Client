@@ -1,0 +1,6 @@
+{
+  "_info": "Vanilla Client ranks. Edit this file on GitHub to give players a rank (by in-game name or UUID). Optional: cape / wings / shield = design id, shown to everyone with the mod.",
+  "players": {
+    "Pileczek": { "rank": "owner", "cape": "galaxy", "shield": "galaxy" }
+  }
+}

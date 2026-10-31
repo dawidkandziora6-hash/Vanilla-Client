@@ -191,6 +191,13 @@ public final class Cosmetics {
 		return t == null ? null : t.asset();
 	}
 
+	/** Built-in design texture for another player (never their own custom PNG). */
+	public static ClientAsset.Texture assetOf(Kind k, String id) {
+		if (id == null || id.equals(NONE) || id.equals(CUSTOM)) return null;
+		Tex t = texture(k, id);
+		return t == null ? null : t.asset();
+	}
+
 	public static Identifier shieldTexture() {
 		Tex t = texture(Kind.SHIELD, effective(Kind.SHIELD));
 		return t == null ? null : t.id();

@@ -30,6 +30,7 @@ public class WorldTest implements FabricClientGameTest {
 			c.crosshair.enabled = true;
 			c.crosshair.outline = true;
 			c.crosshair.outlineThickness = 2;
+			c.keystrokes.enabled = true;
 		});
 		try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
 			ctx.waitTicks(120);
@@ -55,6 +56,9 @@ public class WorldTest implements FabricClientGameTest {
 			});
 			ctx.waitTicks(30);
 			ctx.takeScreenshot("w01_hud");
+			ctx.getInput().pressKey(ctx.computeOnClient(mc -> mc.options.keyScreenshot));
+			ctx.waitTicks(40);
+			ctx.takeScreenshot("w01b_screenshot_popup");
 
 			ctx.runOnClient(mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK));
 			ctx.waitTicks(20);
@@ -112,13 +116,16 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.setScreen(() -> new dev.vanillaclient.gui.StatsOverviewScreen(null));
 			ctx.waitTicks(40);
 			ctx.takeScreenshot("w10_stats");
+			ctx.setScreen(() -> new dev.vanillaclient.gui.GalleryScreen(null));
+			ctx.waitTicks(40);
+			ctx.takeScreenshot("w10b_gallery");
 			ctx.setScreen(() -> new dev.vanillaclient.gui.WorldMapScreen(null));
 			ctx.waitTicks(30);
 			ctx.takeScreenshot("w11_map");
 			ctx.setScreen(() -> new dev.vanillaclient.gui.SettingsScreen(null));
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w12_settings");
-			for (String pg : new String[] {"INFO", "RANK", "CONTROLS", "HELD", "COORDS", "CROSSHAIR"}) {
+			for (String pg : new String[] {"RANK", "KEYS", "IMAGES"}) {
 				ctx.setScreen(() -> dev.vanillaclient.gui.SettingsScreen.at(null, pg));
 				ctx.waitTicks(15);
 				ctx.takeScreenshot("p_" + pg.toLowerCase());

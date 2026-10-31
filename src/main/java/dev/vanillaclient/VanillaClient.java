@@ -34,11 +34,29 @@ import net.minecraft.resources.Identifier;
  */
 public final class VanillaClient implements ClientModInitializer {
 	public static final String MOD_ID = "vanillaclient";
+	/** Screen to open on the next tick (commands run while the chat is still closing). */
+	private static volatile Runnable pending;
 
 	@Override
 	public void onInitializeClient() {
 		Config.load();
 		ImageManager.scan();
+		dev.vanillaclient.features.ClientRanks.init();
+		dev.vanillaclient.net.ClientSync.init();
+		// /vcgallery [file] – opened from the screenshot chat message
+		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, ctx) -> {
+			dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("vcgallery")
+					.executes(c -> {
+						pending = () -> Minecraft.getInstance().setScreenAndShow(new dev.vanillaclient.gui.GalleryScreen(null));
+						return 1;
+					})
+					.then(net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument("file", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+							.executes(c -> {
+								String f = com.mojang.brigadier.arguments.StringArgumentType.getString(c, "file");
+								pending = () -> Minecraft.getInstance().setScreenAndShow(dev.vanillaclient.gui.GalleryScreen.showing(null, f));
+								return 1;
+							})));
+		});
 
 		KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"));
 		KeyMapping zoom = KeyMappingHelper.registerKeyMapping(new KeyMapping(
@@ -85,7 +103,13 @@ public final class VanillaClient implements ClientModInitializer {
 			while (tasksKey.consumeClick()) {
 				if (client.gui.screen() == null) client.setScreenAndShow(new dev.vanillaclient.gui.TasksScreen(null));
 			}
+			if (pending != null && !(client.gui.screen() instanceof net.minecraft.client.gui.screens.ChatScreen)) {
+				Runnable r = pending;
+				pending = null;
+				r.run();
+			}
 			Cosmetics.tick();
+			dev.vanillaclient.net.ClientSync.tick(client);
 			dev.vanillaclient.map.WorldMap.tick(client);
 			dev.vanillaclient.features.Ranks.tick(client);
 			dev.vanillaclient.hud.InfoModules.tick(client);
@@ -106,6 +130,7 @@ public final class VanillaClient implements ClientModInitializer {
 				Identifier.fromNamespaceAndPath(MOD_ID, "hud"), HudManager::render);
 		HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, CrosshairRenderer::wrap);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "waypoints"), dev.vanillaclient.hud.WaypointBar::render);
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "screenshot"), dev.vanillaclient.images.Screenshots::renderPopup);
 
 		ScreenEvents.AFTER_INIT.register(VanillaClient::afterScreenInit);
 
@@ -126,6 +151,7 @@ public final class VanillaClient implements ClientModInitializer {
 					() -> new dev.vanillaclient.gui.HeldItemsScreen(null),
 					() -> new dev.vanillaclient.gui.AdvancementsChecklistScreen(null),
 					() -> new dev.vanillaclient.gui.StatsOverviewScreen(null),
+					() -> new dev.vanillaclient.gui.GalleryScreen(null),
 					() -> new dev.vanillaclient.gui.CrosshairEditorScreen(null),
 					() -> new dev.vanillaclient.gui.ColorPickerScreen(null, "Test", 0xFFFF0000, c -> {}));
 			int[] step = {0, -100};

@@ -90,6 +90,16 @@ public final class Config {
 		public boolean vertical = false;
 	}
 
+	public static class Keystrokes extends Hud {
+		public boolean showMouse = true;
+		public boolean showCps = true;
+		public boolean showSpace = true;
+		public boolean outline = false;
+		public int keyColor = 0x80000000;
+		public int pressedColor = 0xD0FFFFFF;
+		public int pressedTextColor = 0xFF000000;
+	}
+
 	/** Ranks earned with play time. */
 	public static class Ranks {
 		public boolean enabled = true;
@@ -99,6 +109,14 @@ public final class Config {
 		public boolean symbolInName = true;
 		/** Chosen rank id ("" = best unlocked). */
 		public String chosen = "";
+		/** Show Owner / Admin … ranks from the online list. */
+		public boolean showClientRanks = true;
+		/** Download the rank list from GitHub. */
+		public boolean onlineRanks = true;
+		/** Send your cosmetics to servers / LAN worlds that have Vanilla Client. */
+		public boolean shareCosmetics = true;
+		/** Show other players' cosmetics. */
+		public boolean showOthers = true;
 		/** Play time with Vanilla Client in ticks. */
 		public long playTicks = 0;
 	}
@@ -271,6 +289,7 @@ public final class Config {
 	public TextHud fps, ping, biome, clock, speed, light, session, rankHud, effects;
 	public Counter counter;
 	public Ranks ranks = new Ranks();
+	public Keystrokes keystrokes;
 	public Coords coords = (Coords) new Coords().at(0.01f, 0.08f);
 	public WorldMap worldMap = new WorldMap();
 	public Todo todo = (Todo) new Todo().at(0.99f, 0.02f);
@@ -288,6 +307,8 @@ public final class Config {
 	public List<String> categories;
 	public boolean pauseMenuButton = true;
 	public boolean chestButtons = true;
+	public boolean screenshotMessage = true;
+	public boolean screenshotPopup = true;
 	public boolean helperButtons = true;
 
 	public static List<Category> defaultCategories() {
@@ -402,6 +423,11 @@ public final class Config {
 		if (waypointHud == null) waypointHud = new WaypointHud();
 		if (todos == null) todos = new ArrayList<>();
 		if (ranks == null) ranks = new Ranks();
+		if (keystrokes == null) {
+			keystrokes = new Keystrokes();
+			keystrokes.enabled = false;
+			keystrokes.at(0.01f, 0.75f);
+		}
 		if (fps == null) fps = (TextHud) new TextHud().label("FPS").off().at(0.01f, 0.30f);
 		if (ping == null) ping = (TextHud) new TextHud().label("Ping").off().at(0.01f, 0.34f);
 		if (biome == null) biome = (TextHud) new TextHud().label("Biome").off().at(0.01f, 0.38f);
