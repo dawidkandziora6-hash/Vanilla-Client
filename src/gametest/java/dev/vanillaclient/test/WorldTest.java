@@ -32,7 +32,7 @@ public class WorldTest implements FabricClientGameTest {
 			c.crosshair.outlineThickness = 2;
 		});
 		try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
-			sp.getClientWorld().waitForChunksRender();
+			sp.getClientLevel().waitForChunksRender();
 			TestServerContext s = sp.getServer();
 			s.runCommand("gamemode survival @a");
 			s.runCommand("time set noon");

@@ -30,7 +30,7 @@ public final class SettingsScreen extends BaseScreen {
 		CROSSHAIR("VISUALS", "Crosshair", Items.TARGET),
 		ZOOM("VISUALS", "Zoom", Items.SPYGLASS),
 		HELD("VISUALS", "Held Items", Items.TOTEM_OF_UNDYING),
-		RANK("YOU", "Rank & Name", Items.NETHER_STAR),
+		RANK("GENERAL", "Rank & Name", Items.NETHER_STAR),
 		CONTROLS("GENERAL", "Controls", Items.LEVER),
 		GENERAL("GENERAL", "Settings", Items.COMPARATOR);
 
@@ -521,8 +521,20 @@ public final class SettingsScreen extends BaseScreen {
 
 	/** Entry height shrinks on small windows so everything fits. */
 	private int entryH() {
-		int avail = bottom() - top() - 3 * HEADER - 2;
-		return Math.max(12, Math.min(17, avail / Page.values().length));
+		int avail = bottom() - top() - groups() * headerH() - 2;
+		return Math.max(9, Math.min(17, avail / Page.values().length));
+	}
+
+	private static int groups() {
+		java.util.Set<String> g = new java.util.HashSet<>();
+		for (Page p : Page.values()) if (p.group != null) g.add(p.group);
+		return g.size();
+	}
+
+	/** Group headers shrink too when the window is small. */
+	private int headerH() {
+		int avail = bottom() - top() - 2;
+		return avail < Page.values().length * 12 + groups() * HEADER ? 9 : HEADER;
 	}
 
 	private List<Entry> sidebar() {
@@ -534,7 +546,7 @@ public final class SettingsScreen extends BaseScreen {
 			if (p.group != null && !p.group.equals(group)) {
 				group = p.group;
 				out.add(new Entry(null, group, y));
-				y += HEADER;
+				y += headerH();
 			}
 			out.add(new Entry(p, null, y));
 			y += ENTRY;

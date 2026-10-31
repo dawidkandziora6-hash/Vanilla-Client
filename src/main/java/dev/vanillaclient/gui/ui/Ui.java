@@ -733,7 +733,16 @@ public final class Ui {
 			float bob = hovered ? (float) Math.sin(Theme.time() * 6) * 1f : 0f;
 			Icons.scaled(g, icon, x + 4, y + 4 + bob, 0.9f);
 			int tw = w - 22 - 16;
-			g.text(font, font.plainSubstrByWidth(name, tw), x + 21, y + 4, Theme.alpha(on ? 0xFFFFFFFF : 0xFF9A9A9A, alpha), false);
+			int nw = font.width(name);
+			if (nw > tw && nw * 0.75f <= tw + 2) {
+				g.pose().pushMatrix();
+				g.pose().translate(x + 21, y + 5);
+				g.pose().scale(0.75f, 0.75f);
+				g.text(font, name, 0, 0, Theme.alpha(on ? 0xFFFFFFFF : 0xFF9A9A9A, alpha), false);
+				g.pose().popMatrix();
+			} else {
+				g.text(font, font.plainSubstrByWidth(name, tw), x + 21, y + 4, Theme.alpha(on ? 0xFFFFFFFF : 0xFF9A9A9A, alpha), false);
+			}
 			g.text(font, on ? "§aon" : "§8off", x + 21, y + 13, Theme.alpha(0xFFFFFFFF, alpha), false);
 			int sx = x + w - 13, sy = y + 8;
 			g.fill(sx, sy, sx + 8, sy + 8, Theme.alpha(0xFF202020, alpha));
