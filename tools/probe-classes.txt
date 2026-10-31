@@ -1,22 +1,8 @@
-net/minecraft/client/renderer/special/ShieldSpecialRenderer -c
-net/minecraft/client/renderer/FirstPersonHandsAndItemsRenderer -c
-net/minecraft/client/player/ItemActivation -c
-net/minecraft/client/resources/model/sprite/SpriteId
-net/minecraft/client/renderer/texture/TextureAtlasSprite
-net/minecraft/client/renderer/texture/SpriteContents
-net/minecraft/client/renderer/texture/TextureAtlas
-net/minecraft/client/gui/render/pip/GuiEntityRenderer
-net/minecraft/client/renderer/entity/layers/CapeLayer -c
-net/minecraft/client/renderer/entity/layers/WingsLayer -c
-net/minecraft/client/renderer/SubmitNodeCollector
-net/minecraft/client/renderer/rendertype/RenderTypes
-net/minecraft/world/item/ItemStack
-net/minecraft/client/gui/Font
-net/minecraft/client/gui/components/EditBox
-net/minecraft/client/gui/components/Tooltip
-net/minecraft/client/gui/screens/inventory/InventoryScreen -c
-com/mojang/blaze3d/platform/NativeImage
-net/minecraft/client/renderer/texture/DynamicTexture
-net/minecraft/client/renderer/texture/TextureManager
-net/minecraft/client/renderer/entity/state/AvatarRenderState
-net/minecraft/client/model/object/equipment/ShieldModel
+net/minecraft/client/renderer/OrderedSubmitNodeCollector
+net/minecraft/client/renderer/texture/UvMapping
+net/minecraft/client/renderer/ScreenEffectRenderer -c
+net/minecraft/client/renderer/state/level/PlayerRenderState$ItemActivationRenderState
+net/minecraft/client/model/Model
+net/minecraft/client/renderer/item/ItemStackRenderState
+net/minecraft/client/player/LocalPlayer
+net/minecraft/world/entity/LivingEntity
