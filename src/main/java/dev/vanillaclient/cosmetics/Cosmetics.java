@@ -88,7 +88,7 @@ public final class Cosmetics {
 
 	public static final List<Design> TOTEMS = List.of(
 			new Design(NONE, "Vanilla", "Normal totem", 0xFF555555),
-			new Design("statue", "Golden Statue", "◆ 3D model", 0xFFF5C846),
+			new Design("statue", "3D Statue", "◆ Real 3D golden model", 0xFFF5C846),
 			new Design("king", "Golden King", "✦ Gem pulse", 0xFFF5C846),
 			new Design("diamond", "Diamond", "✦ Glint", 0xFF6EE6E6),
 			new Design("emerald", "Emerald", "✦ Glint", 0xFF3CC864),
