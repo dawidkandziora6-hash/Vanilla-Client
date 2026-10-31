@@ -96,7 +96,11 @@ public final class VanillaClient implements ClientModInitializer {
 			// then open every menu for a moment and render it
 			java.util.List<java.util.function.Supplier<Screen>> tour = java.util.List.of(
 					() -> new SettingsScreen(null), () -> new HudEditorScreen(null),
-					() -> new dev.vanillaclient.gui.TasksScreen(null), () -> new dev.vanillaclient.gui.CosmeticsScreen(null),
+					() -> new dev.vanillaclient.gui.TasksScreen(null),
+					() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, Cosmetics.Kind.CAPE),
+					() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, Cosmetics.Kind.WINGS),
+					() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, Cosmetics.Kind.SHIELD),
+					() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, Cosmetics.Kind.TOTEM),
 					() -> new dev.vanillaclient.gui.WorldMapScreen(null), () -> new dev.vanillaclient.gui.GuideScreen(null),
 					() -> new dev.vanillaclient.gui.CrosshairEditorScreen(null),
 					() -> new dev.vanillaclient.gui.ColorPickerScreen(null, "Test", 0xFFFF0000, c -> {}));

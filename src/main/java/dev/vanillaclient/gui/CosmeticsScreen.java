@@ -38,6 +38,12 @@ public final class CosmeticsScreen extends BaseScreen {
 	private String status = "";
 	private long statusAt;
 
+	/** Opens the wardrobe on a given tab. */
+	public static CosmeticsScreen onTab(Screen parent, Kind tab) {
+		kind = tab;
+		return new CosmeticsScreen(parent);
+	}
+
 	public CosmeticsScreen(Screen parent) {
 		super(Component.literal("Wardrobe"), parent);
 	}
