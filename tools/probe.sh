@@ -27,3 +27,6 @@ unzip -l "$JAR" | awk '{print $4}' | grep -E "sprites/hud/(crosshair|locator|exp
 # who uses ItemActivation / displayItemActivation
 mkdir -p /tmp/x && cd /tmp/x && unzip -qo "$JAR" 'net/minecraft/client/*' && grep -rl "ItemActivation" . > "$OLDPWD/probe/itemactivation-users.txt" || true
 GT=$(find ~/.gradle -name "fabric-client-gametest-api-v1*.jar" | head -1); [ -n "$GT" ] && unzip -l "$GT" | awk "{print \$4}" | grep "\.class$" > "$OLDPWD/probe/gametest-classes.txt" 2>/dev/null; unzip -l "$GT" | awk "{print \$4}" | grep "\.class$" > probe/gametest-classes.txt 2>/dev/null || true
+
+RJ=$(find ~/.gradle -name "fabric-rendering-v1*.jar" | head -1); unzip -l "$RJ" | awk '{print $4}' | grep "api.*\.class$" > probe/rendering-classes.txt 2>/dev/null || true
+for c in $(grep -i "layer\|feature" probe/rendering-classes.txt | sed 's/\.class$//'); do javap -p -cp "$RJ:$JAR" "$(echo $c | tr '/' '.')" >> probe/rendering-layer-api.txt 2>&1; done
