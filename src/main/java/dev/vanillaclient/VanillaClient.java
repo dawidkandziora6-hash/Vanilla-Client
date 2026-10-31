@@ -7,7 +7,6 @@ import dev.vanillaclient.config.Config;
 import dev.vanillaclient.cosmetics.Cosmetics;
 import dev.vanillaclient.crosshair.CrosshairRenderer;
 import dev.vanillaclient.gui.HudEditorScreen;
-import dev.vanillaclient.gui.Icons;
 import dev.vanillaclient.gui.SettingsScreen;
 import dev.vanillaclient.hud.HudManager;
 import dev.vanillaclient.images.ImageManager;
@@ -28,7 +27,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.Items;
 
 /**
  * Vanilla Client – client-side only. No packets are sent and no game values are
@@ -55,6 +53,12 @@ public final class VanillaClient implements ClientModInitializer {
 				"key.vanillaclient.map", InputConstants.Type.KEYBOARD, InputConstants.KEY_M, category));
 		KeyMapping waypointKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.vanillaclient.waypoint", InputConstants.Type.KEYBOARD, InputConstants.KEY_B, category));
+		KeyMapping wardrobeKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.vanillaclient.cosmetics", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
+		KeyMapping tasksKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.vanillaclient.tasks", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
+		KeyMapping sortKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.vanillaclient.sort", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
 		Zoom.init(zoom);
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -75,9 +79,27 @@ public final class VanillaClient implements ClientModInitializer {
 			while (waypointKey.consumeClick()) {
 				if (client.gui.screen() == null) dev.vanillaclient.map.Waypoints.addHere();
 			}
+			while (wardrobeKey.consumeClick()) {
+				if (client.gui.screen() == null) client.setScreenAndShow(new dev.vanillaclient.gui.CosmeticsScreen(null));
+			}
+			while (tasksKey.consumeClick()) {
+				if (client.gui.screen() == null) client.setScreenAndShow(new dev.vanillaclient.gui.TasksScreen(null));
+			}
 			Cosmetics.tick();
 			dev.vanillaclient.map.WorldMap.tick(client);
+			dev.vanillaclient.features.Ranks.tick(client);
+			dev.vanillaclient.hud.InfoModules.tick(client);
 		});
+		// sort key also works while a chest is open (screens swallow normal key mappings)
+		ScreenEvents.BEFORE_INIT.register((client, screen, w, h) -> {
+			if (dev.vanillaclient.features.ChestTools.supported(screen)) {
+				net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents.afterKeyPress(screen).register((s, ev) -> {
+					if (sortKey.matches(ev)) dev.vanillaclient.features.ChestTools.sortOpen();
+				});
+			}
+		});
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register(
+				c -> dev.vanillaclient.cosmetics.TexturePack.cleanUpOldTotem());
 
 		// Our HUD elements sit below the chat.
 		HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
@@ -100,8 +122,10 @@ public final class VanillaClient implements ClientModInitializer {
 					() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, Cosmetics.Kind.CAPE),
 					() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, Cosmetics.Kind.WINGS),
 					() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, Cosmetics.Kind.SHIELD),
-					() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, Cosmetics.Kind.TOTEM),
 					() -> new dev.vanillaclient.gui.WorldMapScreen(null), () -> new dev.vanillaclient.gui.GuideScreen(null),
+					() -> new dev.vanillaclient.gui.HeldItemsScreen(null),
+					() -> new dev.vanillaclient.gui.AdvancementsChecklistScreen(null),
+					() -> new dev.vanillaclient.gui.StatsOverviewScreen(null),
 					() -> new dev.vanillaclient.gui.CrosshairEditorScreen(null),
 					() -> new dev.vanillaclient.gui.ColorPickerScreen(null, "Test", 0xFFFF0000, c -> {}));
 			int[] step = {0, -100};
@@ -131,51 +155,47 @@ public final class VanillaClient implements ClientModInitializer {
 		return n.equals("PauseScreen") || n.equals("GameMenuScreen");
 	}
 
-	private static boolean isOptionsButton(AbstractWidget w) {
-		return w.getMessage().getContents() instanceof TranslatableContents tc && tc.getKey().equals("menu.options");
+	private static boolean hasKey(AbstractWidget w, String key) {
+		return w.getMessage().getContents() instanceof TranslatableContents tc && tc.getKey().equals(key);
 	}
 
-	/** New button in the pause menu, left of "Options…" – like the small vanilla icon buttons. */
 	private static void afterScreenInit(Minecraft client, Screen screen, int w, int h) {
-		if (screen instanceof net.minecraft.client.gui.screens.options.OptionsScreen) {
-			addGuideButton(client, screen);
+		List<AbstractWidget> widgets = Screens.getWidgets(screen);
+		if (dev.vanillaclient.features.ChestTools.supported(screen)) {
+			dev.vanillaclient.features.ChestTools.addButtons(screen, widgets);
 			return;
 		}
-		if (!Config.get().pauseMenuButton || !isPauseScreen(screen)) return;
-		List<AbstractWidget> widgets = Screens.getWidgets(screen);
-		if (widgets.isEmpty()) return; // pause menu hidden with F3+Esc
-		AbstractWidget options = null;
+		if (Config.get().helperButtons && screen instanceof net.minecraft.client.gui.screens.advancements.AdvancementsScreen) {
+			widgets.add(Button.builder(Component.literal("✦ Full checklist"), b -> client.setScreenAndShow(new dev.vanillaclient.gui.AdvancementsChecklistScreen(screen)))
+					.bounds(4, 4, 100, 20).tooltip(Tooltip.create(Component.literal("Every advancement, what's missing and how to get it"))).build());
+			return;
+		}
+		if (Config.get().helperButtons && screen instanceof net.minecraft.client.gui.screens.achievement.StatsScreen) {
+			widgets.add(Button.builder(Component.literal("✦ Overview"), b -> client.setScreenAndShow(new dev.vanillaclient.gui.StatsOverviewScreen(screen)))
+					.bounds(4, 4, 90, 20).build());
+			return;
+		}
+		if (!Config.get().pauseMenuButton || !isPauseScreen(screen) || widgets.isEmpty()) return;
+		// "Give Feedback" | "Report Bugs" become "Vanilla Client" | "Wardrobe"
+		AbstractWidget feedback = null, bugs = null;
 		for (AbstractWidget wd : widgets) {
-			if (isOptionsButton(wd)) {
-				options = wd;
-				break;
-			}
+			if (hasKey(wd, "menu.sendFeedback")) feedback = wd;
+			if (hasKey(wd, "menu.reportBugs")) bugs = wd;
 		}
-		Button button;
-		if (options != null) {
-			int bx = options.getX() - 24;
-			int by = options.getY();
-			button = Button.builder(Component.empty(), b -> client.setScreenAndShow(new SettingsScreen(screen)))
-					.bounds(bx, by, 20, 20)
-					.tooltip(Tooltip.create(Component.literal("Vanilla Client")))
-					.build();
-			ScreenEvents.afterExtract(screen).register((s, g, mx, my, delta) -> g.item(Icons.stack(Items.WRITABLE_BOOK), bx + 2, by + 2));
+		if (feedback != null && bugs != null) {
+			feedback.visible = false;
+			feedback.active = false;
+			bugs.visible = false;
+			bugs.active = false;
+			widgets.add(Button.builder(Component.literal("✦ Vanilla Client"), b -> client.setScreenAndShow(new SettingsScreen(screen)))
+					.bounds(feedback.getX(), feedback.getY(), feedback.getWidth(), feedback.getHeight()).build());
+			widgets.add(Button.builder(Component.literal("Wardrobe"), b -> client.setScreenAndShow(new dev.vanillaclient.gui.CosmeticsScreen(screen)))
+					.bounds(bugs.getX(), bugs.getY(), bugs.getWidth(), bugs.getHeight()).build());
 		} else {
-			button = Button.builder(Component.literal("Vanilla Client"), b -> client.setScreenAndShow(new SettingsScreen(screen)))
-					.bounds(4, 4, 90, 20)
-					.build();
+			widgets.add(Button.builder(Component.literal("✦ Vanilla Client"), b -> client.setScreenAndShow(new SettingsScreen(screen)))
+					.bounds(4, 4, 100, 20).build());
+			widgets.add(Button.builder(Component.literal("Wardrobe"), b -> client.setScreenAndShow(new dev.vanillaclient.gui.CosmeticsScreen(screen)))
+					.bounds(4, 28, 100, 20).build());
 		}
-		widgets.add(button);
-	}
-
-	/** Small "UHC Guide" button in Minecraft's own Options screen (top left). */
-	private static void addGuideButton(Minecraft client, Screen screen) {
-		boolean icons = Icons.ready();
-		Button button = Button.builder(icons ? Component.empty() : Component.literal("§e✦"), b -> client.setScreenAndShow(new dev.vanillaclient.gui.GuideScreen(screen)))
-				.bounds(6, 6, 20, 20)
-				.tooltip(Tooltip.create(Component.literal("UHC Guide – villagers, enchants, brewing")))
-				.build();
-		Screens.getWidgets(screen).add(button);
-		if (icons) ScreenEvents.afterExtract(screen).register((s, g, mx, my, delta) -> g.item(Icons.stack(Items.ENCHANTED_BOOK), 8, 8));
 	}
 }

@@ -91,7 +91,15 @@ public final class TasksScreen extends BaseScreen {
 	}
 
 	private int subTop() {
-		return TOP + 116;
+		return TOP + 162;
+	}
+
+	// pictures
+	private boolean picking;
+	private String bigPicture;
+
+	private int picY() {
+		return TOP + 127;
 	}
 
 	private int subBottom() {
@@ -228,6 +236,18 @@ public final class TasksScreen extends BaseScreen {
 			}
 		}).setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Use your current position")));
 
+		EditBox note = new EditBox(this.font, rx + 1, TOP + 104, rwi - 2, 18, Component.literal("Note"));
+		note.setMaxLength(200);
+		note.setValue(t.note == null ? "" : t.note);
+		note.setHint(Component.literal("✎ Note (where, what, why …)"));
+		note.setResponder(v -> {
+			t.note = v;
+			changed();
+		});
+		addRenderableWidget(note);
+		action(rx + rwi - 20, picY(), 20, "+", () -> picking = !picking)
+				.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Add pictures (or drop PNG/JPG files here)")));
+
 		subBox = new EditBox(this.font, rx + 1, bottom() - 45, rwi - 24, 18, Component.literal("Subtask"));
 		subBox.setMaxLength(48);
 		subBox.setHint(Component.literal("+ Subtask / material …"));
@@ -362,9 +382,11 @@ public final class TasksScreen extends BaseScreen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if ((picking || bigPicture != null) && pictureClick(event.x(), event.y(), event.button())) return true;
 		if (super.mouseClicked(event, doubleClick)) return true;
 		double mx = event.x();
 		double my = event.y();
+		if (pictureClick(mx, my, event.button())) return true;
 		// "Show: …" filter in the task header
 		if (mx >= xm() + mw() / 2 && mx < xm() + mw() && my >= TOP + 2 && my < TOP + 14) {
 			Show[] all = Show.values();
@@ -592,10 +614,11 @@ public final class TasksScreen extends BaseScreen {
 
 		int sd = 0;
 		for (SubTask st : selected.subtasks) if (st.done) sd++;
-		g.text(this.font, "§7SUBTASKS §f" + sd + "/" + selected.subtasks.size(), x + 5, TOP + 104, 0xFFFFFFFF, false);
+		g.text(this.font, "§7SUBTASKS §f" + sd + "/" + selected.subtasks.size(), x + 5, TOP + 150, 0xFFFFFFFF, false);
 		if (!selected.subtasks.isEmpty()) {
-			Theme.progressBar(g, x + 90, TOP + 107, w - 96, 3, sd / (float) selected.subtasks.size(), Theme.GOOD);
+			Theme.progressBar(g, x + 90, TOP + 153, w - 96, 3, sd / (float) selected.subtasks.size(), Theme.GOOD);
 		}
+		drawPictureRow(g, x, w, mouseX, mouseY);
 		int rows = visibleSubRows();
 		subScroll = Math.max(0, Math.min(subScroll, Math.max(0, selected.subtasks.size() - rows)));
 		if (selected.subtasks.isEmpty()) {
@@ -617,6 +640,136 @@ public final class TasksScreen extends BaseScreen {
 				boolean overX = mouseX >= x + w - 16;
 				g.text(this.font, "✖", x + w - 12, y + 3, overX ? Theme.BAD : Theme.DIM, false);
 			}
+		}
+	}
+
+	// ------------------------------------------------------------ pictures
+
+	private void thumb(GuiGraphicsExtractor g, String file, int x, int y, int size) {
+		dev.vanillaclient.images.ImageManager.Tex t = dev.vanillaclient.images.ImageManager.texture(file);
+		g.fill(x - 1, y - 1, x + size + 1, y + size + 1, 0xFF000000);
+		if (t == null) {
+			g.fill(x, y, x + size, y + size, 0xFF303030);
+			g.centeredText(this.font, "?", x + size / 2, y + size / 2 - 4, 0xFF808080);
+			return;
+		}
+		float k = Math.min(size / (float) t.width(), size / (float) t.height());
+		int dw = Math.max(1, Math.round(t.width() * k)), dh = Math.max(1, Math.round(t.height() * k));
+		g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, t.id(), x + (size - dw) / 2, y + (size - dh) / 2, 0f, 0f, dw, dh,
+				t.width(), t.height(), t.width(), t.height());
+	}
+
+	private void drawPictureRow(GuiGraphicsExtractor g, int x, int w, int mouseX, int mouseY) {
+		int y = picY();
+		g.text(this.font, "§7PICTURES", x + 5, y + 6, 0xFFFFFFFF, false);
+		int tx = x + 56;
+		java.util.List<String> pics = selected.images;
+		if (pics.isEmpty()) g.text(this.font, "§8none", tx, y + 6, 0xFFFFFFFF, false);
+		for (int i = 0; i < pics.size(); i++) {
+			int px = tx + i * 20;
+			if (px + 18 > x + w - 24) break;
+			thumb(g, pics.get(i), px, y + 1, 18);
+		}
+	}
+
+	/** Picture picker and big preview are drawn on top of everything. */
+	@Override
+	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+		super.extractRenderState(g, mouseX, mouseY, delta);
+		if (bigPicture != null) {
+			g.fill(0, 0, this.width, this.height, 0xC0000000);
+			dev.vanillaclient.images.ImageManager.Tex t = dev.vanillaclient.images.ImageManager.texture(bigPicture);
+			if (t != null) {
+				float k = Math.min((this.width - 40) / (float) t.width(), (this.height - 60) / (float) t.height());
+				int dw = Math.round(t.width() * k), dh = Math.round(t.height() * k);
+				g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, t.id(), this.width / 2 - dw / 2, this.height / 2 - dh / 2 + 6,
+						0f, 0f, dw, dh, t.width(), t.height(), t.width(), t.height());
+			}
+			g.centeredText(this.font, "§f" + bigPicture + " §7· click to close · right-click on the thumbnail removes it", this.width / 2, 10, 0xFFFFFFFF);
+			return;
+		}
+		if (picking && selected != null) {
+			int pw = Math.min(this.width - 40, 300), ph = Math.min(this.height - 60, 200);
+			int px = this.width / 2 - pw / 2, py = this.height / 2 - ph / 2;
+			g.fill(0, 0, this.width, this.height, 0x80000000);
+			Theme.panel(g, px, py, pw, ph);
+			g.text(this.font, "§lAdd pictures §7· click to attach / remove", px + 8, py + 7, 0xFFFFFFFF, false);
+			java.util.List<Config.Image> imgs = cfg().images;
+			if (imgs.isEmpty()) {
+				g.text(this.font, "§7No pictures yet – drop PNG/JPG files", px + 8, py + 24, 0xFFFFFFFF, false);
+				g.text(this.font, "§7onto this window, or put them into", px + 8, py + 34, 0xFFFFFFFF, false);
+				g.text(this.font, "§7the images folder.", px + 8, py + 44, 0xFFFFFFFF, false);
+			}
+			int cell = 44, cols = Math.max(1, (pw - 16) / cell);
+			for (int i = 0; i < imgs.size(); i++) {
+				int cx = px + 8 + (i % cols) * cell, cy = py + 22 + (i / cols) * cell;
+				if (cy + cell > py + ph) break;
+				String f = imgs.get(i).file;
+				boolean on = selected.images.contains(f);
+				boolean hov = mouseX >= cx && mouseX < cx + 40 && mouseY >= cy && mouseY < cy + 40;
+				g.fill(cx - 2, cy - 2, cx + 42, cy + 42, on ? Theme.GOOD : hov ? 0x60FFFFFF : 0x30FFFFFF);
+				thumb(g, f, cx, cy, 40);
+				if (on) g.text(this.font, "✔", cx + 32, cy + 2, 0xFFFFFFFF, true);
+			}
+		}
+	}
+
+	private boolean pictureClick(double mx, double my, int button) {
+		if (bigPicture != null) {
+			bigPicture = null;
+			return true;
+		}
+		if (picking && selected != null) {
+			int pw = Math.min(this.width - 40, 300), ph = Math.min(this.height - 60, 200);
+			int px = this.width / 2 - pw / 2, py = this.height / 2 - ph / 2;
+			if (mx < px || mx >= px + pw || my < py || my >= py + ph) {
+				picking = false;
+				return true;
+			}
+			java.util.List<Config.Image> imgs = cfg().images;
+			int cell = 44, cols = Math.max(1, (pw - 16) / cell);
+			for (int i = 0; i < imgs.size(); i++) {
+				int cx = px + 8 + (i % cols) * cell, cy = py + 22 + (i / cols) * cell;
+				if (mx >= cx && mx < cx + 40 && my >= cy && my < cy + 40) {
+					String f = imgs.get(i).file;
+					if (!selected.images.remove(f)) selected.images.add(f);
+					changed();
+					dev.vanillaclient.gui.ui.Ui.click();
+					return true;
+				}
+			}
+			return true;
+		}
+		if (selected != null) {
+			int y = picY();
+			int tx = xr() + 56;
+			for (int i = 0; i < selected.images.size(); i++) {
+				int px = tx + i * 20;
+				if (mx >= px && mx < px + 18 && my >= y + 1 && my < y + 19) {
+					dev.vanillaclient.gui.ui.Ui.click();
+					if (button == Mouse.RIGHT) {
+						selected.images.remove(i);
+						changed();
+					} else {
+						bigPicture = selected.images.get(i);
+					}
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/** Drop pictures onto the planner: they are copied and attached to the selected task. */
+	@Override
+	public void onFilesDrop(java.util.List<java.nio.file.Path> paths) {
+		int n = dev.vanillaclient.images.ImageManager.importFiles(paths);
+		if (n > 0 && selected != null) {
+			for (java.nio.file.Path p : paths) {
+				String f = p.getFileName().toString();
+				if (dev.vanillaclient.images.ImageManager.isImage(p) && !selected.images.contains(f)) selected.images.add(f);
+			}
+			changed();
 		}
 	}
 }

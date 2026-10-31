@@ -33,8 +33,6 @@ public final class CosmeticsScreen extends BaseScreen {
 	private String hovered;
 	private String flashId;
 	private long flashAt;
-	private final String totemAtOpen = Cosmetics.selected(Kind.TOTEM);
-	private boolean totemDirty;
 	private String status = "";
 	private long statusAt;
 
@@ -98,8 +96,8 @@ public final class CosmeticsScreen extends BaseScreen {
 	protected void init() {
 		super.init();
 		int x = gridX();
-		int tw = (gridW() - 12) / 4;
-		ItemStack[] icons = {Icons.stack(Items.LEATHER), Icons.stack(Items.ELYTRA), Icons.stack(Items.SHIELD), Icons.stack(Items.TOTEM_OF_UNDYING)};
+		int tw = (gridW() - 8) / 3;
+		ItemStack[] icons = {Icons.stack(Items.LEATHER), Icons.stack(Items.ELYTRA), Icons.stack(Items.SHIELD)};
 		for (Kind k : Kind.values()) {
 			Button b = iconAction(x + k.ordinal() * (tw + 4), top(), tw, icons[k.ordinal()], "    " + k.title, () -> {
 				kind = k;
@@ -186,12 +184,7 @@ public final class CosmeticsScreen extends BaseScreen {
 		Cosmetics.previewCape = null;
 		Cosmetics.previewWings = null;
 		Cosmetics.previewShield = null;
-		String totem = Cosmetics.selected(Kind.TOTEM);
 		super.onClose();
-		if (totemDirty || !java.util.Objects.equals(totem, totemAtOpen)) {
-			// swaps the totem item texture (short resource reload)
-			TexturePackApply.run(totem);
-		}
 	}
 
 	/** Drop a PNG on the wardrobe to use it as your own design for the open tab. */
@@ -205,7 +198,6 @@ public final class CosmeticsScreen extends BaseScreen {
 				java.nio.file.Files.copy(p, Config.cosmeticsDir().resolve(kind.customFile), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 				Cosmetics.reloadCustom();
 				Cosmetics.select(kind, Cosmetics.CUSTOM);
-				if (kind == Kind.TOTEM) totemDirty = true;
 				flashId = Cosmetics.CUSTOM;
 				flashAt = System.currentTimeMillis();
 				status = "✔ Your image is now your " + kind.title.toLowerCase(java.util.Locale.ROOT).replaceAll("s$", "");
@@ -279,30 +271,6 @@ public final class CosmeticsScreen extends BaseScreen {
 		int x1 = x0 + previewW();
 		int y1 = bottom() - 26;
 		var player = this.minecraft.player;
-		if (kind == Kind.TOTEM) {
-			String id = hovered != null ? hovered : Cosmetics.selected(Kind.TOTEM);
-			float t = Theme.time();
-			float spin = (float) Math.cos(t * 1.6);
-			float bob = (float) Math.sin(t * 2.0) * 3f;
-			float size = Math.min(80f, (x1 - x0) * 0.6f);
-			int cx = (x0 + x1) / 2, cy = (y0 + y1) / 2 - 8;
-			g.pose().pushMatrix();
-			g.pose().translate(cx, cy + bob);
-			if (!"statue".equals(id)) g.pose().scale(Math.max(0.08f, Math.abs(spin)) * (spin < 0 ? -1f : 1f), 1f);
-			Cosmetics.Tex tex = Cosmetics.texture(Kind.TOTEM, id);
-			if (tex != null) {
-				int sz = Math.round(size);
-				g.blit(RenderPipelines.GUI_TEXTURED, tex.id(), -sz / 2, -sz / 2, 0f, 0f, sz, sz, tex.width(), tex.height(), tex.width(), tex.height());
-			} else {
-				float s = size / 16f;
-				g.pose().scale(s, s);
-				g.item(Icons.stack(Items.TOTEM_OF_UNDYING), -8, -8);
-			}
-			g.pose().popMatrix();
-			g.centeredText(this.font, "§7Changes the totem item", (x0 + x1) / 2, y1 - 22, 0xFFFFFFFF);
-			g.centeredText(this.font, "§7(applied when you close)", (x0 + x1) / 2, y1 - 12, 0xFFFFFFFF);
-			return;
-		}
 		if (kind == Kind.SHIELD) {
 			// big shield that gently floats
 			float bob = (float) Math.sin(Theme.time() * 2.0) * 3f;
@@ -386,7 +354,6 @@ public final class CosmeticsScreen extends BaseScreen {
 		switch (kind) {
 			case CAPE -> { u = 2; v = 2; rw = 20; rh = 32; }
 			case WINGS -> { u = 48; v = 4; rw = 20; rh = 40; }
-			case TOTEM -> { u = 0; v = 0; rw = 16; rh = 16; k = t.width() / 16f; }
 			default -> { u = 2; v = 2; rw = 24; rh = 44; }
 		}
 		int ru = Math.round(u * k), rv = Math.round(v * k), rwp = Math.round(rw * k), rhp = Math.round(rh * k);

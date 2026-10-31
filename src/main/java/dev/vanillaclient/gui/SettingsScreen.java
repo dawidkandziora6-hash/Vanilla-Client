@@ -26,9 +26,12 @@ public final class SettingsScreen extends BaseScreen {
 		TASKLIST("HUD", "Task List", Items.WRITABLE_BOOK),
 		IMAGES("HUD", "Images", Items.PAINTING),
 		WAYPOINTS("HUD", "Waypoints", Items.RECOVERY_COMPASS),
+		INFO("HUD", "Info Lines", Items.REDSTONE),
 		CROSSHAIR("VISUALS", "Crosshair", Items.TARGET),
 		ZOOM("VISUALS", "Zoom", Items.SPYGLASS),
 		HELD("VISUALS", "Held Items", Items.TOTEM_OF_UNDYING),
+		RANK("YOU", "Rank & Name", Items.NETHER_STAR),
+		CONTROLS("GENERAL", "Controls", Items.LEVER),
 		GENERAL("GENERAL", "Settings", Items.COMPARATOR);
 
 		final String group;
@@ -43,6 +46,7 @@ public final class SettingsScreen extends BaseScreen {
 	}
 
 	private static Page page = Page.HOME;
+	private static int infoIndex = 0;
 
 	private static final int SIDEBAR = 106, GAP = 10, HEADER = 12;
 
@@ -93,6 +97,8 @@ public final class SettingsScreen extends BaseScreen {
 		list.w = contentW();
 		list.top = top();
 		list.bottom = bottom();
+		list.addWidget = b -> addRenderableWidget(b);
+		list.removeWidget = this::removeWidget;
 		buildPage();
 		action(this.width / 2 - 154, this.height - 26, 150, "✥ Edit HUD", () -> this.minecraft.setScreenAndShow(new HudEditorScreen(this)));
 		action(this.width / 2 + 4, this.height - 26, 150, "✔ Done", this::onClose);
@@ -127,29 +133,81 @@ public final class SettingsScreen extends BaseScreen {
 			case TASKLIST -> taskList();
 			case IMAGES -> images();
 			case WAYPOINTS -> waypoints();
+			case INFO -> info();
 			case CROSSHAIR -> crosshair();
 			case ZOOM -> zoom();
 			case HELD -> held();
+			case RANK -> rank();
+			case CONTROLS -> controls();
 			case GENERAL -> general();
 		}
 	}
 
 	private void home() {
 		Config c = cfg();
-		list.add(new Ui.Header("MODULES"));
-		list.add(new Ui.ModuleCard("Days", "Day & clock", i(Items.CLOCK), () -> c.days.enabled, v -> c.days.enabled = v, () -> go(Page.DAYS)));
-		list.add(new Ui.ModuleCard("Coordinates", "XYZ & facing", i(Items.COMPASS), () -> c.coords.enabled, v -> c.coords.enabled = v, () -> go(Page.COORDS)));
-		list.add(new Ui.ModuleCard("Armor", "Next to hotbar", i(Items.DIAMOND_CHESTPLATE), () -> c.armor.enabled, v -> c.armor.enabled = v, () -> go(Page.ARMOR)));
-		list.add(new Ui.ModuleCard("Task List", "On screen", i(Items.WRITABLE_BOOK), () -> c.todo.enabled, v -> c.todo.enabled = v, () -> go(Page.TASKLIST)));
-		list.add(new Ui.ModuleCard("Crosshair", "Your own pixels", i(Items.TARGET), () -> c.crosshair.enabled, v -> c.crosshair.enabled = v, () -> go(Page.CROSSHAIR)));
-		list.add(new Ui.ModuleCard("Zoom", "Hold C", i(Items.SPYGLASS), () -> c.zoom.enabled, v -> c.zoom.enabled = v, () -> go(Page.ZOOM)));
-		list.add(new Ui.ModuleCard("Held Items", "Smaller shield/totem", i(Items.TOTEM_OF_UNDYING), () -> c.heldItems.enabled, v -> c.heldItems.enabled = v, () -> go(Page.HELD)));
-		list.add(new Ui.ModuleCard("World Map", "Records explored land", i(Items.FILLED_MAP), () -> c.worldMap.enabled, v -> c.worldMap.enabled = v, () -> go(Page.GENERAL)));
+		list.add(new Ui.Custom(34, (g, x, y, w, h, mx, my, a) -> drawRankBanner(g, x, y, w, a)));
+		list.add(new Ui.Header("MODULES  §8· click = settings · right-click = on/off"));
+		list.add(new Ui.Chip("Days", i(Items.CLOCK), () -> c.days.enabled, v -> c.days.enabled = v, () -> go(Page.DAYS)));
+		list.add(new Ui.Chip("Coordinates", i(Items.COMPASS), () -> c.coords.enabled, v -> c.coords.enabled = v, () -> go(Page.COORDS)));
+		list.add(new Ui.Chip("Armor", i(Items.DIAMOND_CHESTPLATE), () -> c.armor.enabled, v -> c.armor.enabled = v, () -> go(Page.ARMOR)));
+		list.add(new Ui.Chip("Task List", i(Items.WRITABLE_BOOK), () -> c.todo.enabled, v -> c.todo.enabled = v, () -> go(Page.TASKLIST)));
+		list.add(new Ui.Chip("Waypoint Bar", i(Items.RECOVERY_COMPASS), () -> c.waypointHud.mode != 0,
+				v -> c.waypointHud.mode = v ? 1 : 0, () -> go(Page.WAYPOINTS)));
+		list.add(new Ui.Chip("Crosshair", i(Items.TARGET), () -> c.crosshair.enabled, v -> c.crosshair.enabled = v, () -> go(Page.CROSSHAIR)));
+		list.add(new Ui.Chip("Zoom", i(Items.SPYGLASS), () -> c.zoom.enabled, v -> c.zoom.enabled = v, () -> go(Page.ZOOM)));
+		list.add(new Ui.Chip("Held Items", i(Items.TOTEM_OF_UNDYING), () -> c.heldItems.enabled, v -> c.heldItems.enabled = v, () -> go(Page.HELD)));
+		list.add(new Ui.Chip("World Map", i(Items.FILLED_MAP), () -> c.worldMap.enabled, v -> c.worldMap.enabled = v, () -> go(Page.GENERAL)));
+		list.add(new Ui.Chip("Name Tag", i(Items.NAME_TAG), () -> c.ranks.ownNameTag, v -> c.ranks.ownNameTag = v, () -> go(Page.RANK)));
+		java.util.List<dev.vanillaclient.hud.HudModule> info = dev.vanillaclient.hud.HudManager.INFO;
+		for (int k = 0; k < info.size(); k++) {
+			final int idx = k;
+			dev.vanillaclient.hud.HudModule m = info.get(k);
+			list.add(new Ui.Chip(m.name, m.icon(), () -> m.settings().enabled, v -> m.settings().enabled = v, () -> {
+				infoIndex = idx;
+				go(Page.INFO);
+			}));
+		}
 		list.add(new Ui.Header("TOOLS"));
 		list.add(new Ui.Tile("Task Planner", "Farms, builds, trips", i(Items.WRITABLE_BOOK), () -> open(new TasksScreen(this))));
-		list.add(new Ui.Tile("World Map", "Where you've been", i(Items.FILLED_MAP), () -> open(new WorldMapScreen(this))));
-		list.add(new Ui.Tile("UHC Guide", "Villagers, enchants", i(Items.ENCHANTED_BOOK), () -> open(new GuideScreen(this))));
-		list.add(new Ui.Tile("Wardrobe", "Capes, wings, totems", i(Items.ELYTRA), () -> open(new CosmeticsScreen(this))));
+		list.add(new Ui.Tile("World Map", "Map & waypoints", i(Items.FILLED_MAP), () -> open(new WorldMapScreen(this))));
+		list.add(new Ui.Tile("Wardrobe", "Capes, wings, shields", i(Items.ELYTRA), () -> open(new CosmeticsScreen(this))));
+		list.add(new Ui.Tile("UHC Guide", "Trades, enchants, brewing", i(Items.ENCHANTED_BOOK), () -> open(new GuideScreen(this))));
+		list.add(new Ui.Tile("Advancements", "Every one, what to do", i(Items.GOLDEN_APPLE), () -> open(new AdvancementsChecklistScreen(this))));
+		list.add(new Ui.Tile("Statistics", "Your world in numbers", i(Items.BOOK), () -> open(new StatsOverviewScreen(this))));
+	}
+
+	private void drawRankBanner(GuiGraphicsExtractor g, int x, int y, int w, float a) {
+		dev.vanillaclient.features.Ranks.Rank r = dev.vanillaclient.features.Ranks.current();
+		dev.vanillaclient.features.Ranks.Rank next = dev.vanillaclient.features.Ranks.next();
+		double h = dev.vanillaclient.features.Ranks.hours();
+		g.fill(x, y, x + w, y + 32, Theme.alpha(0x50000000, a));
+		g.fill(x, y, x + 2, y + 32, Theme.alpha(r.color(), a));
+		g.outline(x, y, w, 32, Theme.alpha(0x40FFFFFF, a));
+		String name = this.minecraft.getUser().getName();
+		g.pose().pushMatrix();
+		g.pose().translate(x + 8, y + 6);
+		g.pose().scale(2f, 2f);
+		g.text(this.font, r.symbol(), 0, 0, Theme.alpha(r.color(), a), true);
+		g.pose().popMatrix();
+		g.text(this.font, "§f" + name + " §7· " + r.name(), x + 28, y + 6, Theme.alpha(r.color(), a), false);
+		String sub = "§7" + dev.vanillaclient.features.Ranks.formatHours(h) + " played"
+				+ (next == null ? " §6· max rank!" : " §8· next: " + next.symbol() + " " + next.name() + " at " + next.hours() + "h");
+		g.text(this.font, this.font.plainSubstrByWidth(sub, w - 34), x + 28, y + 17, Theme.alpha(0xFFFFFFFF, a), false);
+		if (next != null) {
+			double from = r.hours() <= h ? dev.vanillaclient.features.Ranks.best().hours() : 0;
+			float f = (float) Math.max(0, Math.min(1, (h - from) / Math.max(0.01, next.hours() - from)));
+			g.fill(x + 28, y + 27, x + w - 6, y + 29, Theme.alpha(0x60000000, a));
+			g.fill(x + 28, y + 27, x + 28 + Math.round((w - 34) * f), y + 29, Theme.alpha(next.color(), a));
+		}
+	}
+
+	private void labelOptions(Config.TextHud s, String hint) {
+		list.add(new Ui.Header("LABEL"));
+		list.add(new Ui.TextField("Label text", () -> s.label, v -> s.label = v, 24));
+		list.add(new Ui.Toggle("Show label", null, () -> s.showLabel, v -> s.showLabel = v));
+		list.add(new Ui.ColorPick("Label color", () -> s.labelColor, v -> s.labelColor = v, this::colorPicker));
+		list.add(new Ui.TextField("Text after value", () -> s.suffix, v -> s.suffix = v, 16));
+		if (hint != null) list.add(new Ui.Info(hint));
 	}
 
 	private void style(Config.Hud s, boolean text) {
@@ -168,10 +226,8 @@ public final class SettingsScreen extends BaseScreen {
 		Config.Days s = cfg().days;
 		list.add(new Ui.Header("DAYS"));
 		list.add(new Ui.Toggle("Show on screen", i(Items.CLOCK), () -> s.enabled, v -> s.enabled = v));
-		list.add(new Ui.Toggle("Show clock time", null, () -> s.showTime, v -> s.showTime = v));
-		list.add(new Ui.Toggle("Start counting at day 1", null, () -> s.countFromOne, v -> s.countFromOne = v));
-		list.add(new Ui.Toggle("Sun / moon icon", null, () -> s.showIcon, v -> s.showIcon = v));
-		list.add(new Ui.Cycle<>("Label", List.of("Day", "Survival Day", "Hardcore Day", "UHC Day", "Day #"), () -> s.label, v -> s.label = v, v -> v));
+		list.add(new Ui.Info("Counts from day 1, exactly like your world's days."));
+		labelOptions(s, "e.g. \"Day\", \"UHC Day\", \"Tag\" …");
 		style(s, true);
 	}
 
@@ -183,7 +239,16 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Toggle("Facing direction", null, () -> s.showDirection, v -> s.showDirection = v));
 		list.add(new Ui.Toggle("Nether ⇄ Overworld position", null, () -> s.showOtherDimension, v -> s.showOtherDimension = v));
 		list.add(new Ui.Toggle("Chunk position", null, () -> s.showChunk, v -> s.showChunk = v));
-		list.add(new Ui.Toggle("Gray labels", null, () -> s.coloredLabels, v -> s.coloredLabels = v));
+		list.add(new Ui.Header("LABELS"));
+		list.add(new Ui.Toggle("Own label color", null, () -> s.coloredLabels, v -> s.coloredLabels = v));
+		list.add(new Ui.ColorPick("Label color", () -> s.labelColor, v -> s.labelColor = v, this::colorPicker));
+		list.add(new Ui.TextField("X label", () -> s.labelX, v -> s.labelX = v, 12));
+		list.add(new Ui.TextField("Y label", () -> s.labelY, v -> s.labelY = v, 12));
+		list.add(new Ui.TextField("Z label", () -> s.labelZ, v -> s.labelZ = v, 12));
+		list.add(new Ui.TextField("Facing label", () -> s.labelFacing, v -> s.labelFacing = v, 16));
+		list.add(new Ui.TextField("Nether/Overworld label", () -> s.labelOther, v -> s.labelOther = v, 16));
+		list.add(new Ui.TextField("Chunk label", () -> s.labelChunk, v -> s.labelChunk = v, 16));
+		list.add(new Ui.Info("Leave a field empty for the default text."));
 		style(s, true);
 	}
 
@@ -262,9 +327,14 @@ public final class SettingsScreen extends BaseScreen {
 				"Look towards a waypoint to see its name and distance."));
 		java.util.List<Config.Waypoint> here = dev.vanillaclient.map.Waypoints.here();
 		if (!here.isEmpty()) list.add(new Ui.Header("IN THIS WORLD"));
+		var pl = this.minecraft.player;
 		for (Config.Waypoint wp : here) {
-			list.add(new Ui.Toggle(wp.name + " §8" + wp.x + " " + wp.y + " " + wp.z, null, () -> wp.visible, v -> wp.visible = v));
+			String dist = pl == null ? "" : " §7" + Math.round(Math.hypot(wp.x - pl.getX(), wp.z - pl.getZ())) + "m";
+			ItemStack ic = dev.vanillaclient.map.Waypoints.iconStack(wp);
+			list.add(new Ui.Toggle("§f" + wp.name + dist + " §8" + wp.x + " " + wp.y + " " + wp.z,
+					ic.isEmpty() ? i(Items.RECOVERY_COMPASS) : ic, () -> wp.visible, v -> wp.visible = v));
 		}
+		if (!here.isEmpty()) list.add(new Ui.Info("Click a waypoint on the world map to rename it,", "give it an icon or a color, or drag it."));
 	}
 
 	private void crosshair() {
@@ -281,8 +351,15 @@ public final class SettingsScreen extends BaseScreen {
 		}));
 		list.add(new Ui.ColorPick("Color", () -> s.color, v -> s.color = v, this::colorPicker));
 		list.add(new Ui.Slider("Size", 1, 5, 1, () -> s.scale, v -> s.scale = (float) v, v -> (int) v + "×"));
+		list.add(new Ui.Toggle("Vanilla blending (inverts colors)", null, () -> s.vanillaBlend, v -> s.vanillaBlend = v));
+		list.add(new Ui.Header("OUTLINE"));
 		list.add(new Ui.Toggle("Outline", null, () -> s.outline, v -> s.outline = v));
+		list.add(new Ui.Slider("Thickness", 1, 3, 1, () -> s.outlineThickness, v -> s.outlineThickness = (int) v, v -> (int) v + " px"));
+		list.add(new Ui.Slider("Opacity", 0.1, 1.0, 0.05, () -> s.outlineOpacity, v -> s.outlineOpacity = (float) v, v -> Math.round(v * 100) + "%"));
 		list.add(new Ui.ColorPick("Outline color", () -> s.outlineColor, v -> s.outlineColor = v, this::colorPicker));
+		list.add(new Ui.Header("EXTRA"));
+		list.add(new Ui.Toggle("Other color on mobs/players", null, () -> s.dynamicColor, v -> s.dynamicColor = v));
+		list.add(new Ui.ColorPick("Color on target", () -> s.targetColor, v -> s.targetColor = v, this::colorPicker));
 		list.add(new Ui.Toggle("Attack cooldown bar", null, () -> s.attackIndicator, v -> s.attackIndicator = v));
 		list.add(new Ui.Toggle("Also in third person", null, () -> s.thirdPerson, v -> s.thirdPerson = v));
 		list.add(new Ui.Info("Tip: the color's opacity makes it see-through."));
@@ -298,30 +375,128 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Toggle("Reset scroll when released", null, () -> z.resetLevelOnRelease, v -> z.resetLevelOnRelease = v));
 		list.add(new Ui.Toggle("Cinematic camera", null, () -> z.cinematicCamera, v -> z.cinematicCamera = v));
 		list.add(new Ui.Toggle("Hide hand while zooming", null, () -> z.hideHand, v -> z.hideHand = v));
-		list.add(new Ui.Info("Key: C (change it in Options › Controls)."));
+		list.add(new Ui.Button("Change the zoom key", i(Items.LEVER), () -> go(Page.CONTROLS)));
 	}
 
 	private void held() {
 		Config.HeldItems h = cfg().heldItems;
 		list.add(new Ui.Header("HELD ITEMS"));
 		list.add(new Ui.Toggle("Change sizes", i(Items.TOTEM_OF_UNDYING), () -> h.enabled, v -> h.enabled = v));
-		list.add(new Ui.Slider("Shield", 0.3, 1.5, 0.05, () -> h.shieldScale, v -> h.shieldScale = (float) v, v -> Math.round(v * 100) + "%"));
-		list.add(new Ui.Slider("Totem in hand", 0.3, 1.5, 0.05, () -> h.totemScale, v -> h.totemScale = (float) v, v -> Math.round(v * 100) + "%"));
-		list.add(new Ui.Slider("Totem pop", 0.2, 1.5, 0.05, () -> h.totemPopScale, v -> h.totemPopScale = (float) v, v -> Math.round(v * 100) + "%"));
 		list.add(new Ui.Custom(56, (g, x, y, w, hh, mx, my, a) -> {
 			float bob = (float) Math.sin(Theme.time() * 2.0) * 2f;
-			float s1 = 2f * (h.enabled ? h.shieldScale : 1f);
-			float s2 = 2f * (h.enabled ? h.totemScale : 1f);
-			Icons.scaled(g, i(Items.SHIELD), x + w / 4f - 8 * s1, y + 26 - 8 * s1 + bob, s1);
-			Icons.scaled(g, i(Items.TOTEM_OF_UNDYING), x + w * 3 / 4f - 8 * s2, y + 26 - 8 * s2 - bob, s2);
+			Item[] demo = {Items.SHIELD, Items.DIAMOND_SWORD, Items.COOKED_BEEF, Items.GRASS_BLOCK, Items.TOTEM_OF_UNDYING};
+			for (int k = 0; k < demo.length; k++) {
+				ItemStack st = i(demo[k]);
+				float sc = 1.6f * (h.enabled && !st.isEmpty() ? dev.vanillaclient.held.HeldItems.scaleFor(st) : 1f);
+				float cxp = x + w * (k + 0.5f) / demo.length;
+				Icons.scaled(g, st, cxp - 8 * sc, y + 26 - 8 * sc + (k % 2 == 0 ? bob : -bob), sc);
+			}
 		}));
-		list.add(new Ui.Info("Only changes how they look in your hands."));
+		list.add(new Ui.Header("BY CATEGORY  §8· right-click = 100%"));
+		for (dev.vanillaclient.held.HeldItems.Category c : dev.vanillaclient.held.HeldItems.CATEGORIES) {
+			list.add(new Ui.Slider(c.name(), 0.2, 1.6, 0.05, () -> dev.vanillaclient.held.HeldItems.category(c.id()),
+					v -> dev.vanillaclient.held.HeldItems.setCategory(c.id(), (float) v), v -> Math.round(v * 100) + "%")
+					.icon(i(c.icon())).onReset(() -> dev.vanillaclient.held.HeldItems.setCategory(c.id(), 1f)));
+		}
+		list.add(new Ui.Button("Every item one by one … §8(" + h.items.size() + " changed)", i(Items.CHEST), () -> open(new HeldItemsScreen(this)), 22));
+		list.add(new Ui.Header("TOTEM POP"));
+		list.add(new Ui.Slider("Totem pop animation", 0.2, 1.5, 0.05, () -> h.totemPopScale, v -> h.totemPopScale = (float) v, v -> Math.round(v * 100) + "%"));
+		list.add(new Ui.Info("Only changes how items look in your own hands."));
+	}
+
+	private void info() {
+		java.util.List<dev.vanillaclient.hud.HudModule> mods = dev.vanillaclient.hud.HudManager.INFO;
+		infoIndex = Math.floorMod(infoIndex, mods.size());
+		java.util.List<Integer> idx = new ArrayList<>();
+		for (int k = 0; k < mods.size(); k++) idx.add(k);
+		list.add(new Ui.Header("INFO LINES"));
+		list.add(new Ui.Cycle<>("Module", idx, () -> infoIndex, v -> {
+			infoIndex = v;
+			buildPage();
+		}, v -> mods.get(v).name));
+		dev.vanillaclient.hud.HudModule m = mods.get(infoIndex);
+		Config.Hud hs = m.settings();
+		list.add(new Ui.Toggle("Show on screen", m.icon(), () -> hs.enabled, v -> hs.enabled = v));
+		if (hs instanceof Config.Counter c) {
+			list.add(new Ui.Toggle("Hide items you don't have", null, () -> c.hideZero, v -> c.hideZero = v));
+			list.add(new Ui.Toggle("Vertical", null, () -> c.vertical, v -> c.vertical = v));
+			list.add(new Ui.Header("COUNT THESE"));
+			String[][] opts = {{"totem_of_undying", "Totems"}, {"golden_apple", "Golden apples"}, {"enchanted_golden_apple", "Enchanted apples"},
+					{"ender_pearl", "Ender pearls"}, {"arrow", "Arrows"}, {"spectral_arrow", "Spectral arrows"}, {"cobweb", "Cobwebs"},
+					{"water_bucket", "Water buckets"}, {"lava_bucket", "Lava buckets"}, {"experience_bottle", "XP bottles"},
+					{"cobblestone", "Cobblestone"}, {"oak_planks", "Oak planks"}, {"obsidian", "Obsidian"}, {"tnt", "TNT"},
+					{"wind_charge", "Wind charges"}, {"firework_rocket", "Rockets"}};
+			for (String[] o : opts) {
+				Item it = dev.vanillaclient.hud.InfoModules.Counter.item(o[0]);
+				if (it == Items.AIR) continue;
+				list.add(new Ui.Toggle(o[1], i(it), () -> c.items.contains(o[0]), v -> {
+					if (v && !c.items.contains(o[0])) c.items.add(o[0]);
+					if (!v) c.items.remove(o[0]);
+				}));
+			}
+			style(c, true);
+			return;
+		}
+		if (hs instanceof Config.TextHud t && !(m instanceof dev.vanillaclient.hud.InfoModules.Effects)) {
+			labelOptions(t, null);
+		} else if (hs instanceof Config.TextHud t) {
+			list.add(new Ui.ColorPick("Time color", () -> t.labelColor, v -> t.labelColor = v, this::colorPicker));
+		}
+		style(hs, true);
+	}
+
+	private void rank() {
+		Config.Ranks r = cfg().ranks;
+		list.add(new Ui.Custom(34, (g, x, y, w, h, mx, my, a) -> drawRankBanner(g, x, y, w, a)));
+		list.add(new Ui.Header("NAME"));
+		list.add(new Ui.Toggle("Show your name in F5 (third person)", i(Items.NAME_TAG), () -> r.ownNameTag, v -> r.ownNameTag = v));
+		list.add(new Ui.Toggle("Rank symbol in front of your name", null, () -> r.symbolInName, v -> r.symbolInName = v));
+		list.add(new Ui.Toggle("Rank line on screen", i(Items.NETHER_STAR), () -> cfg().rankHud.enabled, v -> cfg().rankHud.enabled = v));
+		list.add(new Ui.Header("RANKS  §8· click an unlocked one to wear it"));
+		for (dev.vanillaclient.features.Ranks.Rank rk : dev.vanillaclient.features.Ranks.ALL) {
+			list.add(new Ui.Custom(20, (g, x, y, w, h, mx, my, a) -> {
+				boolean un = dev.vanillaclient.features.Ranks.unlocked(rk);
+				boolean cur = dev.vanillaclient.features.Ranks.current() == rk;
+				boolean hov = mx >= x && mx < x + w && my >= y && my < y + 18;
+				g.fill(x, y, x + w, y + 18, Theme.alpha(cur ? 0x50FFFFFF : hov && un ? 0x30FFFFFF : 0x18FFFFFF, a));
+				if (cur) g.fill(x, y, x + 2, y + 18, Theme.alpha(rk.color(), a));
+				g.text(this.font, rk.symbol(), x + 7, y + 5, Theme.alpha(un ? rk.color() : 0xFF555555, a), true);
+				g.text(this.font, un ? rk.name() : "§8" + rk.name(), x + 20, y + 5, Theme.alpha(un ? rk.color() : 0xFFFFFFFF, a), false);
+				String req = un ? (cur ? "§a✔ wearing" : "§7unlocked") : "§8locked · " + rk.hours() + " h";
+				g.text(this.font, req, x + w - 6 - this.font.width(req), y + 5, Theme.alpha(0xFFFFFFFF, a), false);
+			}, () -> {
+				if (dev.vanillaclient.features.Ranks.unlocked(rk)) {
+					r.chosen = rk.id();
+					Config.save();
+				}
+			}));
+		}
+		list.add(new Ui.Info("Hours = play time with Vanilla Client, or the world's", "\"Time Played\" statistic – whichever is higher."));
+	}
+
+	private void controls() {
+		list.add(new Ui.Header("VANILLA CLIENT  §8· click, then press a key · Esc = none · right-click = default"));
+		String[][] ours = {{"key.vanillaclient.open", "Open this menu"}, {"key.vanillaclient.zoom", "Zoom (hold)"},
+				{"key.vanillaclient.map", "World map"}, {"key.vanillaclient.waypoint", "Save a waypoint"},
+				{"key.vanillaclient.hud_editor", "Edit HUD"}, {"key.vanillaclient.toggle_todo", "Show / hide task list"},
+				{"key.vanillaclient.cosmetics", "Wardrobe"}, {"key.vanillaclient.tasks", "Task planner"},
+				{"key.vanillaclient.sort", "Sort open chest"}};
+		for (String[] k : ours) {
+			net.minecraft.client.KeyMapping km = net.minecraft.client.KeyMapping.get(k[0]);
+			if (km != null) list.add(new Ui.KeyBind(k[1], km));
+		}
+		list.add(new Ui.Header("MINECRAFT"));
+		for (net.minecraft.client.KeyMapping km : this.minecraft.options.keyMappings) {
+			if (km.getName().startsWith("key.vanillaclient")) continue;
+			list.add(new Ui.KeyBind(Component.translatable(km.getName()).getString(), km));
+		}
 	}
 
 	private void general() {
 		Config c = cfg();
 		list.add(new Ui.Header("MENU"));
-		list.add(new Ui.Toggle("Button in the pause menu", i(Items.WRITABLE_BOOK), () -> c.pauseMenuButton, v -> c.pauseMenuButton = v));
+		list.add(new Ui.Toggle("Vanilla Client & Wardrobe in the pause menu", i(Items.WRITABLE_BOOK), () -> c.pauseMenuButton, v -> c.pauseMenuButton = v));
+		list.add(new Ui.Toggle("Advancement & stats helper buttons", i(Items.GOLDEN_APPLE), () -> c.helperButtons, v -> c.helperButtons = v));
 		list.add(new Ui.Header("WORLD MAP"));
 		list.add(new Ui.Toggle("Record explored land", i(Items.FILLED_MAP), () -> c.worldMap.enabled, v -> c.worldMap.enabled = v));
 		list.add(new Ui.Slider("Map radius", 0, 32, 1, () -> c.worldMap.radius, v -> c.worldMap.radius = (int) v,
@@ -330,8 +505,9 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Button("Open the world map", i(Items.FILLED_MAP), () -> open(new WorldMapScreen(this))));
 		list.add(new Ui.Header("FILES"));
 		list.add(new Ui.Button("Open settings folder", i(Items.CHEST), () -> Platform.open(Config.dir())));
-		list.add(new Ui.Header("KEYS"));
-		list.add(new Ui.Info("Right Shift  ·  open this menu", "M  ·  world map", "B  ·  save a waypoint", "C  ·  zoom (hold)", "Change keys in Options › Controls"));
+		list.add(new Ui.Header("CHESTS"));
+		list.add(new Ui.Toggle("Sort & Store buttons on chests", i(Items.CHEST), () -> c.chestButtons, v -> c.chestButtons = v));
+		list.add(new Ui.Button("Change keys", i(Items.LEVER), () -> go(Page.CONTROLS)));
 	}
 
 	private void say(String s) {
@@ -438,6 +614,12 @@ public final class SettingsScreen extends BaseScreen {
 			}
 		}
 		return list.mouseDown(mx, my, event.button());
+	}
+
+	@Override
+	public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+		if (Ui.KeyBind.keyPressed(event)) return true;
+		return super.keyPressed(event);
 	}
 
 	@Override

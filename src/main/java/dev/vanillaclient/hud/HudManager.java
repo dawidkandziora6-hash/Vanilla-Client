@@ -17,6 +17,9 @@ public final class HudManager {
 	public static final CoordsModule COORDS = new CoordsModule();
 	public static final TodoModule TODO = new TodoModule();
 	public static final ArmorModule ARMOR = new ArmorModule();
+	public static final List<HudModule> INFO = List.of(new InfoModules.Fps(), new InfoModules.Ping(), new InfoModules.Biome(),
+			new InfoModules.Clock(), new InfoModules.Speed(), new InfoModules.Light(), new InfoModules.Session(),
+			new InfoModules.RankLine(), new InfoModules.Effects(), new InfoModules.Counter());
 	private static final Map<String, ImageModule> IMAGES = new HashMap<>();
 
 	private HudManager() {}
@@ -36,6 +39,7 @@ public final class HudManager {
 		out.add(COORDS);
 		out.add(TODO);
 		out.add(ARMOR);
+		out.addAll(INFO);
 		return out;
 	}
 

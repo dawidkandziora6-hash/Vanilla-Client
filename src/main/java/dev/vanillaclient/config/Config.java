@@ -45,11 +45,30 @@ public final class Config {
 		}
 	}
 
-	public static class Days extends Hud {
-		public boolean showTime = true;
-		public boolean countFromOne = true;
-		public boolean showIcon = true;
-		public String label = "Day";
+	/** A HUD line with your own label in front ("Day 12", "FPS 144" …). */
+	public static class TextHud extends Hud {
+		public String label = "";
+		public boolean showLabel = true;
+		public int labelColor = 0xFFAAAAAA;
+		/** Text after the value, e.g. " blocks/s". */
+		public String suffix = "";
+
+		TextHud label(String l) {
+			this.label = l;
+			return this;
+		}
+
+		TextHud off() {
+			this.enabled = false;
+			return this;
+		}
+	}
+
+	public static class Days extends TextHud {
+		public Days() {
+			label = "Day";
+			labelColor = 0xFFFFFFFF;
+		}
 	}
 
 	public static class Coords extends Hud {
@@ -59,6 +78,29 @@ public final class Config {
 		public boolean showOtherDimension = true;
 		public boolean showChunk = false;
 		public boolean coloredLabels = true;
+		public String labelX = "X", labelY = "Y", labelZ = "Z";
+		public String labelFacing = "", labelOther = "", labelChunk = "Chunk";
+		public int labelColor = 0xFFAAAAAA;
+	}
+
+	/** Item counter: how many of these items you carry. */
+	public static class Counter extends TextHud {
+		public List<String> items = new ArrayList<>(List.of("totem_of_undying", "golden_apple", "ender_pearl", "arrow"));
+		public boolean hideZero = true;
+		public boolean vertical = false;
+	}
+
+	/** Ranks earned with play time. */
+	public static class Ranks {
+		public boolean enabled = true;
+		/** Show your own name tag in third person (F5). */
+		public boolean ownNameTag = true;
+		/** Rank symbol in front of your name tag. */
+		public boolean symbolInName = true;
+		/** Chosen rank id ("" = best unlocked). */
+		public String chosen = "";
+		/** Play time with Vanilla Client in ticks. */
+		public long playTicks = 0;
 	}
 
 	public static class WorldMap {
@@ -75,6 +117,9 @@ public final class Config {
 		public String world = "";
 		public int color = 0xFFFFD34D;
 		public boolean visible = true;
+		/** Item id used as icon ("" = colored diamond). */
+		public String icon = "";
+		public long created = 0;
 
 		public Waypoint() {}
 
@@ -137,7 +182,15 @@ public final class Config {
 		public boolean attackIndicator = true;
 		public boolean outline = false;
 		public int outlineColor = 0xFF000000;
+		/** CS / Valorant style outline: 1-3 px, own opacity. */
+		public int outlineThickness = 1;
+		public float outlineOpacity = 0.8f;
+		/** Inverts the colors behind it like the vanilla crosshair. */
+		public boolean vanillaBlend = false;
 		public boolean thirdPerson = false;
+		/** Hide while a menu or the inventory is open? (always hidden by vanilla) */
+		public boolean dynamicColor = false;
+		public int targetColor = 0xFFFF4040;
 	}
 
 	public static class Cosmetics {
@@ -154,6 +207,10 @@ public final class Config {
 		public float totemScale = 1.0f;
 		/** Size of the big totem animation when a totem saves you. */
 		public float totemPopScale = 1.0f;
+		/** Size per category (swords, food, blocks …). */
+		public Map<String, Float> categories = new java.util.LinkedHashMap<>();
+		/** Size per item id – wins over the category. */
+		public Map<String, Float> items = new java.util.LinkedHashMap<>();
 	}
 
 	public static class Image extends Hud {
@@ -182,6 +239,12 @@ public final class Config {
 		public String coords = "";
 		public String note = "";
 		public List<SubTask> subtasks = new ArrayList<>();
+		/** Picture file names from the images folder. */
+		public List<String> images = new ArrayList<>();
+		/** Item id shown as the task icon ("" = category icon). */
+		public String icon = "";
+		/** Due day in the world (0 = none). */
+		public int dueDay = 0;
 
 		public TodoItem() {}
 
@@ -205,6 +268,9 @@ public final class Config {
 	}
 
 	public Days days = (Days) new Days().at(0.01f, 0.01f);
+	public TextHud fps, ping, biome, clock, speed, light, session, rankHud, effects;
+	public Counter counter;
+	public Ranks ranks = new Ranks();
 	public Coords coords = (Coords) new Coords().at(0.01f, 0.08f);
 	public WorldMap worldMap = new WorldMap();
 	public Todo todo = (Todo) new Todo().at(0.99f, 0.02f);
@@ -221,6 +287,8 @@ public final class Config {
 	/** Old format (plain names) – only read for migration. */
 	public List<String> categories;
 	public boolean pauseMenuButton = true;
+	public boolean chestButtons = true;
+	public boolean helperButtons = true;
 
 	public static List<Category> defaultCategories() {
 		return new ArrayList<>(List.of(new Category("Farms", 0), new Category("Builds", 1),
@@ -333,6 +401,41 @@ public final class Config {
 		if (waypoints == null) waypoints = new ArrayList<>();
 		if (waypointHud == null) waypointHud = new WaypointHud();
 		if (todos == null) todos = new ArrayList<>();
+		if (ranks == null) ranks = new Ranks();
+		if (fps == null) fps = (TextHud) new TextHud().label("FPS").off().at(0.01f, 0.30f);
+		if (ping == null) ping = (TextHud) new TextHud().label("Ping").off().at(0.01f, 0.34f);
+		if (biome == null) biome = (TextHud) new TextHud().label("Biome").off().at(0.01f, 0.38f);
+		if (clock == null) clock = (TextHud) new TextHud().label("Time").off().at(0.01f, 0.42f);
+		if (speed == null) speed = (TextHud) new TextHud().label("Speed").off().at(0.01f, 0.46f);
+		if (light == null) light = (TextHud) new TextHud().label("Light").off().at(0.01f, 0.50f);
+		if (session == null) session = (TextHud) new TextHud().label("Session").off().at(0.01f, 0.54f);
+		if (rankHud == null) rankHud = (TextHud) new TextHud().label("Rank").off().at(0.01f, 0.58f);
+		if (effects == null) effects = (TextHud) new TextHud().label("").off().at(0.99f, 0.40f);
+		if (counter == null) {
+			counter = new Counter();
+			counter.label = "";
+			counter.enabled = false;
+			counter.at(0.99f, 0.60f);
+		}
+		if (days.label == null) days.label = "Day";
+		if (heldItems.categories == null) heldItems.categories = new java.util.LinkedHashMap<>();
+		if (heldItems.items == null) heldItems.items = new java.util.LinkedHashMap<>();
+		// old single sliders -> categories
+		if (heldItems.shieldScale != 1f && !heldItems.categories.containsKey("shields")) heldItems.categories.put("shields", heldItems.shieldScale);
+		if (heldItems.totemScale != 1f && !heldItems.categories.containsKey("totems")) heldItems.categories.put("totems", heldItems.totemScale);
+		heldItems.shieldScale = 1f;
+		heldItems.totemScale = 1f;
+		for (TodoItem t : todos) {
+			if (t.images == null) t.images = new ArrayList<>();
+			if (t.icon == null) t.icon = "";
+		}
+		for (Waypoint w : waypoints) if (w.icon == null) w.icon = "";
+		if (coords.labelX == null) coords.labelX = "X";
+		if (coords.labelY == null) coords.labelY = "Y";
+		if (coords.labelZ == null) coords.labelZ = "Z";
+		if (coords.labelFacing == null) coords.labelFacing = "";
+		if (coords.labelOther == null) coords.labelOther = "";
+		if (coords.labelChunk == null) coords.labelChunk = "Chunk";
 
 		// German defaults from the first version -> English
 		if ("Tag".equals(days.label) || days.label == null) days.label = "Day";

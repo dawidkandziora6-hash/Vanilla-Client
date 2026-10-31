@@ -80,8 +80,13 @@ public final class WaypointBar {
 				int y = top ? barY + 1 : barY;
 				// diamond marker with outline, a bit smaller when far away
 				int r = dist < 64 ? 3 : 2;
-				diamond(g, x, y, r + 1, 0xFF000000);
-				diamond(g, x, y, r, col);
+				net.minecraft.world.item.ItemStack icon = dev.vanillaclient.map.Waypoints.iconStack(w);
+				if (top && !icon.isEmpty()) {
+					dev.vanillaclient.gui.Icons.scaled(g, icon, x - 4, y - 4, 0.5f);
+				} else {
+					diamond(g, x, y, r + 1, 0xFF000000);
+					diamond(g, x, y, r, col);
+				}
 				double dy = w.y - p.getY();
 				if (dy > 6) g.text(font, "▴", x - 2, y - r - 8, col, true);
 				else if (dy < -6) g.text(font, "▾", x - 2, y + r, col, true);
@@ -100,11 +105,29 @@ public final class WaypointBar {
 			double dx = focused.x + 0.5 - p.getX(), dz = focused.z + 0.5 - p.getZ();
 			int dist = (int) Math.round(Math.sqrt(dx * dx + dz * dz));
 			String label = focused.name + (cfg.showDistance ? " §7" + dist + "m" : "");
-			int ly = top ? barY + 9 : barY - 15;
-			int w = font.width(label) + 6;
-			g.fill(cx - w / 2, ly - 2, cx + w / 2, ly + 9, 0x90000000);
-			g.centeredText(font, label, cx, ly, focused.color | 0xFF000000);
+			// XP-bar mode: above hearts, armor, hunger and air – never on top of them
+			int ly = top ? barY + 9 : statusTop(p, sh) - 12;
+			net.minecraft.world.item.ItemStack icon = dev.vanillaclient.map.Waypoints.iconStack(focused);
+			int iw = icon.isEmpty() ? 0 : 10;
+			int w = font.width(label) + 8 + iw;
+			int lx = cx - w / 2;
+			g.fill(lx, ly - 2, lx + w, ly + 9, 0xA0000000);
+			g.fill(lx, ly + 9, lx + w, ly + 10, focused.color | 0xFF000000);
+			if (iw > 0) dev.vanillaclient.gui.Icons.scaled(g, icon, lx + 3, ly - 1, 0.5f);
+			g.text(font, label, lx + 4 + iw, ly, focused.color | 0xFF000000, true);
 		}
+	}
+
+	/** Top edge of the vanilla status bars (hearts / armor on the left, food / air on the right). */
+	private static int statusTop(LocalPlayer p, int sh) {
+		if (p.isCreative() || p.isSpectator()) return sh - 32;
+		float max = p.getMaxHealth() + p.getAbsorptionAmount();
+		int rows = Math.max(1, (int) Math.ceil(max / 20f));
+		int spacing = Math.max(10 - (rows - 2), 3);
+		int left = sh - 39 - (rows - 1) * spacing - (p.getArmorValue() > 0 ? 10 : 0);
+		int right = sh - 39 - (p.getAirSupply() < p.getMaxAirSupply() || p.isUnderWater() ? 10 : 0);
+		if (p.getVehicle() instanceof net.minecraft.world.entity.LivingEntity) right -= 10;
+		return Math.min(left, right);
 	}
 
 	private static void diamond(GuiGraphicsExtractor g, int x, int y, int r, int color) {

@@ -129,6 +129,9 @@ public final class CrosshairEditorScreen extends BaseScreen {
 		toggle(x, y, half, "Outline", () -> c.outline, v -> c.outline = v);
 		color(x + half + 4, y, half, "Edge", () -> c.outlineColor, v -> c.outlineColor = v);
 		y += 22;
+		cycle(x, y, half, "Edge", java.util.List.of(1, 2, 3), () -> c.outlineThickness, v -> c.outlineThickness = v, v -> v + " px");
+		toggle(x + half + 4, y, half, "Blend", () -> c.vanillaBlend, v -> c.vanillaBlend = v);
+		y += 22;
 		slider(x, y, w, 1, 5, 1, () -> c.scale, v -> c.scale = (float) v, v -> "In-game size: " + (int) v + "×");
 		y += 22;
 		toggle(x, y, w, "Use custom crosshair", () -> c.enabled, v -> c.enabled = v);
@@ -338,7 +341,7 @@ public final class CrosshairEditorScreen extends BaseScreen {
 			g.fill(bx, gy, bx + box, gy + box / 2, 0xFF7BA4E0);
 			g.fill(bx, gy + box / 2, bx + box, gy + box, 0xFF5E8C3A);
 			g.outline(bx, gy, box, box, 0x60FFFFFF);
-			CrosshairRenderer.draw(g, n, new String(pixels), c.color, c.outline, c.outlineColor, bx + box / 2, gy + box / 2, Math.max(1, Math.round(c.scale)));
+			CrosshairRenderer.draw(g, n, new String(pixels), c.color, c.outline, CrosshairRenderer.outlineColor(c), Math.max(1, c.outlineThickness), bx + box / 2, gy + box / 2, Math.max(1, Math.round(c.scale)));
 			g.text(this.font, "§7real size", bx, gy + box + 3, 0xFFFFFFFF, false);
 		}
 
@@ -355,7 +358,7 @@ public final class CrosshairEditorScreen extends BaseScreen {
 			String p = new String(pixels);
 			int scale = Math.max(1, Math.round(c.scale));
 			float flash = 1f - Math.min(1f, (System.currentTimeMillis() - changedAt) / 300f);
-			CrosshairRenderer.draw(g, n, p, c.color, c.outline, c.outlineColor, vx + vw / 2, vy + vh / 2, scale);
+			CrosshairRenderer.draw(g, n, p, c.color, c.outline, CrosshairRenderer.outlineColor(c), Math.max(1, c.outlineThickness), vx + vw / 2, vy + vh / 2, scale);
 			if (flash > 0) g.outline(vx, vy, vw, vh, Theme.alpha(Theme.ACCENT, flash));
 			g.text(this.font, "§7preview " + scale + "×", vx + 3, vy + 3, 0xFFFFFFFF, false);
 		}

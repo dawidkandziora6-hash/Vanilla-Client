@@ -145,9 +145,24 @@ public final class Ui {
 			void paint(GuiGraphicsExtractor g, int x, int y, int w, int h, int mx, int my, float alpha);
 		}
 
+		Runnable onClick;
+
 		public Custom(int h, Painter painter) {
 			this.h = h;
 			this.painter = painter;
+		}
+
+		public Custom(int h, Painter painter, Runnable onClick) {
+			this(h, painter);
+			this.onClick = onClick;
+		}
+
+		@Override
+		public boolean mouseDown(double mx, double my, int button) {
+			if (onClick == null || !inside(mx, my) || button != Mouse.LEFT) return false;
+			click();
+			onClick.run();
+			return true;
 		}
 
 		@Override
@@ -221,6 +236,20 @@ public final class Ui {
 		final DoubleConsumer set;
 		final DoubleFunction<String> fmt;
 		boolean held;
+		ItemStack icon;
+		Runnable reset;
+
+		/** Item icon in front of the label. */
+		public Slider icon(ItemStack icon) {
+			this.icon = icon;
+			return this;
+		}
+
+		/** Right-click resets. */
+		public Slider onReset(Runnable r) {
+			this.reset = r;
+			return this;
+		}
 
 		public Slider(String label, double min, double max, double step, DoubleSupplier get, DoubleConsumer set, DoubleFunction<String> fmt) {
 			this.label = label;
@@ -245,7 +274,12 @@ public final class Ui {
 			updateHover(mx, my);
 			if (!label.isEmpty()) {
 				rowBackground(g, alpha);
-				g.text(font, label, x + 6, y + 6, Theme.alpha(0xFFFFFFFF, alpha), false);
+				int tx = x + 6;
+				if (icon != null && !icon.isEmpty()) {
+					Icons.small(g, icon, x + 5, y + 6);
+					tx += 11;
+				}
+				g.text(font, font.plainSubstrByWidth(label, sx() - tx - 4), tx, y + 6, Theme.alpha(0xFFFFFFFF, alpha), false);
 			}
 			int sx = sx(), sw = sw();
 			boolean hl = held || (mx >= sx && mx < sx + sw && my >= y && my < y + 20);
@@ -259,6 +293,12 @@ public final class Ui {
 
 		@Override
 		public boolean mouseDown(double mx, double my, int button) {
+			if (button == Mouse.RIGHT && reset != null && inside(mx, my)) {
+				reset.run();
+				Config.save();
+				click();
+				return true;
+			}
 			if (button != Mouse.LEFT || !(mx >= sx() && mx < sx() + sw() && my >= y && my < y + 20)) return false;
 			held = true;
 			apply(mx);
@@ -546,6 +586,175 @@ public final class Ui {
 		}
 	}
 
+	// ================================================================ text field (vanilla EditBox, placed by the list)
+
+	public static final class TextField extends Control {
+		final String label;
+		final Supplier<String> get;
+		final Consumer<String> set;
+		final int max;
+		public net.minecraft.client.gui.components.EditBox box;
+
+		public TextField(String label, Supplier<String> get, Consumer<String> set, int max) {
+			this.label = label;
+			this.get = get;
+			this.set = set;
+			this.max = max;
+		}
+
+		net.minecraft.client.gui.components.EditBox create(Font font) {
+			box = new net.minecraft.client.gui.components.EditBox(font, 0, -100, 100, 14, net.minecraft.network.chat.Component.literal(label));
+			box.setMaxLength(max);
+			String v = get.get();
+			box.setValue(v == null ? "" : v);
+			box.setResponder(v2 -> {
+				set.accept(v2);
+				Config.save();
+			});
+			return box;
+		}
+
+		@Override
+		public void render(GuiGraphicsExtractor g, Font font, int mx, int my, float alpha) {
+			updateHover(mx, my);
+			rowBackground(g, alpha);
+			g.text(font, label, x + 6, y + 6, Theme.alpha(0xFFFFFFFF, alpha), false);
+		}
+
+		void place(int top, int bottom) {
+			if (box == null) return;
+			int bw = Math.max(70, w * 11 / 20);
+			box.setWidth(bw - 4);
+			box.setX(x + w - bw);
+			box.setY(y + 3);
+			box.visible = y + 3 >= top && y + 17 <= bottom;
+		}
+	}
+
+	// ================================================================ key binding
+
+	public static final class KeyBind extends Control {
+		final String label;
+		final net.minecraft.client.KeyMapping key;
+		public static KeyBind listening;
+
+		public KeyBind(String label, net.minecraft.client.KeyMapping key) {
+			this.label = label;
+			this.key = key;
+		}
+
+		private boolean conflict() {
+			if (key.isUnbound()) return false;
+			for (net.minecraft.client.KeyMapping k : Minecraft.getInstance().options.keyMappings) {
+				if (k != key && k.same(key)) return true;
+			}
+			return false;
+		}
+
+		@Override
+		public void render(GuiGraphicsExtractor g, Font font, int mx, int my, float alpha) {
+			updateHover(mx, my);
+			rowBackground(g, alpha);
+			g.text(font, label, x + 6, y + 6, Theme.alpha(0xFFFFFFFF, alpha), false);
+			int bw = 90;
+			int bx = x + w - bw - 4;
+			boolean hl = mx >= bx && mx < bx + bw && my >= y + 1 && my < y + 19;
+			g.blitSprite(RenderPipelines.GUI_TEXTURED, hl || listening == this ? BUTTON_HL : BUTTON, bx, y + 1, bw, 18);
+			String text = listening == this ? "§e> press a key <" : key.isUnbound() ? "§8none" : (conflict() ? "§c" : "§f") + key.getTranslatedKeyMessage().getString();
+			g.centeredText(font, text, bx + bw / 2, y + 6, Theme.alpha(0xFFFFFFFF, alpha));
+			if (!key.isDefault()) g.text(font, "§8↺", bx - 9, y + 6, Theme.alpha(0xFFFFFFFF, alpha), false);
+		}
+
+		@Override
+		public boolean mouseDown(double mx, double my, int button) {
+			if (!inside(mx, my)) return false;
+			click();
+			if (button == Mouse.RIGHT) {
+				set(key.getDefaultKey());
+				return true;
+			}
+			listening = listening == this ? null : this;
+			return true;
+		}
+
+		void set(com.mojang.blaze3d.platform.InputConstants.Key k) {
+			key.setKey(k);
+			net.minecraft.client.KeyMapping.resetMapping();
+			Minecraft.getInstance().options.save();
+			listening = null;
+		}
+
+		/** Returns true if the key press was used. */
+		public static boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
+			if (listening == null) return false;
+			if (e.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) listening.set(com.mojang.blaze3d.platform.InputConstants.UNKNOWN);
+			else listening.set(com.mojang.blaze3d.platform.InputConstants.getKey(e));
+			return true;
+		}
+	}
+
+	// ================================================================ compact module chip (3 per row)
+
+	public static final class Chip extends Control {
+		final String name;
+		final ItemStack icon;
+		final BooleanSupplier get;
+		final Consumer<Boolean> set;
+		final Runnable open;
+		float knob = -1f;
+
+		public Chip(String name, ItemStack icon, BooleanSupplier get, Consumer<Boolean> set, Runnable open) {
+			this.name = name;
+			this.icon = icon;
+			this.get = get;
+			this.set = set;
+			this.open = open;
+			this.span = 3;
+		}
+
+		@Override
+		public int height() {
+			return 26;
+		}
+
+		private boolean onSwitch(double mx) {
+			return mx >= x + w - 16;
+		}
+
+		@Override
+		public void render(GuiGraphicsExtractor g, Font font, int mx, int my, float alpha) {
+			updateHover(mx, my);
+			boolean on = get.getAsBoolean();
+			if (knob < 0) knob = on ? 1f : 0f;
+			knob = approach(knob, on ? 1f : 0f, 0.3f);
+			g.fill(x, y, x + w, y + 24, Theme.alpha(Theme.lerpColor(0x30000000, 0x40FFFFFF, hover * 0.6f), alpha));
+			g.fill(x, y + 22, x + w, y + 24, Theme.alpha(Theme.lerpColor(0xFF3A3A3A, 0xFF3FA34D, knob), alpha));
+			g.outline(x, y, w, 24, Theme.alpha(Theme.lerpColor(0x28FFFFFF, 0x90FFFFFF, hover), alpha));
+			float bob = hovered ? (float) Math.sin(Theme.time() * 6) * 1f : 0f;
+			Icons.scaled(g, icon, x + 4, y + 4 + bob, 0.9f);
+			int tw = w - 22 - 16;
+			g.text(font, font.plainSubstrByWidth(name, tw), x + 21, y + 4, Theme.alpha(on ? 0xFFFFFFFF : 0xFF9A9A9A, alpha), false);
+			g.text(font, on ? "§aon" : "§8off", x + 21, y + 13, Theme.alpha(0xFFFFFFFF, alpha), false);
+			int sx = x + w - 13, sy = y + 8;
+			g.fill(sx, sy, sx + 8, sy + 8, Theme.alpha(0xFF202020, alpha));
+			g.fill(sx + 1, sy + 1, sx + 7, sy + 7, Theme.alpha(Theme.lerpColor(0xFF4A4A4A, 0xFF5AD06A, knob), alpha));
+			if (open != null && hovered && !onSwitch(mx)) g.text(font, "›", x + w - 22, y + 8, Theme.alpha(Theme.ACCENT, alpha), false);
+		}
+
+		@Override
+		public boolean mouseDown(double mx, double my, int button) {
+			if (!inside(mx, my)) return false;
+			click();
+			if (button == Mouse.RIGHT || onSwitch(mx) || open == null) {
+				set.accept(!get.getAsBoolean());
+				Config.save();
+			} else {
+				open.run();
+			}
+			return true;
+		}
+	}
+
 	// ================================================================ list
 
 	/** Vertical list with two-column rows, scrolling, clipping and a staggered intro. */
@@ -556,13 +765,21 @@ public final class Ui {
 		private float scroll, scrollTarget;
 		private long builtAt = System.currentTimeMillis();
 		private int contentH;
+		/** Screen hooks so text fields can live in the screen's widget list. */
+		public Consumer<net.minecraft.client.gui.components.EditBox> addWidget;
+		public Consumer<net.minecraft.client.gui.components.EditBox> removeWidget;
 
 		public <T extends Control> T add(T c) {
 			controls.add(c);
+			if (c instanceof TextField tf && addWidget != null) addWidget.accept(tf.create(Minecraft.getInstance().font));
 			return c;
 		}
 
 		public void reset() {
+			for (Control c : controls) {
+				if (c instanceof TextField tf && tf.box != null && removeWidget != null) removeWidget.accept(tf.box);
+			}
+			KeyBind.listening = null;
 			controls.clear();
 			held = null;
 			scroll = scrollTarget = 0;
@@ -571,24 +788,11 @@ public final class Ui {
 
 		private void layout() {
 			int yy = top + 2 - Math.round(scroll);
-			int col = 0;
-			int rowH = 0;
-			int half = (w - 6) / 2;
+			int col = 0, rowSpan = 0, rowH = 0;
 			for (Control c : controls) {
-				if (c.span == 2) {
-					c.w = half;
-					c.x = x + (col == 0 ? 0 : half + 6);
-					c.y = yy;
-					rowH = Math.max(rowH, c.height());
-					if (col == 1) {
-						yy += rowH + 2;
-						col = 0;
-						rowH = 0;
-					} else {
-						col = 1;
-					}
-				} else {
-					if (col == 1) {
+				int sp = Math.max(1, c.span);
+				if (sp == 1) {
+					if (col > 0) {
 						yy += rowH + 2;
 						col = 0;
 						rowH = 0;
@@ -597,10 +801,28 @@ public final class Ui {
 					c.x = x;
 					c.y = yy;
 					yy += c.height() + 2;
+					continue;
+				}
+				if (col > 0 && sp != rowSpan) {
+					yy += rowH + 2;
+					col = 0;
+					rowH = 0;
+				}
+				rowSpan = sp;
+				int cw = (w - (sp - 1) * 4) / sp;
+				c.w = cw;
+				c.x = x + col * (cw + 4);
+				c.y = yy;
+				rowH = Math.max(rowH, c.height());
+				if (++col == sp) {
+					yy += rowH + 2;
+					col = 0;
+					rowH = 0;
 				}
 			}
-			if (col == 1) yy += rowH + 2;
+			if (col > 0) yy += rowH + 2;
 			contentH = yy + Math.round(scroll) - top;
+			for (Control c : controls) if (c instanceof TextField tf) tf.place(top, bottom);
 		}
 
 		public void render(GuiGraphicsExtractor g, Font font, int mx, int my) {

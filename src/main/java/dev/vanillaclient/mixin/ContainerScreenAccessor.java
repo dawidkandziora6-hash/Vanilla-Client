@@ -1,0 +1,17 @@
+package dev.vanillaclient.mixin;
+
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.gen.Accessor;
+
+@Mixin(AbstractContainerScreen.class)
+public interface ContainerScreenAccessor {
+	@Accessor("leftPos")
+	int vc$left();
+
+	@Accessor("topPos")
+	int vc$top();
+
+	@Accessor("imageWidth")
+	int vc$width();
+}

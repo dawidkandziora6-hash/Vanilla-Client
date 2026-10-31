@@ -7,12 +7,15 @@
     "CapeLayerMixin",
     "ClientClockManagerAccessor",
     "ClockInstanceAccessor",
+    "ContainerScreenAccessor",
     "FirstPersonItemsMixin",
     "GameRendererMixin",
     "InventoryScreenInvoker",
     "MouseHandlerMixin",
+    "NameTagMixin",
     "ScreenEffectRendererMixin",
-    "ShieldSpecialRendererMixin"
+    "ShieldSpecialRendererMixin",
+    "ShowNameMixin"
   ],
   "injectors": {
     "defaultRequire": 1

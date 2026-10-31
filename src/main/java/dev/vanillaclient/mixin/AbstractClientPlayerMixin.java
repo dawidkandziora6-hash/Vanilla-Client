@@ -33,8 +33,9 @@ public class AbstractClientPlayerMixin {
 			return;
 		}
 		ClientAsset.Texture newCape = cape != null ? cape : skin.cape();
-		// Without a wings design, vanilla also uses the cape texture for the elytra.
-		ClientAsset.Texture newElytra = wings != null ? wings : (cape != null ? null : skin.elytra());
+		// Vanilla would draw the elytra with the cape texture – our capes only fill the cape
+		// area, so with "Vanilla" wings the normal elytra texture is used instead.
+		ClientAsset.Texture newElytra = wings != null ? wings : (cape != null ? Cosmetics.VANILLA_ELYTRA : skin.elytra());
 		cir.setReturnValue(PlayerSkin.insecure(skin.body(), newCape, newElytra, skin.model()));
 	}
 }

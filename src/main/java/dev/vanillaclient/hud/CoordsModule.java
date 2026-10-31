@@ -13,12 +13,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
-/** X / Y / Z, facing direction and the matching Nether/Overworld position. */
+/** X / Y / Z, facing direction and the matching Nether/Overworld position – every label is your own text. */
 public final class CoordsModule extends HudModule {
 	private static final String[] DIRS = {"South", "South-West", "West", "North-West", "North", "North-East", "East", "South-East"};
 	private static final String[] SHORT = {"S", "SW", "W", "NW", "N", "NE", "E", "SE"};
 	private static final String[] AXIS = {"+Z", "", "-X", "", "-Z", "", "+X", ""};
 	private static final String[] ARROWS = {"↓", "↙", "←", "↖", "↑", "↗", "→", "↘"};
+
+	/** Piece of a line: label pieces use the label color. */
+	private record Seg(String text, boolean label, int color) {}
 
 	public CoordsModule() {
 		super("coords", "Coordinates");
@@ -34,7 +37,11 @@ public final class CoordsModule extends HudModule {
 		return Icons.stack(Items.COMPASS);
 	}
 
-	private List<String> lines(boolean editing) {
+	private static String lbl(String custom, String fallback) {
+		return custom == null || custom.isBlank() ? fallback : custom;
+	}
+
+	private List<List<Seg>> lines(boolean editing) {
 		Config.Coords s = settings();
 		Minecraft mc = Minecraft.getInstance();
 		LocalPlayer p = mc.player;
@@ -43,44 +50,55 @@ public final class CoordsModule extends HudModule {
 		int z = p == null ? -256 : p.getBlockZ();
 		float yaw = p == null ? 180f : p.getYRot();
 		int dir = Math.floorMod(Math.round(yaw / 45f), 8);
-		String l = s.coloredLabels ? "§7" : "";
-		String r = "§r";
-		List<String> out = new ArrayList<>();
+		List<List<Seg>> out = new ArrayList<>();
 		if (s.compact) {
-			StringBuilder b = new StringBuilder();
-			b.append(l).append("XYZ ").append(r).append(x).append(" ").append(y).append(" ").append(z);
-			if (s.showDirection) b.append(" ").append(l).append(ARROWS[dir]).append(" ").append(SHORT[dir]).append(r);
-			out.add(b.toString());
+			List<Seg> l = new ArrayList<>();
+			l.add(new Seg(lbl(s.labelX, "X") + lbl(s.labelY, "Y") + lbl(s.labelZ, "Z") + " ", true, 0));
+			l.add(new Seg(x + " " + y + " " + z, false, 0));
+			if (s.showDirection) l.add(new Seg(" " + ARROWS[dir] + " " + (s.labelFacing.isBlank() ? "" : s.labelFacing + " ") + SHORT[dir], true, 0));
+			out.add(l);
 		} else {
-			out.add(l + "X: " + r + x);
-			out.add(l + "Y: " + r + y);
-			out.add(l + "Z: " + r + z);
+			out.add(List.of(new Seg(lbl(s.labelX, "X") + ": ", true, 0), new Seg(String.valueOf(x), false, 0)));
+			out.add(List.of(new Seg(lbl(s.labelY, "Y") + ": ", true, 0), new Seg(String.valueOf(y), false, 0)));
+			out.add(List.of(new Seg(lbl(s.labelZ, "Z") + ": ", true, 0), new Seg(String.valueOf(z), false, 0)));
 			if (s.showDirection) {
-				String axis = AXIS[dir].isEmpty() ? "" : " " + l + "(" + AXIS[dir] + ")" + r;
-				out.add(l + ARROWS[dir] + " " + r + DIRS[dir] + axis);
+				List<Seg> l = new ArrayList<>();
+				l.add(new Seg(ARROWS[dir] + " " + (s.labelFacing.isBlank() ? "" : s.labelFacing + ": "), true, 0));
+				l.add(new Seg(DIRS[dir], false, 0));
+				if (!AXIS[dir].isEmpty()) l.add(new Seg(" (" + AXIS[dir] + ")", true, 0));
+				out.add(l);
 			}
 		}
-		if (s.showOtherDimension && mc.level != null) {
-			if (mc.level.dimension() == Level.OVERWORLD) {
-				out.add(l + "Nether: " + r + "§c" + Math.floorDiv(x, 8) + " " + Math.floorDiv(z, 8));
-			} else if (mc.level.dimension() == Level.NETHER) {
-				out.add(l + "Overworld: " + r + "§a" + (x * 8) + " " + (z * 8));
+		boolean nether = mc.level != null && mc.level.dimension() == Level.NETHER;
+		boolean over = mc.level == null || mc.level.dimension() == Level.OVERWORLD;
+		if (s.showOtherDimension && (over || nether || editing)) {
+			if (!nether) {
+				out.add(List.of(new Seg(lbl(s.labelOther, "Nether") + ": ", true, 0),
+						new Seg(Math.floorDiv(x, 8) + " " + Math.floorDiv(z, 8), false, 0xFFFF6A5A)));
+			} else {
+				out.add(List.of(new Seg(lbl(s.labelOther, "Overworld") + ": ", true, 0),
+						new Seg((x * 8) + " " + (z * 8), false, 0xFF6AE070)));
 			}
-		} else if (s.showOtherDimension && editing) {
-			out.add(l + "Nether: " + r + "§c16 -32");
 		}
 		if (s.showChunk) {
-			out.add(l + "Chunk: " + r + Math.floorDiv(x, 16) + " " + Math.floorDiv(z, 16)
-					+ l + " in " + r + Math.floorMod(x, 16) + " " + Math.floorMod(z, 16));
+			out.add(List.of(new Seg(lbl(s.labelChunk, "Chunk") + ": ", true, 0),
+					new Seg(Math.floorDiv(x, 16) + " " + Math.floorDiv(z, 16), false, 0),
+					new Seg(" in ", true, 0), new Seg(Math.floorMod(x, 16) + " " + Math.floorMod(z, 16), false, 0)));
 		}
 		return out;
+	}
+
+	private static int lineW(Font font, List<Seg> line) {
+		int w = 0;
+		for (Seg sg : line) w += font.width(sg.text());
+		return w;
 	}
 
 	@Override
 	public int width(boolean editing) {
 		Font font = Minecraft.getInstance().font;
 		int w = 0;
-		for (String s : lines(editing)) w = Math.max(w, font.width(s));
+		for (List<Seg> l : lines(editing)) w = Math.max(w, lineW(font, l));
 		return w;
 	}
 
@@ -95,8 +113,13 @@ public final class CoordsModule extends HudModule {
 		Font font = Minecraft.getInstance().font;
 		background(g, s, width(editing), height(editing));
 		int y = 0;
-		for (String line : lines(editing)) {
-			g.text(font, line, 0, y, s.color, s.shadow);
+		for (List<Seg> line : lines(editing)) {
+			int x = 0;
+			for (Seg sg : line) {
+				int col = sg.color() != 0 ? sg.color() : sg.label() && s.coloredLabels ? s.labelColor : s.color;
+				g.text(font, sg.text(), x, y, col, s.shadow);
+				x += font.width(sg.text());
+			}
 			y += 10;
 		}
 	}

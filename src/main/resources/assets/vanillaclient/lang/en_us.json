@@ -5,5 +5,8 @@
   "key.vanillaclient.toggle_todo": "Toggle task list",
   "key.vanillaclient.hud_editor": "Open HUD editor",
   "key.vanillaclient.map": "Open world map",
-  "key.vanillaclient.waypoint": "Save a waypoint here"
+  "key.vanillaclient.waypoint": "Save a waypoint here",
+  "key.vanillaclient.cosmetics": "Wardrobe",
+  "key.vanillaclient.tasks": "Task planner",
+  "key.vanillaclient.sort": "Sort open chest"
 }
