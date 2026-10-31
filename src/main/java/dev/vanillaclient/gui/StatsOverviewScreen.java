@@ -137,7 +137,7 @@ public final class StatsOverviewScreen extends BaseScreen {
 		int x0 = this.width / 2 - w / 2;
 		g.enableScissor(x0 - 2, top, x0 + w + 2, bottom);
 		int y = top + 2 - scroll;
-		int cols = w >= 360 ? 4 : 3;
+		int cols = w >= 4 * 120 + 12 ? 4 : 3;
 		int cw = (w - (cols - 1) * 4) / cols;
 		long now = System.currentTimeMillis();
 		for (int i = 0; i < CARDS.size(); i++) {

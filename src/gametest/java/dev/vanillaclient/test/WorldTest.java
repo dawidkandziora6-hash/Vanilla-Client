@@ -77,28 +77,38 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.takeScreenshot("w06_pause");
 			ctx.setScreen(() -> null);
 
-			// chest in front of the player, filled with a mess
-			s.runCommand("execute as @a at @s run fill ~-2 ~-1 ~1 ~2 ~-1 ~3 stone");
-			s.runCommand("execute as @a at @s run setblock ~ ~ ~2 chest");
+			// chest next to the player, filled with a mess
+			int[] pos = ctx.computeOnClient(mc -> new int[] {mc.player.getBlockX(), mc.player.getBlockY(), mc.player.getBlockZ() + 2});
+			String at = pos[0] + " " + pos[1] + " " + pos[2];
+			s.runCommand("setblock " + at + " chest");
 			String[] items = {"dirt 12", "cobblestone 30", "dirt 40", "oak_planks 5", "cobblestone 64", "iron_ingot 3", "dirt 7", "torch 9", "iron_ingot 20"};
 			for (int i = 0; i < items.length; i++) {
-				s.runCommand("execute as @a at @s run item replace block ~ ~ ~2 container." + (i * 3) + " with " + items[i]);
+				s.runCommand("item replace block " + at + " container." + (i * 3) + " with " + items[i]);
 			}
 			s.runCommand("give @a dirt 20");
-			s.runCommand("execute as @a at @s run tp @s ~ ~ ~ facing ~ ~0.5 ~2.5");
 			ctx.waitTicks(10);
-			KeyMapping use = ctx.computeOnClient(mc -> mc.options.keyUse);
-			ctx.getInput().pressKey(use);
+			ctx.runOnClient(mc -> {
+				net.minecraft.core.BlockPos bp = new net.minecraft.core.BlockPos(pos[0], pos[1], pos[2]);
+				mc.gameMode.useItemOn(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND,
+						new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(bp), net.minecraft.core.Direction.UP, bp, false));
+			});
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w07_chest");
 			ctx.runOnClient(mc -> ChestTools.sortOpen());
 			ctx.waitTicks(10);
 			ctx.takeScreenshot("w08_chest_sorted");
+			ctx.runOnClient(mc -> {
+				if (mc.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> cs) ChestTools.store(cs.getMenu());
+			});
+			ctx.waitTicks(10);
+			ctx.takeScreenshot("w08b_chest_stored");
 			ctx.setScreen(() -> null);
 
 			ctx.setScreen(() -> new dev.vanillaclient.gui.AdvancementsChecklistScreen(null));
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w09_advancements");
+			ctx.setScreen(() -> new dev.vanillaclient.gui.SettingsScreen(null));
+			ctx.waitTicks(5);
 			ctx.setScreen(() -> new dev.vanillaclient.gui.StatsOverviewScreen(null));
 			ctx.waitTicks(40);
 			ctx.takeScreenshot("w10_stats");

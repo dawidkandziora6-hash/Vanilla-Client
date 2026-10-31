@@ -176,26 +176,35 @@ public final class VanillaClient implements ClientModInitializer {
 			return;
 		}
 		if (!Config.get().pauseMenuButton || !isPauseScreen(screen) || widgets.isEmpty()) return;
-		// "Give Feedback" | "Report Bugs" become "Vanilla Client" | "Wardrobe"
-		AbstractWidget feedback = null, bugs = null;
+		// The small icon row (feedback, bugs, friends …) gets "Vanilla Client" on its left
+		// and "Wardrobe" on its right – same width as the menu.
+		AbstractWidget feedback = null, back = null;
 		for (AbstractWidget wd : widgets) {
-			if (hasKey(wd, "menu.sendFeedback")) feedback = wd;
-			if (hasKey(wd, "menu.reportBugs")) bugs = wd;
+			if (hasKey(wd, "menu.sendFeedback") || hasKey(wd, "menu.reportBugs")) feedback = feedback == null ? wd : feedback;
+			if (hasKey(wd, "menu.returnToGame")) back = wd;
 		}
-		if (feedback != null && bugs != null) {
-			feedback.visible = false;
-			feedback.active = false;
-			bugs.visible = false;
-			bugs.active = false;
-			widgets.add(Button.builder(Component.literal("✦ Vanilla Client"), b -> client.setScreenAndShow(new SettingsScreen(screen)))
-					.bounds(feedback.getX(), feedback.getY(), feedback.getWidth(), feedback.getHeight()).build());
-			widgets.add(Button.builder(Component.literal("Wardrobe"), b -> client.setScreenAndShow(new dev.vanillaclient.gui.CosmeticsScreen(screen)))
-					.bounds(bugs.getX(), bugs.getY(), bugs.getWidth(), bugs.getHeight()).build());
-		} else {
-			widgets.add(Button.builder(Component.literal("✦ Vanilla Client"), b -> client.setScreenAndShow(new SettingsScreen(screen)))
-					.bounds(4, 4, 100, 20).build());
-			widgets.add(Button.builder(Component.literal("Wardrobe"), b -> client.setScreenAndShow(new dev.vanillaclient.gui.CosmeticsScreen(screen)))
-					.bounds(4, 28, 100, 20).build());
+		if (feedback != null && back != null) {
+			int rowY = feedback.getY();
+			int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
+			for (AbstractWidget wd : widgets) {
+				if (wd.getY() == rowY && wd.visible) {
+					minX = Math.min(minX, wd.getX());
+					maxX = Math.max(maxX, wd.getX() + wd.getWidth());
+				}
+			}
+			int left = back.getX(), right = back.getX() + back.getWidth();
+			int lw = minX - 4 - left, rw = right - (maxX + 4);
+			if (lw >= 40 && rw >= 40) {
+				widgets.add(Button.builder(Component.literal("Vanilla Client"), b -> client.setScreenAndShow(new SettingsScreen(screen)))
+						.bounds(left, rowY, lw, feedback.getHeight()).build());
+				widgets.add(Button.builder(Component.literal("Wardrobe"), b -> client.setScreenAndShow(new dev.vanillaclient.gui.CosmeticsScreen(screen)))
+						.bounds(maxX + 4, rowY, rw, feedback.getHeight()).build());
+				return;
+			}
 		}
+		widgets.add(Button.builder(Component.literal("Vanilla Client"), b -> client.setScreenAndShow(new SettingsScreen(screen)))
+				.bounds(4, 4, 100, 20).build());
+		widgets.add(Button.builder(Component.literal("Wardrobe"), b -> client.setScreenAndShow(new dev.vanillaclient.gui.CosmeticsScreen(screen)))
+				.bounds(4, 28, 100, 20).build());
 	}
 }
