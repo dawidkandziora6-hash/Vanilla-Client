@@ -1,0 +1,19 @@
+{
+  "required": true,
+  "package": "dev.vanillaclient.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "AbstractClientPlayerMixin",
+    "ClientClockManagerAccessor",
+    "ClockInstanceAccessor",
+    "FirstPersonItemsMixin",
+    "GameRendererMixin",
+    "InventoryScreenInvoker",
+    "MouseHandlerMixin",
+    "ScreenEffectRendererMixin",
+    "ShieldSpecialRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

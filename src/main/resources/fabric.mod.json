@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "id": "logbuch",
+  "id": "vanillaclient",
   "version": "${version}",
-  "name": "Logbuch",
-  "description": "Rein clientseitiger Helfer für Hardcore/UHC: Tage, Aufgaben, Rüstungsanzeige, Zoom, eigenes Fadenkreuz, Bilder und Kosmetik – ohne etwas am Spiel zu verändern.",
+  "name": "Vanilla Client",
+  "description": "A clean, client-side helper for Hardcore/UHC: days, tasks, armor status, zoom, custom crosshair, images and cosmetics – without changing the game.",
   "authors": ["Dawid"],
   "license": "MIT",
-  "icon": "assets/logbuch/icon.png",
+  "icon": "assets/vanillaclient/icon.png",
   "environment": "client",
   "entrypoints": {
-    "client": ["dev.logbuch.LogbuchClient"]
+    "client": ["dev.vanillaclient.VanillaClient"]
   },
   "mixins": [
-    { "config": "logbuch.mixins.json", "environment": "client" }
+    { "config": "vanillaclient.mixins.json", "environment": "client" }
   ],
   "depends": {
     "fabricloader": ">=0.19.5",

@@ -1,52 +1,36 @@
-# Logbuch – Fabric-Mod für Minecraft 26.3
+# Vanilla Client – Fabric mod for Minecraft 26.3
 
-Rein **clientseitiger** Helfer für deine Hardcore-/UHC-Welt. Die Mod schickt nichts an den Server
-und ändert keine Spielmechanik: Sie zeigt nur etwas an. Kosmetik siehst nur du.
+A clean, **client-side** helper for your Hardcore/UHC world. It sends nothing to the server and
+changes no game mechanics – it only shows things. Cosmetics are only visible to you.
 
-## Funktionen
+## Features
 
-| Modul | Was es macht |
+| Module | What it does |
 |---|---|
-| **Tage** | „Tag 37 · 14:20“ als Anzeige auf dem Bildschirm (liest die Überwelt-Uhr nur aus) |
-| **Aufgaben** | To-do-Liste auf dem Bildschirm mit Kategorien (Farm, Bau, …), Priorität, Koordinaten („Hier“-Knopf) und Unteraufgaben/Materiallisten |
-| **Rüstung** | Rüstung + Haltbarkeit im echten Hotbar-Look, direkt neben der Hotbar (oder frei verschiebbar) |
-| **Fadenkreuz** | Eigenes Pixel-Fadenkreuz mit Malprogramm (malen, radieren, spiegeln, Vorlagen), Farbe, Größe, Umrandung |
-| **Zoom** | Taste **C** halten. Zoomstufe, weicher Übergang, Mausrad zum Nachjustieren, Kinokamera |
-| **Bilder** | PNG/JPG vom PC als Overlay (z. B. Baupläne). Einfach ins Menü ziehen, im HUD-Editor platzieren, Deckkraft einstellen |
-| **Kosmetik** | Umhänge, Flügel (nur sichtbar, wenn du eine Elytra trägst), Schild-Designs (nur auf dem Schild). Alle auch mit eigenen Bildern |
+| **Days** | "☀ Day 37 · 14:20" on screen (sun turns into a moon at night) |
+| **Tasks** | Task planner with categories + icons, priorities, coordinates ("Here" button), subtasks / material lists, progress bars |
+| **Armor** | Armor + durability in the real hotbar look, right next to the hotbar (or free to move) |
+| **Crosshair** | Paint your own pixel crosshair (paint, erase, mirror, presets), color, size, outline |
+| **Zoom** | Hold **C**. Zoom level, smooth transition, scroll to adjust, cinematic camera, hide hand |
+| **Images** | PNG/JPG from your PC as overlays (e.g. build plans). Drag them into the menu |
+| **Wardrobe** | 10 capes (one animated), 7 wings (shown with an elytra), 7 shield skins – with a live player preview |
+| **Held Items** | Make the shield / totem in your hand and the totem pop animation smaller |
 
-**Menü:** Im Pausemenü links neben „Optionen…“ ist ein neuer Knopf mit Buch-Symbol. Dort kannst du alle Module an- und
-ausschalten, Farben und Größen einstellen, und über **„HUD bearbeiten“** alles mit der Maus verschieben (Mausrad = Größe,
-Rechtsklick = Größe zurücksetzen, rastet an Rändern und an der Mitte ein).
+**Menu:** In the pause menu, left of "Options…", there's a new button with a book icon (or press **Right Shift**).
+**Edit HUD:** drag everything with the mouse, scroll to resize, right-click to reset, snaps to edges and center.
 
-Tastenbelegungen unter *Optionen → Steuerung → Logbuch*: Zoom (C), Menü öffnen, Aufgaben-Anzeige an/aus.
+## Install
 
-## Bauen
+Fabric Loader ≥ 0.19.5 + Fabric API 0.161.0+26.3 + the jar from
+[Releases → latest](../../releases/tag/latest) into your `mods` folder.
 
-Benötigt: **JDK 25**.
+## Build
 
-```bash
-./gradlew build        # Windows: gradlew.bat build
-```
+JDK 25, then `./gradlew build` → `build/libs/`. Every push to `main` is built by GitHub Actions and
+published as the `latest` release.
 
-Die fertige Mod liegt danach in `build/libs/logbuch-1.0.0+26.3.jar`.
-Zusammen mit **Fabric Loader ≥ 0.19.5** und **Fabric API (0.161.0+26.3 oder neuer)** in den `mods`-Ordner legen.
+## Folders (`.minecraft/config/vanillaclient/`)
 
-Ohne eigenes Java: Projekt in ein GitHub-Repository hochladen. Der mitgelieferte Workflow
-(`.github/workflows/build.yml`) baut die Jar automatisch und legt sie als Download unter *Actions* ab.
-
-## Ordner
-
-Alles liegt in `.minecraft/config/logbuch/`:
-
-- `config.json` – alle Einstellungen und Aufgaben
-- `bilder/` – deine Overlay-Bilder
-- `kosmetik/` – eigene Kosmetik: `umhang.png` / `fluegel.png` (64×32, Minecraft-Umhang-Layout), `schild.png` (64×64, Schild-Layout)
-
-**Schild-Design:** Schilde werden über ein normales Ressourcenpaket umgefärbt (der Vanilla-Weg). Nach „Übernehmen“
-einmal unter *Optionen → Ressourcenpakete* **„Logbuch Kosmetik“** aktivieren. Spätere Änderungen lädst du mit **F3+T** neu.
-
-## Hinweise
-
-- **C** ist in Vanilla auch die Taste „Schnellleiste speichern“ (nur im Kreativmodus). Falls das stört, unter *Steuerung* umbelegen.
-- Zoom und eigenes Fadenkreuz sind rein optisch. Auf fremden Servern oder bei UHC-Events trotzdem kurz die Regeln prüfen.
+- `config.json` – all settings and tasks
+- `images/` – your overlay pictures
+- `cosmetics/` – your own cosmetics: `cape.png` / `wings.png` (Minecraft cape layout, 64×32 or 128×64), `shield.png` (shield layout, 64×64 or 128×128)

@@ -1,0 +1,7 @@
+{
+  "key.category.vanillaclient.main": "Vanilla Client",
+  "key.vanillaclient.zoom": "Zoom (hold)",
+  "key.vanillaclient.open": "Open Vanilla Client menu",
+  "key.vanillaclient.toggle_todo": "Toggle task list",
+  "key.vanillaclient.hud_editor": "Open HUD editor"
+}
