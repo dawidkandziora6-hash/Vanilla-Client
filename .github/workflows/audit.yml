@@ -25,7 +25,11 @@ jobs:
       - name: Publish log
         if: always()
         run: |
-          mkdir -p out && cp audit.log out/ && cp run/logs/latest.log out/ 2>/dev/null; cp run/screenshots/*.png out/ 2>/dev/null || true
+          mkdir -p out
+          cp audit.log out/ || true
+          cp run/logs/latest.log out/ || true
+          cp run/screenshots/*.png out/ || true
+          ls -la out run/screenshots || true
           cd out && git init -q && git checkout -q -b audit-log
           git config user.name ci && git config user.email ci@users.noreply.github.com
           git add -A && git commit -qm "audit" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" audit-log
