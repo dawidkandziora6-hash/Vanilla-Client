@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "logbuch",
+  "version": "${version}",
+  "name": "Logbuch",
+  "description": "Rein clientseitiger Helfer für Hardcore/UHC: Tage, Aufgaben, Rüstungsanzeige, Zoom, eigenes Fadenkreuz, Bilder und Kosmetik – ohne etwas am Spiel zu verändern.",
+  "authors": ["Dawid"],
+  "license": "MIT",
+  "icon": "assets/logbuch/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.logbuch.LogbuchClient"]
+  },
+  "mixins": [
+    { "config": "logbuch.mixins.json", "environment": "client" }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "fabric-api": "*",
+    "minecraft": ">=26.3- <26.4",
+    "java": ">=25"
+  }
+}
