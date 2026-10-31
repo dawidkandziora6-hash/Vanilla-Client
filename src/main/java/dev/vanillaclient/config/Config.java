@@ -426,7 +426,7 @@ public final class Config {
 		if (keystrokes == null) {
 			keystrokes = new Keystrokes();
 			keystrokes.enabled = false;
-			keystrokes.at(0.01f, 0.75f);
+			keystrokes.at(0.99f, 0.97f);
 		}
 		if (fps == null) fps = (TextHud) new TextHud().label("FPS").off().at(0.01f, 0.30f);
 		if (ping == null) ping = (TextHud) new TextHud().label("Ping").off().at(0.01f, 0.34f);

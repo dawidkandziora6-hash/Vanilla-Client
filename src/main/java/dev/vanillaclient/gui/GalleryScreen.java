@@ -233,7 +233,9 @@ public final class GalleryScreen extends BaseScreen {
 				int picH = ch - 12;
 				drawPic(g, files.get(i), cx + 2, cy + 2, cw - 4, picH - 2, shotsTab ? 240 : 128);
 				String name = files.get(i).getFileName().toString();
-				if (shotsTab && name.length() > 10) name = name.substring(0, 10).replace('_', ' ') + " " + name.substring(Math.min(name.length(), 11), Math.min(name.length(), 16)).replace('.', ':');
+				if (shotsTab && name.matches("\\d{4}-\\d{2}-\\d{2}_\\d{2}\\.\\d{2}.*")) {
+					name = name.substring(8, 10) + "." + name.substring(5, 7) + "." + name.substring(0, 4) + "  " + name.substring(11, 16).replace('.', ':');
+				}
 				g.text(this.font, this.font.plainSubstrByWidth(name, cw - 4), cx + 2, cy + ch - 10, hov ? 0xFFFFFFFF : 0xFFB0B0B0, false);
 				if (img != null && img.enabled) g.text(this.font, "§a●", cx + cw - 8, cy + ch - 10, 0xFFFFFFFF, false);
 			}

@@ -91,6 +91,11 @@ public final class ClientRanks {
 		return o.has(k) && !o.get(k).isJsonNull() ? o.get(k).getAsString() : null;
 	}
 
+	/** Adds a rank locally (used by the CI world test). */
+	public static void put(String name, String rank) {
+		PLAYERS.put(name.toLowerCase(Locale.ROOT), new Entry(rank, null, null, null));
+	}
+
 	/** Entry by name or UUID (as text). */
 	public static Entry entry(String name, java.util.UUID uuid) {
 		Entry e = name == null ? null : PLAYERS.get(name.toLowerCase(Locale.ROOT));

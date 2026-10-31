@@ -31,6 +31,7 @@ public class WorldTest implements FabricClientGameTest {
 			c.crosshair.outline = true;
 			c.crosshair.outlineThickness = 2;
 			c.keystrokes.enabled = true;
+			dev.vanillaclient.features.ClientRanks.put("Player0", "owner");
 		});
 		try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
 			ctx.waitTicks(120);
