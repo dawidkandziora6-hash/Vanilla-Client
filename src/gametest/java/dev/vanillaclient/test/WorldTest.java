@@ -118,6 +118,12 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.setScreen(() -> new dev.vanillaclient.gui.SettingsScreen(null));
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w12_settings");
+			for (String pg : new String[] {"INFO", "RANK", "CONTROLS", "HELD", "COORDS", "CROSSHAIR"}) {
+				ctx.setScreen(() -> dev.vanillaclient.gui.SettingsScreen.at(null, pg));
+				ctx.waitTicks(15);
+				ctx.takeScreenshot("p_" + pg.toLowerCase());
+			}
+			ctx.setScreen(() -> dev.vanillaclient.gui.SettingsScreen.at(null, "HOME"));
 			ctx.setScreen(() -> dev.vanillaclient.gui.CosmeticsScreen.onTab(null, dev.vanillaclient.cosmetics.Cosmetics.Kind.SHIELD));
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w13_wardrobe_shield");

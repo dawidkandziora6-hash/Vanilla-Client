@@ -195,10 +195,15 @@ public final class VanillaClient implements ClientModInitializer {
 			int left = back.getX(), right = back.getX() + back.getWidth();
 			int lw = minX - 4 - left, rw = right - (maxX + 4);
 			if (lw >= 40 && rw >= 40) {
-				widgets.add(Button.builder(Component.literal("Vanilla Client"), b -> client.setScreenAndShow(new SettingsScreen(screen)))
-						.bounds(left, rowY, lw, feedback.getHeight()).build());
-				widgets.add(Button.builder(Component.literal("Wardrobe"), b -> client.setScreenAndShow(new dev.vanillaclient.gui.CosmeticsScreen(screen)))
-						.bounds(maxX + 4, rowY, rw, feedback.getHeight()).build());
+				var font = client.font;
+				String l = font.width("Vanilla Client") + 8 <= lw ? "Vanilla Client" : "✦ Client";
+				String r = font.width("Cosmetics") + 8 <= rw ? "Cosmetics" : "Wardrobe";
+				widgets.add(Button.builder(Component.literal(l), b -> client.setScreenAndShow(new SettingsScreen(screen)))
+						.bounds(left, rowY, lw, feedback.getHeight())
+						.tooltip(Tooltip.create(Component.literal("Vanilla Client – modules, HUD, map, guide …"))).build());
+				widgets.add(Button.builder(Component.literal(r), b -> client.setScreenAndShow(new dev.vanillaclient.gui.CosmeticsScreen(screen)))
+						.bounds(maxX + 4, rowY, rw, feedback.getHeight())
+						.tooltip(Tooltip.create(Component.literal("Wardrobe – capes, wings, shields"))).build());
 				return;
 			}
 		}

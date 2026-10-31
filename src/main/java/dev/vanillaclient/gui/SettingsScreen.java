@@ -58,6 +58,16 @@ public final class SettingsScreen extends BaseScreen {
 	private String status = "";
 	private long statusAt;
 
+	/** Opens the menu on a page by name (e.g. "RANK"). */
+	public static SettingsScreen at(Screen parent, String pageName) {
+		try {
+			page = Page.valueOf(pageName);
+		} catch (IllegalArgumentException ignored) {
+			page = Page.HOME;
+		}
+		return new SettingsScreen(parent);
+	}
+
 	public SettingsScreen(Screen parent) {
 		super(Component.literal("Vanilla Client"), parent);
 	}
