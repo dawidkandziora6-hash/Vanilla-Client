@@ -568,7 +568,7 @@ public final class SettingsScreen extends BaseScreen {
 				int c = 0xFF000000 | rk.from();
 				g.fillGradient(x, y, x + w, y + 22, Theme.alpha(Theme.lerpColor(c, 0xFF101010, wearing ? 0.45f : hov && owner ? 0.6f : 0.8f), a), Theme.alpha(0x50000000, a));
 				if (wearing) g.outline(x, y, w, 22, Theme.alpha(c, a));
-				net.minecraft.network.chat.MutableComponent t = dev.vanillaclient.features.ClientRanks.prefix(rk);
+				net.minecraft.network.chat.MutableComponent t = dev.vanillaclient.features.ClientRanks.tag(rk);
 				g.text(this.font, t, x + 6, y + 7, Theme.alpha(owner ? 0xFFFFFFFF : 0x90FFFFFF, a), true);
 				String st = wearing ? "§a✔" : owner ? (hov ? "§eWear" : "") : "§8🔒";
 				st = st.replace("🔒", "locked");

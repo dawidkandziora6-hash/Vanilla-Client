@@ -155,6 +155,13 @@ public final class ClientRanks {
 		return out;
 	}
 
+	/** "♛ OWNER" without separator (rank cards). */
+	public static MutableComponent tag(Rank r) {
+		MutableComponent out = Component.literal(r.symbol() + " ").withColor(r.from());
+		out.append(gradient(r.tag(), r.from(), r.to(), true));
+		return out;
+	}
+
 	/** "♛ OWNER ┃ " prefix for a name tag. */
 	public static MutableComponent prefix(Rank r) {
 		MutableComponent out = Component.literal(r.symbol() + " ").withColor(r.from());

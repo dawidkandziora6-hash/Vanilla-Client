@@ -82,8 +82,8 @@ public final class CosmeticsScreen extends BaseScreen {
 	}
 
 	private int cardH() {
-		if (tab == COLLECTIONS) return Math.max(52, Math.min(74, (bottom() - gridTop() - 12) / 3));
-		return Math.max(54, Math.min(90, (bottom() - gridTop() - 8) / 2 - 2));
+		if (tab == COLLECTIONS) return Math.max(34, Math.min(74, (bottom() - 26 - gridTop() - 12) / 3));
+		return Math.max(44, Math.min(90, (bottom() - 26 - gridTop() - 8) / 2 - 2));
 	}
 
 	private List<?> items() {
@@ -95,7 +95,7 @@ public final class CosmeticsScreen extends BaseScreen {
 	@Override
 	protected void init() {
 		super.init();
-		String[] names = {"Collections", "Capes", "Wings", "Shields"};
+		String[] names = {"Sets", "Capes", "Wings", "Shields"};
 		ItemStack[] icons = {Icons.stack(Items.NETHER_STAR), Icons.stack(Items.LEATHER), Icons.stack(Items.FEATHER), Icons.stack(Items.SHIELD)};
 		int tw = (gridW() - 12) / 4;
 		for (int i = 0; i < 4; i++) {
@@ -253,7 +253,8 @@ public final class CosmeticsScreen extends BaseScreen {
 		List<?> l = items();
 		for (int i = 0; i < l.size(); i++) drawCard(g, i, l.get(i), mouseX, mouseY, dt);
 		if (tab == COLLECTIONS) {
-			g.text(this.font, "§8More collections coming soon", gridX(), bottom() - 8, 0xFFFFFFFF, false);
+			int[] last = cardRect(items().size() - 1);
+			if (last[1] + last[3] + 14 < bottom() - 26) g.text(this.font, "§8More collections coming soon", gridX(), last[1] + last[3] + 5, 0xFFFFFFFF, false);
 		}
 	}
 
@@ -301,11 +302,12 @@ public final class CosmeticsScreen extends BaseScreen {
 			thumb(g, Kind.WINGS, c.id(), x + 12 + th * 20 / 32, y + 4, ww, th);
 			thumb(g, Kind.SHIELD, c.id(), x + 18 + th * 20 / 32 + ww, y + 4, th * 24 / 44, th);
 			int tx = x + 26 + th * 20 / 32 + ww + th * 24 / 44;
-			g.text(this.font, "§l" + c.name(), tx, y + 8, Theme.alpha(c.accent(), appear), true);
-			g.text(this.font, "§7" + this.font.plainSubstrByWidth(c.desc(), x + w - tx - 4), tx, y + 20, Theme.alpha(0xFFFFFFFF, appear), false);
-			g.text(this.font, "§8Cape · Wings · Shield", tx, y + 31, Theme.alpha(0xFFFFFFFF, appear), false);
+			int tw = x + w - tx - 14;
+			g.text(this.font, "§l" + c.name(), tx, y + 5, Theme.alpha(c.accent(), appear), true);
+			if (h >= 48) g.text(this.font, "§7" + this.font.plainSubstrByWidth(c.desc(), tw), tx, y + 17, Theme.alpha(0xFFFFFFFF, appear), false);
+			if (h >= 62) g.text(this.font, "§8Cape · Wings · Shield", tx, y + 29, Theme.alpha(0xFFFFFFFF, appear), false);
 			String btn = worn ? "§a✔ Wearing" : hov ? "§e» Wear set" : "§7Wear set";
-			g.text(this.font, btn, tx, y + h - 13, Theme.alpha(0xFFFFFFFF, appear), false);
+			g.text(this.font, btn, tx, y + h - 12, Theme.alpha(0xFFFFFFFF, appear), false);
 		} else {
 			Design d = (Design) o;
 			Kind k = Kind.values()[tab];
