@@ -1,5 +1,8 @@
 name: build
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,18 +17,28 @@ jobs:
           distribution: temurin
           java-version: 25
       - name: Build
-        run: chmod +x gradlew && ./gradlew build --no-daemon
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew build --no-daemon 2>&1 | tee build.log
+      - name: Publish build log
+        if: always()
+        run: |
+          mkdir -p ci && cp build.log ci/ 2>/dev/null || echo "no log" > ci/build.log
+          cd ci && git init -q && git checkout -q -b ci-log
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          git add -A && git commit -qm "log ${GITHUB_SHA::7}" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ci-log
       - uses: actions/upload-artifact@v4
         with:
           name: logbuch-mod
           path: build/libs/*.jar
-      - name: Release "neueste Version" aktualisieren
-        if: github.ref == 'refs/heads/main'
+      - name: Release "latest"
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete neueste -y --cleanup-tag || true
-          gh release create neueste build/libs/*.jar \
-            --title "Logbuch – neueste Version (MC 26.3)" \
-            --notes "Automatisch gebaut aus ${GITHUB_SHA::7}. Jar zusammen mit Fabric Loader ≥ 0.19.5 und Fabric API 0.161.0+26.3 in den mods-Ordner legen." \
+          gh release delete latest -y --cleanup-tag || true
+          gh release create latest build/libs/*.jar \
+            --title "Vanilla Client – latest build (MC 26.3)" \
+            --notes "Built automatically from ${GITHUB_SHA::7}. Put the jar into your mods folder together with Fabric Loader ≥ 0.19.5 and Fabric API 0.161.0+26.3." \
             --latest

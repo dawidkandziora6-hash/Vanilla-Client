@@ -1,0 +1,13 @@
+Shield
+Totem
+ItemActivation
+FirstPerson
+Inventory.*Screen
+EntityRender
+PlayerRender
+Avatar
+Cape
+Wings
+Elytra
+SpecialRenderer
+PictureInPicture
