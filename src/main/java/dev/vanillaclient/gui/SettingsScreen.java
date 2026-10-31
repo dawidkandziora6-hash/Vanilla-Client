@@ -557,6 +557,7 @@ public final class SettingsScreen extends BaseScreen {
 		var me = this.minecraft.getUser();
 		boolean owner = dev.vanillaclient.features.ClientRanks.isOwner(me.getName(), me.getProfileId());
 		list.add(new Ui.Custom(34, (g, x, y, w, h, mx, my, a) -> drawRankBanner(g, x, y, w, a)));
+		perks(r, owner);
 		list.add(new Ui.Header(owner ? "RANKS  §8· owner account: click a rank to wear it" : "RANKS  §8· not available yet"));
 		java.util.List<dev.vanillaclient.features.ClientRanks.Rank> all = dev.vanillaclient.features.ClientRanks.ALL;
 		for (int k = all.size() - 1; k >= 0; k--) {
@@ -570,8 +571,8 @@ public final class SettingsScreen extends BaseScreen {
 				if (wearing) g.outline(x, y, w, 22, Theme.alpha(c, a));
 				net.minecraft.network.chat.MutableComponent t = dev.vanillaclient.features.ClientRanks.tag(rk);
 				g.text(this.font, t, x + 6, y + 7, Theme.alpha(owner ? 0xFFFFFFFF : 0x90FFFFFF, a), true);
-				String st = wearing ? "§a✔" : owner ? (hov ? "§eWear" : "") : "§8🔒";
-				st = st.replace("🔒", "locked");
+				int pc = dev.vanillaclient.features.ClientRanks.perkCount(rk);
+				String st = wearing ? "§a✔ wearing" : owner && hov ? "§eWear" : (owner ? "§7" : "§8locked · ") + pc + " perk" + (pc == 1 ? "" : "s");
 				g.text(this.font, st, x + w - 6 - this.font.width(st), y + 7, Theme.alpha(0xFFFFFFFF, a), false);
 			}, () -> {
 				if (owner) {
@@ -582,7 +583,6 @@ public final class SettingsScreen extends BaseScreen {
 			card.span = 2;
 			list.add(card);
 		}
-		perks(r, owner);
 		list.add(new Ui.Header("NAME TAG"));
 		list.add(new Ui.Toggle("Show your name in F5 (third person)", i(Items.NAME_TAG), () -> r.ownNameTag, v -> r.ownNameTag = v));
 		list.add(new Ui.Toggle("Rank in front of your name", null, () -> r.symbolInName, v -> r.symbolInName = v));

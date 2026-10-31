@@ -20,6 +20,7 @@ import net.minecraft.world.item.Items;
 public final class WingsLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
 	private static WingsModel model;
 	/** Smoothed animation per player: phase, strength, fold, last time. */
+	private static final long START = System.nanoTime();
 	private static final java.util.Map<Integer, float[]> ANIM = new java.util.HashMap<>();
 	private static long lastCleanup;
 
@@ -58,10 +59,11 @@ public final class WingsLayer extends RenderLayer<AvatarRenderState, PlayerModel
 		Identifier tex = textureFor(s);
 		if (tex == null) return;
 		if (model == null) model = new WingsModel();
-		long now = System.nanoTime();
+		// seconds since start as float stays precise (nanoTime/1e9 as float would step in ~8 ms chunks)
+		float now = (float) ((System.nanoTime() - START) / 1e9);
 		float[] a = ANIM.computeIfAbsent(s.id, k -> new float[] {k * 0.7f, 0f, 0f, 0f});
-		float dt = a[3] == 0 ? 0f : Math.min(0.1f, (now / 1e9f) - a[3]);
-		a[3] = now / 1e9f;
+		float dt = a[3] == 0 ? 0f : Math.max(0f, Math.min(0.1f, now - a[3]));
+		a[3] = now;
 		// targets: gentle idle, a bit more while walking, full flaps while gliding
 		float target = s.isFallFlying ? 1f : Math.min(0.35f, s.walkAnimationSpeed * 0.5f);
 		a[1] += (target - a[1]) * Math.min(1f, dt * 2.5f);
@@ -70,7 +72,7 @@ public final class WingsLayer extends RenderLayer<AvatarRenderState, PlayerModel
 		if (a[0] > 1000f) a[0] -= (float) (Math.PI * 2 * 159);
 		if (System.currentTimeMillis() - lastCleanup > 30_000) {
 			lastCleanup = System.currentTimeMillis();
-			ANIM.entrySet().removeIf(e -> now / 1e9f - e.getValue()[3] > 30f);
+			ANIM.entrySet().removeIf(e -> now - e.getValue()[3] > 30f);
 		}
 		pose.pushPose();
 		getParentModel().body.translateAndRotate(pose);

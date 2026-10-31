@@ -10,11 +10,11 @@ changes no game mechanics – it only shows things. Cosmetics are only visible t
 | **Days** | "Day 37" on screen, counted from day 1, your own label |
 | **Coordinates** | XYZ, facing, Nether/Overworld position, chunk – every label editable |
 | **More HUD modules** | FPS, ping, biome, real time, speed, light level, session time, rank, potion effects, item counter (totems, gapples, pearls …) |
-| **Ranks** | VIP, VIP+, MVP, MVP+, Elite, Legend, Media, Partner, Mod, Admin, Owner – given by name in [`ranks.json`](ranks.json) (not obtainable yet) |
+| **Ranks** | Client tiers Plus, Pro, Ultra, Ultra+, Elite, Legend, Creator, Partner, Staff, Dev, Owner – given by name in [`ranks.json`](ranks.json) (not obtainable yet). Perks: name color, bold/italic, gradient, animated gradient, name font, own badge |
 | **Shared cosmetics** | On LAN worlds and servers with Vanilla Client everyone sees each other's capes, wings, shields and ranks |
 | **Keystrokes** | W A S D, mouse with CPS, sneak/sprint, space – size, gap, rounded, colors, presets |
 | **Gallery** | Screenshot popup + nicer chat message ([View] [Open] [Folder]), in-game screenshot viewer, HUD pictures with previews |
-| **Chests** | "Sort" and "Store" buttons next to chests and shulker boxes (+ optional sort key) |
+| **Chests** | Small sort + store icons in the top right corner of chests and shulker boxes (+ optional sort key) |
 | **Advancements** | Every advancement in one checklist (also hidden ones), what's still missing, short hints |
 | **Statistics** | Overview cards + most mined / killed / killed by / crafted |
 | **World Map** | Press **M** – biome-colored map of everything loaded/explored, saved per world; tasks show as markers |
@@ -25,7 +25,7 @@ changes no game mechanics – it only shows things. Cosmetics are only visible t
 | **Crosshair** | Paint your own pixel crosshair, crisp 1–5× size, CS/Valorant-style outline (1–3 px, opacity), vanilla inverting blend, color on targets |
 | **Zoom** | Hold **C**. Zoom level, smooth transition, scroll to adjust, cinematic camera, hide hand |
 | **Images** | PNG/JPG from your PC as overlays (e.g. build plans). Drag them into the menu |
-| **Wardrobe** | Store-style collections (Inferno, Celestial, Void): animated capes, 3D flapping wings, shields – plus your own PNG |
+| **Wardrobe & Shop** | Collections (Inferno, Celestial, Void): animated capes, 3D flapping wings, round shields – bought with coins (coins come from `ranks.json`), plus your own PNG. Wings optionally only with an elytra |
 | **Held Items** | Size of items in your hand per category (swords, food, blocks …) or per single item; totem pop size |
 
 **Menu:** In the pause menu next to the small icon row: "Vanilla Client" (left) and "Wardrobe" (right) – or press **Right Shift**. All keys can be changed in Vanilla Client › Controls.

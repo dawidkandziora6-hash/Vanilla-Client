@@ -33,16 +33,16 @@ public final class ClientRanks {
 
 	/** Lowest to highest. Not obtainable yet – only the owner account can wear them. */
 	public static final List<Rank> ALL = List.of(
-			new Rank("vip", "VIP", "★", 0x55FF55, 0x2FD67A, 0xB8FFC8),
-			new Rank("vip+", "VIP+", "★", 0x3CFF9A, 0x00D4C8, 0xA8FFE8),
-			new Rank("mvp", "MVP", "✦", 0x55FFFF, 0x3C9CFF, 0xB0F0FF),
-			new Rank("mvp+", "MVP+", "✦", 0x6AA8FF, 0xA05CFF, 0xC8C0FF),
+			new Rank("vip", "PLUS", "★", 0x55FF55, 0x2FD67A, 0xB8FFC8),
+			new Rank("vip+", "PRO", "★", 0x3CFF9A, 0x00D4C8, 0xA8FFE8),
+			new Rank("mvp", "ULTRA", "✦", 0x55FFFF, 0x3C9CFF, 0xB0F0FF),
+			new Rank("mvp+", "ULTRA+", "✦", 0x6AA8FF, 0xA05CFF, 0xC8C0FF),
 			new Rank("elite", "ELITE", "❖", 0xC86CFF, 0xFF5CD6, 0xF0C0FF),
 			new Rank("legend", "LEGEND", "♚", 0xFFC21A, 0xFF7A1A, 0xFFE3A0),
-			new Rank("media", "MEDIA", "▶", 0xFF5555, 0xFFFFFF, 0xFFC8C8),
+			new Rank("media", "CREATOR", "▶", 0xFF5555, 0xFFFFFF, 0xFFC8C8),
 			new Rank("partner", "PARTNER", "❤", 0xFF7AC8, 0xB48CFF, 0xFFC8E8),
-			new Rank("mod", "MOD", "⚔", 0x5CFF7A, 0x1FB58F, 0xA8FFB8),
-			new Rank("admin", "ADMIN", "✪", 0xFF4F6A, 0xFF6AD5, 0xFF9AC8),
+			new Rank("mod", "STAFF", "⚔", 0x5CFF7A, 0x1FB58F, 0xA8FFB8),
+			new Rank("admin", "DEV", "✪", 0xFF4F6A, 0xFF6AD5, 0xFF9AC8),
 			new Rank("owner", "OWNER", "♛", 0xFF3B3B, 0xFFC21A, 0xFFD966));
 
 	/** Perks in the order they unlock (VIP gets the first, staff ranks get all). */
@@ -57,6 +57,12 @@ public final class ClientRanks {
 			this.label = label;
 			this.tier = tier;
 		}
+	}
+
+	public static int perkCount(Rank r) {
+		int n = 0;
+		for (Perk p : Perk.values()) if (has(r, p)) n++;
+		return n;
 	}
 
 	public static boolean has(Rank r, Perk p) {

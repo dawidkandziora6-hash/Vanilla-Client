@@ -37,7 +37,7 @@ public final class ChestTools {
 		ContainerScreenAccessor acc = (ContainerScreenAccessor) screen;
 		AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
 		// two small icons in the top right corner of the chest, on the title row
-		int size = 11;
+		int size = 12;
 		int x = acc.vc$left() + acc.vc$width() - 7 - size * 2 - 2;
 		int y = acc.vc$top() + 4;
 		widgets.add(new dev.vanillaclient.gui.IconButton(x, y, size, new ItemStack(net.minecraft.world.item.Items.COMPARATOR),

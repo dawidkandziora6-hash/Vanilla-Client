@@ -82,7 +82,7 @@ public final class CosmeticsScreen extends BaseScreen {
 	}
 
 	private int cols() {
-		return tab == SETS ? 1 : 2;
+		return tab == SETS ? 1 : items().size() > 4 ? 3 : 2;
 	}
 
 	private int cardW() {
@@ -332,7 +332,7 @@ public final class CosmeticsScreen extends BaseScreen {
 		int px = gridX() + gridW() - pw;
 		g.fill(px, 6, px + pw, 20, 0xC0201A08);
 		g.outline(px, 6, pw, 14, 0x80F2C440);
-		Icons.scaled(g, Icons.stack(Items.GOLD_NUGGET), px + 3, 8, 0.65f);
+		coin(g, px + 5, 9);
 		g.text(this.font, cs, px + 17, 9, 0xFFFFD34D, true);
 
 		drawTabs(g, mouseX, mouseY, dt);
@@ -428,7 +428,7 @@ public final class CosmeticsScreen extends BaseScreen {
 		int tw = this.font.width(text) + 6 + (coin ? 10 : 0);
 		int bx = x + w - tw - 3, by = y + h - 13;
 		g.fill(bx, by, bx + tw, by + 11, bg);
-		if (coin) Icons.scaled(g, Icons.stack(Items.GOLD_NUGGET), bx + 2, by + 1, 0.55f);
+		if (coin) coin(g, bx + 2, by + 1);
 		g.text(this.font, text, bx + 3 + (coin ? 10 : 0), by + 2, 0xFFFFFFFF, false);
 	}
 
@@ -496,7 +496,7 @@ public final class CosmeticsScreen extends BaseScreen {
 		long have = Shop.wallet().coins;
 		int price = price(buying);
 		boolean ok = have >= price;
-		Icons.scaled(g, Icons.stack(Items.GOLD_NUGGET), x + w / 2 - 30, y + 26, 0.75f);
+		coin(g, x + w / 2 - 28, y + 28);
 		g.text(this.font, "§e" + Shop.format(price), x + w / 2 - 16, y + 28, 0xFFFFFFFF, true);
 		g.centeredText(this.font, ok ? "§7After: " + Shop.format(have - price) + " coins" : "§cYou have " + Shop.format(have) + " coins", x + w / 2, y + 44, 0xFFFFFFFF);
 		int by = y + h - 24;
@@ -506,6 +506,17 @@ public final class CosmeticsScreen extends BaseScreen {
 		g.centeredText(this.font, ok ? "§lBuy" : "§7Buy", x + 10 + (w / 2 - 14) / 2, by + 5, 0xFFFFFFFF);
 		g.fill(x + w / 2 + 4, by, x + w - 10, by + 18, hc ? 0xFF555555 : 0xFF3A3A3A);
 		g.centeredText(this.font, "Cancel", x + w / 2 + 4 + (w / 2 - 14) / 2, by + 5, 0xFFFFFFFF);
+	}
+
+	/** A small gold coin. */
+	static void coin(GuiGraphicsExtractor g, int x, int y) {
+		g.fill(x + 2, y, x + 6, y + 8, 0xFFB8860B);
+		g.fill(x, y + 2, x + 8, y + 6, 0xFFB8860B);
+		g.fill(x + 1, y + 1, x + 7, y + 7, 0xFFB8860B);
+		g.fill(x + 2, y + 1, x + 6, y + 7, 0xFFFFD34D);
+		g.fill(x + 1, y + 2, x + 7, y + 6, 0xFFFFD34D);
+		g.fill(x + 3, y + 2, x + 5, y + 6, 0xFFE0A520);
+		g.fill(x + 2, y + 2, x + 3, y + 3, 0xFFFFF4B0);
 	}
 
 	/** Visible face of a design, scaled into the box (animated designs animate here too). */
