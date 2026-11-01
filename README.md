@@ -18,7 +18,7 @@ changes no game mechanics – it only shows things. Cosmetics are only visible t
 | **Keystrokes** | W A S D, mouse with CPS, sneak/sprint, space – size, gap, rounded, colors, presets |
 | **Gallery** | Screenshot popup + nicer chat message ([View] [Open] [Folder]), in-game screenshot viewer, HUD pictures with previews |
 | **Chests** | Small sort + store icons in the top right corner of chests and shulker boxes (+ optional sort key) |
-| **Advancements** | Every advancement in one checklist (also hidden ones), what's still missing, short hints |
+| **Advancements** | All-advancements tracker like AATool: every category as an icon grid that ticks itself off, progress bar + in-game time, "ready now" marking, hover for hints & missing parts, checklists for biomes / mobs / foods / animals / cats / wolves / Nether biomes |
 | **Statistics** | Overview cards + most mined / killed / killed by / crafted |
 | **World Map** | Press **M** – biome-colored map of everything loaded/explored, saved per world; tasks show as markers |
 | **Waypoints** | Press **B** (or right-click the map) – icons, any color, drag to move; dots on the XP bar or a compass bar |

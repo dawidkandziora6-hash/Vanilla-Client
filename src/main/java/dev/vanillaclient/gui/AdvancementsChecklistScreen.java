@@ -149,6 +149,7 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 				doneById.put(e.holder().id().toString(), done(e));
 			}
 		}
+		tabs.sort(java.util.Comparator.comparingInt(t -> order(t)));
 		// newly finished while the screen is open -> flash
 		Set<String> nowDone = new HashSet<>();
 		for (var en : doneById.entrySet()) if (en.getValue()) nowDone.add(en.getKey());
@@ -165,6 +166,15 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 			crits.sort((a, b) -> a.name().compareToIgnoreCase(b.name()));
 			trackers.add(new Tracker(t[0], t[1], icon(e.display()).getItem(), crits));
 		}
+	}
+
+	/** Story, Nether, End, Adventure, Husbandry – like the speedrun trackers. */
+	private static int order(Tab t) {
+		if (t.entries().isEmpty()) return 99;
+		String p = t.entries().get(0).holder().id().getPath();
+		String[] o = {"story", "nether", "end", "adventure", "husbandry"};
+		for (int i = 0; i < o.length; i++) if (p.startsWith(o[i] + "/")) return i;
+		return 50;
 	}
 
 	private static ItemStack critIcon(String crit, String kind) {
@@ -314,7 +324,9 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 			Icons.scaled(g, icon(t.display()), x + 3, y + 2, 0.75f);
 			String name = t.display().title().getString();
 			String cnt = (d == n ? "§a" : "§7") + d + "/" + n;
-			g.text(this.font, "§f" + this.font.plainSubstrByWidth(name, pw - 22 - this.font.width(cnt)), x + 17, y + 4, 0xFFFFFFFF, false);
+			int room = pw - 22 - this.font.width(cnt);
+			if (this.font.width(name) <= room) g.text(this.font, "§f" + name, x + 17, y + 4, 0xFFFFFFFF, false);
+			else small(g, "§f" + this.font.plainSubstrByWidth(name, (int) (room / 0.7f)), x + 17, y + 5, 0xFFFFFFFF, 0.7f);
 			g.text(this.font, cnt, x + pw - 4 - this.font.width(cnt), y + 4, 0xFFFFFFFF, false);
 			for (int i = 0; i < n; i++) {
 				Entry e = t.entries().get(i);
@@ -369,14 +381,9 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 		int fx = x + (tileW() - 22) / 2, fy = y + 1;
 		int bg = d ? 0xFF2E5A2E : hov ? 0xFF4A4A52 : r ? 0xFF2C2C32 : 0xFF1A1A1E;
 		g.fill(fx, fy, fx + 22, fy + 22, bg);
-		g.outline(fx, fy, 22, 22, d ? 0xFF5AD06A : r ? typeCol : 0xFF303036);
-		if (type == AdvancementType.CHALLENGE) {
-			// little corner marks for challenges
-			g.fill(fx - 1, fy - 1, fx + 3, fy, typeCol);
-			g.fill(fx + 19, fy + 22, fx + 23, fy + 23, typeCol);
-		}
+		g.outline(fx, fy, 22, 22, d ? 0xFF5AD06A : r ? typeCol : Theme.lerpColor(typeCol, 0xFF202024, 0.6f));
 		g.item(icon(e.display()), fx + 3, fy + 3);
-		if (!d) g.fill(fx + 1, fy + 1, fx + 21, fy + 21, r ? 0x40000000 : 0xA0101014);
+		if (!d && !r) g.fill(fx + 1, fy + 1, fx + 21, fy + 21, 0x60101014);
 		if (d) g.text(this.font, "§a✔", fx + 15, fy + 13, 0xFFFFFFFF, true);
 		// partial progress
 		int n = e.holder().value().criteria().size();
