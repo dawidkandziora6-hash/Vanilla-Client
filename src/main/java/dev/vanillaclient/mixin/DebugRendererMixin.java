@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /** Our hitboxes are added while Minecraft collects its debug shapes. */
 @Mixin(DebugRenderer.class)
 public class DebugRendererMixin {
-	@Inject(method = "emitGizmos", at = @At("TAIL"))
+	@Inject(method = "emitGizmos", at = @At("HEAD"))
 	private void vc$hitboxes(Frustum frustum, double x, double y, double z, float partial, CallbackInfo ci) {
 		dev.vanillaclient.pvp.Hitboxes.emit(partial);
 	}

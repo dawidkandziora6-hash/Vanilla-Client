@@ -1,3 +1,1 @@
-net/minecraft/client/renderer/LevelRenderer -c
-net/minecraft/client/renderer/GameRenderer -c
-net/minecraft/client/renderer/extract/LevelExtractor -c
+net/minecraft/client/renderer/debug/DebugRenderer -c
