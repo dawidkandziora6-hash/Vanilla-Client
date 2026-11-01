@@ -12,6 +12,9 @@ changes no game mechanics – it only shows things. Cosmetics are only visible t
 | **More HUD modules** | FPS, ping, biome, real time, speed, light level, session time, rank, potion effects, item counter (totems, gapples, pearls …) |
 | **Ranks** | Client tiers Plus, Pro, Ultra, Ultra+, Elite, Legend, Creator, Partner, Staff, Dev, Owner – given by name in [`ranks.json`](ranks.json) (not obtainable yet). Perks: name color, bold/italic, gradient, animated gradient, name font, own badge |
 | **Shared cosmetics** | On LAN worlds and servers with Vanilla Client everyone sees each other's capes, wings, shields and ranks |
+| **PvP** | Hitboxes (colors, fill, aim/hurt highlight, eye line, look direction, per entity type), Fullbright, low fire, target HUD (health, armor, distance), reach display, combo counter, hurt-shake/FOV-effect/bobbing/attack-indicator shortcuts – toggle keys in Controls |
+| **Scoreboard** | Sidebar as a movable module: scale, hide numbers, number color, max lines, background/title colors – or Minecraft's own |
+| **Performance** | One-click FPS boost (with undo), hide far mobs/items, all important video settings in one page |
 | **Keystrokes** | W A S D, mouse with CPS, sneak/sprint, space – size, gap, rounded, colors, presets |
 | **Gallery** | Screenshot popup + nicer chat message ([View] [Open] [Folder]), in-game screenshot viewer, HUD pictures with previews |
 | **Chests** | Small sort + store icons in the top right corner of chests and shulker boxes (+ optional sort key) |

@@ -695,7 +695,7 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Toggle("Fullbright", i(Items.GLOWSTONE), () -> p.fullbright, v -> p.fullbright = v));
 		list.add(new Ui.Slider("Brightness", 0.1, 1.0, 0.05, () -> p.fullbrightStrength, v -> p.fullbrightStrength = (float) v, v -> Math.round(v * 100) + "%"));
 		list.add(new Ui.Header("SCREEN"));
-		list.add(new Ui.Slider("Low fire (move the fire overlay down)", 0.0, 0.45, 0.05, () -> p.lowFire, v -> p.lowFire = (float) v,
+		list.add(new Ui.Slider("Low fire", 0.0, 0.45, 0.05, () -> p.lowFire, v -> p.lowFire = (float) v,
 				v -> v < 0.01 ? "Off" : Math.round(v / 0.45 * 100) + "%"));
 		list.add(new Ui.Slider("Hurt camera shake", 0.0, 1.0, 0.05, () -> o.damageTiltStrength().get(), v -> {
 			o.damageTiltStrength().set(v);
@@ -775,7 +775,7 @@ public final class SettingsScreen extends BaseScreen {
 			say("Settings restored");
 			buildPage();
 		}));
-		list.add(new Ui.Info("Boost: clouds off, fewer particles, no entity shadows, no biome blend,", "no V-Sync / FPS cap, no fade-in or blur, far entities hidden."));
+		list.add(new Ui.Info("Clouds off, fewer particles, no shadows,", "no biome blend, no V-Sync, far mobs hidden."));
 		list.add(new Ui.Header("DISTANCE"));
 		list.add(new Ui.Slider("Render distance", 2, 32, 1, () -> o.renderDistance().get(), v -> {
 			o.renderDistance().set((int) Math.round(v));
