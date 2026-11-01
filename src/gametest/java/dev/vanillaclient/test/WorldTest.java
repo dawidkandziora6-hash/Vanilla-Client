@@ -72,6 +72,48 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.waitTicks(40);
 			ctx.takeScreenshot("w01b_screenshot_popup");
 
+			// PvP: hitboxes, scoreboard, target HUD, fullbright at night
+			s.runCommand("scoreboard objectives add kills dummy {\"text\":\"UHC\",\"color\":\"gold\",\"bold\":true}");
+			s.runCommand("scoreboard objectives setdisplay sidebar kills");
+			s.runCommand("scoreboard players set Player0 kills 5");
+			s.runCommand("scoreboard players set Teams kills 3");
+			s.runCommand("scoreboard players set Border kills 1");
+			s.runCommand("execute as @p at @s run summon zombie ^ ^ ^4 {NoAI:1b,PersistenceRequired:1b}");
+			s.runCommand("execute as @p at @s run summon pig ^2 ^ ^5 {NoAI:1b}");
+			s.runCommand("execute as @p at @s run summon arrow ^-1 ^1 ^3");
+			ctx.runOnClient(mc -> {
+				Config.get().hitboxes.enabled = true;
+				Config.get().reach.enabled = true;
+				Config.get().combo.enabled = true;
+				Config.get().targetHud.enabled = true;
+				dev.vanillaclient.pvp.Combat.lastReach = 2.94;
+				dev.vanillaclient.pvp.Combat.lastHitAt = System.currentTimeMillis() + 60000;
+				dev.vanillaclient.pvp.Combat.combo = 4;
+			});
+			ctx.waitTicks(10);
+			ctx.runOnClient(mc -> {
+				for (var e : mc.level.entitiesForRendering()) if (e.getType() == net.minecraft.world.entity.EntityType.ZOMBIE) {
+					dev.vanillaclient.pvp.Combat.targetId = e.getId();
+					dev.vanillaclient.pvp.Combat.targetAt = System.currentTimeMillis() + 60000;
+				}
+			});
+			ctx.waitTicks(20);
+			ctx.takeScreenshot("w01c_pvp_hitboxes_scoreboard");
+			s.runCommand("time set midnight");
+			ctx.runOnClient(mc -> mc.player.setXRot(60f));
+			ctx.waitTicks(20);
+			ctx.takeScreenshot("w01d_night_normal");
+			ctx.runOnClient(mc -> Config.get().pvp.fullbright = true);
+			ctx.waitTicks(20);
+			ctx.takeScreenshot("w01e_night_fullbright");
+			ctx.runOnClient(mc -> {
+				Config.get().pvp.fullbright = false;
+				Config.get().hitboxes.enabled = false;
+				mc.player.setXRot(10f);
+			});
+			s.runCommand("time set noon");
+			s.runCommand("kill @e[type=!player]");
+
 			ctx.runOnClient(mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK));
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w02_third_person_cape");
@@ -141,7 +183,7 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.setScreen(() -> new dev.vanillaclient.gui.SettingsScreen(null));
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w12_settings");
-			for (String pg : new String[] {"HOME", "RANK", "KEYS", "FPS", "COUNTER"}) {
+			for (String pg : new String[] {"HOME", "RANK", "KEYS", "FPS", "PVP", "HITBOXES", "PERFORMANCE", "SCOREBOARD"}) {
 				ctx.setScreen(() -> dev.vanillaclient.gui.SettingsScreen.at(null, pg));
 				ctx.waitTicks(15);
 				ctx.takeScreenshot("p_" + pg.toLowerCase());

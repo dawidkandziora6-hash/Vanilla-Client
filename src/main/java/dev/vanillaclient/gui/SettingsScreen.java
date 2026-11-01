@@ -36,10 +36,17 @@ public final class SettingsScreen extends BaseScreen {
 		SESSION("HUD", "Session Time", Items.COMPASS, 6),
 		EFFECTS("HUD", "Effects", Items.POTION, 7),
 		COUNTER("HUD", "Item Counter", Items.TOTEM_OF_UNDYING, 8),
+		SCOREBOARD("HUD", "Scoreboard", Items.OAK_SIGN),
+		PVP("PVP", "PvP Tweaks", Items.DIAMOND_SWORD),
+		HITBOXES("PVP", "Hitboxes", Items.GLASS),
+		TARGET("PVP", "Target HUD", Items.PLAYER_HEAD),
+		REACH("PVP", "Reach Display", Items.IRON_SWORD, 9),
+		COMBO("PVP", "Combo Counter", Items.BLAZE_POWDER, 10),
 		CROSSHAIR("VISUALS", "Crosshair", Items.TARGET),
 		ZOOM("VISUALS", "Zoom", Items.SPYGLASS),
 		HELD("VISUALS", "Held Items", Items.TOTEM_OF_UNDYING),
 		RANK("ACCOUNT", "Rank", Items.NETHER_STAR),
+		PERFORMANCE("GENERAL", "Performance", Items.BEACON),
 		CONTROLS("GENERAL", "Controls", Items.LEVER),
 		GENERAL("GENERAL", "Settings", Items.COMPARATOR);
 
@@ -168,7 +175,12 @@ public final class SettingsScreen extends BaseScreen {
 			case IMAGES -> images();
 			case KEYS -> keystrokes();
 			case WAYPOINTS -> waypoints();
-			case FPS, PING, BIOME, CLOCK, SPEED, LIGHT, SESSION, EFFECTS, COUNTER -> info(page.module);
+			case FPS, PING, BIOME, CLOCK, SPEED, LIGHT, SESSION, EFFECTS, COUNTER, REACH, COMBO -> info(page.module);
+			case SCOREBOARD -> scoreboard();
+			case PVP -> pvp();
+			case HITBOXES -> hitboxes();
+			case TARGET -> targetHud();
+			case PERFORMANCE -> performance();
 			case CROSSHAIR -> crosshair();
 			case ZOOM -> zoom();
 			case HELD -> held();
@@ -194,6 +206,10 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Chip("World Map", i(Items.FILLED_MAP), () -> c.worldMap.enabled, v -> c.worldMap.enabled = v, () -> go(Page.GENERAL)));
 		list.add(new Ui.Chip("Name Tag", i(Items.NAME_TAG), () -> c.ranks.ownNameTag, v -> c.ranks.ownNameTag = v, () -> go(Page.RANK)));
 		list.add(new Ui.Chip("Keystrokes", i(Items.STONE_BUTTON), () -> c.keystrokes.enabled, v -> c.keystrokes.enabled = v, () -> go(Page.KEYS)));
+		list.add(new Ui.Chip("Scoreboard", i(Items.OAK_SIGN), () -> c.scoreboard.enabled, v -> c.scoreboard.enabled = v, () -> go(Page.SCOREBOARD)));
+		list.add(new Ui.Chip("Hitboxes", i(Items.GLASS), () -> c.hitboxes.enabled, v -> c.hitboxes.enabled = v, () -> go(Page.HITBOXES)));
+		list.add(new Ui.Chip("Fullbright", i(Items.GLOWSTONE), () -> c.pvp.fullbright, v -> c.pvp.fullbright = v, () -> go(Page.PVP)));
+		list.add(new Ui.Chip("Target HUD", i(Items.PLAYER_HEAD), () -> c.targetHud.enabled, v -> c.targetHud.enabled = v, () -> go(Page.TARGET)));
 		java.util.List<dev.vanillaclient.hud.HudModule> info = dev.vanillaclient.hud.HudManager.INFO;
 		for (int k = 0; k < info.size(); k++) {
 			final int idx = k;
@@ -210,6 +226,7 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Tile("Advancements", "Every one, what to do", i(Items.GOLDEN_APPLE), () -> open(new AdvancementsChecklistScreen(this))));
 		list.add(new Ui.Tile("Statistics", "Your world in numbers", i(Items.BOOK), () -> open(new StatsOverviewScreen(this))));
 		list.add(new Ui.Tile("Gallery", "Screenshots & pictures", i(Items.PAINTING), () -> open(new GalleryScreen(this))));
+		list.add(new Ui.Tile("Performance", "More FPS in one click", i(Items.BEACON), () -> go(Page.PERFORMANCE)));
 	}
 
 	private void drawRankBanner(GuiGraphicsExtractor g, int x, int y, int w, float a) {
@@ -654,13 +671,176 @@ public final class SettingsScreen extends BaseScreen {
 		}));
 	}
 
+	private static String pretty(Enum<?> e) {
+		return dev.vanillaclient.hud.InfoModules.pretty(e.name().toLowerCase(java.util.Locale.ROOT));
+	}
+
+	private void scoreboard() {
+		Config.Scoreboard s = cfg().scoreboard;
+		list.add(new Ui.Header("SCOREBOARD  §8· the sidebar from servers / minigames"));
+		list.add(new Ui.Toggle("Show the scoreboard", i(Items.OAK_SIGN), () -> s.enabled, v -> s.enabled = v));
+		list.add(new Ui.Toggle("Styled by Vanilla Client (off = Minecraft's own)", null, () -> s.custom, v -> s.custom = v));
+		list.add(new Ui.Toggle("Show score numbers", null, () -> s.numbers, v -> s.numbers = v));
+		list.add(new Ui.ColorPick("Number color", () -> s.numberColor, v -> s.numberColor = v, this::colorPicker));
+		list.add(new Ui.Slider("Max lines", 1, 15, 1, () -> s.maxLines, v -> s.maxLines = (int) Math.round(v), v -> String.valueOf((int) Math.round(v))));
+		list.add(new Ui.Toggle("Hide when it has no lines", null, () -> s.hideWhenEmpty, v -> s.hideWhenEmpty = v));
+		list.add(new Ui.ColorPick("Title background", () -> s.titleBackground, v -> s.titleBackground = v, this::colorPicker));
+		style(s, true);
+	}
+
+	private void pvp() {
+		Config.Pvp p = cfg().pvp;
+		var o = this.minecraft.options;
+		list.add(new Ui.Header("FULLBRIGHT  §8· see everything in caves and at night"));
+		list.add(new Ui.Toggle("Fullbright", i(Items.GLOWSTONE), () -> p.fullbright, v -> p.fullbright = v));
+		list.add(new Ui.Slider("Brightness", 0.1, 1.0, 0.05, () -> p.fullbrightStrength, v -> p.fullbrightStrength = (float) v, v -> Math.round(v * 100) + "%"));
+		list.add(new Ui.Header("SCREEN"));
+		list.add(new Ui.Slider("Low fire (move the fire overlay down)", 0.0, 0.45, 0.05, () -> p.lowFire, v -> p.lowFire = (float) v,
+				v -> v < 0.01 ? "Off" : Math.round(v / 0.45 * 100) + "%"));
+		list.add(new Ui.Slider("Hurt camera shake", 0.0, 1.0, 0.05, () -> o.damageTiltStrength().get(), v -> {
+			o.damageTiltStrength().set(v);
+			o.save();
+		}, v -> v < 0.01 ? "Off" : Math.round(v * 100) + "%"));
+		list.add(new Ui.Slider("Speed / FOV zoom effect", 0.0, 1.0, 0.05, () -> o.fovEffectScale().get(), v -> {
+			o.fovEffectScale().set(v);
+			o.save();
+		}, v -> v < 0.01 ? "Off" : Math.round(v * 100) + "%"));
+		list.add(new Ui.Toggle("View bobbing", null, () -> o.bobView().get(), v -> {
+			o.bobView().set(v);
+			o.save();
+		}));
+		list.add(new Ui.Cycle<>("Attack indicator", java.util.List.of(net.minecraft.client.AttackIndicatorStatus.values()), () -> o.attackIndicator().get(), v -> {
+			o.attackIndicator().set(v);
+			o.save();
+		}, SettingsScreen::pretty));
+		list.add(new Ui.Header("MORE PVP"));
+		list.add(new Ui.Button("Hitboxes", i(Items.GLASS), () -> go(Page.HITBOXES)));
+		list.add(new Ui.Button("Target HUD", i(Items.PLAYER_HEAD), () -> go(Page.TARGET)));
+		list.add(new Ui.Button("Reach display", i(Items.IRON_SWORD), () -> go(Page.REACH)));
+		list.add(new Ui.Button("Combo counter", i(Items.BLAZE_POWDER), () -> go(Page.COMBO)));
+		list.add(new Ui.Button("Keystrokes & CPS", i(Items.STONE_BUTTON), () -> go(Page.KEYS)));
+		list.add(new Ui.Info("Tip: set keys for hitboxes and fullbright in Controls.", "Everything here only changes what you see."));
+	}
+
+	private void hitboxes() {
+		Config.Hitboxes h = cfg().hitboxes;
+		list.add(new Ui.Header("HITBOXES"));
+		list.add(new Ui.Toggle("Show hitboxes", i(Items.GLASS), () -> h.enabled, v -> h.enabled = v));
+		list.add(new Ui.ColorPick("Box color", () -> h.color, v -> h.color = v, this::colorPicker));
+		list.add(new Ui.Slider("Line width", 1.0, 6.0, 0.5, () -> h.width, v -> h.width = (float) v, v -> String.format(java.util.Locale.ROOT, "%.1f", v)));
+		list.add(new Ui.Toggle("Fill the box", null, () -> h.fill, v -> h.fill = v));
+		list.add(new Ui.ColorPick("Fill color", () -> h.fillColor, v -> h.fillColor = v, this::colorPicker));
+		list.add(new Ui.Toggle("Highlight what you aim at", null, () -> h.targetHighlight, v -> h.targetHighlight = v));
+		list.add(new Ui.ColorPick("Aim color", () -> h.targetColor, v -> h.targetColor = v, this::colorPicker));
+		list.add(new Ui.Toggle("Highlight when hurt", null, () -> h.hurtHighlight, v -> h.hurtHighlight = v));
+		list.add(new Ui.ColorPick("Hurt color", () -> h.hurtColor, v -> h.hurtColor = v, this::colorPicker));
+		list.add(new Ui.Toggle("Eye height line", null, () -> h.eyeLine, v -> h.eyeLine = v));
+		list.add(new Ui.Toggle("Looking direction", null, () -> h.lookLine, v -> h.lookLine = v));
+		list.add(new Ui.Slider("Max distance", 8, 128, 4, () -> h.distance, v -> h.distance = (int) Math.round(v), v -> (int) Math.round(v) + " blocks"));
+		list.add(new Ui.Header("SHOW FOR"));
+		list.add(new Ui.Toggle("Players", i(Items.PLAYER_HEAD), () -> h.players, v -> h.players = v));
+		list.add(new Ui.Toggle("Monsters", i(Items.ZOMBIE_HEAD), () -> h.mobs, v -> h.mobs = v));
+		list.add(new Ui.Toggle("Animals & other mobs", i(Items.WHEAT), () -> h.animals, v -> h.animals = v));
+		list.add(new Ui.Toggle("Arrows, pearls & projectiles", i(Items.ARROW), () -> h.projectiles, v -> h.projectiles = v));
+		list.add(new Ui.Toggle("Items & XP orbs", i(Items.EXPERIENCE_BOTTLE), () -> h.items, v -> h.items = v));
+		list.add(new Ui.Toggle("Everything else (boats, frames …)", i(Items.ITEM_FRAME), () -> h.others, v -> h.others = v));
+		list.add(new Ui.Toggle("Yourself in F5", null, () -> h.self, v -> h.self = v));
+	}
+
+	private void targetHud() {
+		Config.TargetHud t = cfg().targetHud;
+		list.add(new Ui.Header("TARGET HUD  §8· health & armor of what you hit"));
+		list.add(new Ui.Toggle("Show on screen", i(Items.PLAYER_HEAD), () -> t.enabled, v -> t.enabled = v));
+		list.add(new Ui.Toggle("Only players", null, () -> t.playersOnly, v -> t.playersOnly = v));
+		list.add(new Ui.Toggle("Armor & held item", null, () -> t.showArmor, v -> t.showArmor = v));
+		list.add(new Ui.Toggle("Distance", null, () -> t.showDistance, v -> t.showDistance = v));
+		list.add(new Ui.Slider("Stays for", 1, 10, 0.5, () -> t.seconds, v -> t.seconds = (float) v, v -> String.format(java.util.Locale.ROOT, "%.1f s", v)));
+		list.add(new Ui.ColorPick("Health bar color", () -> t.barColor, v -> t.barColor = v, this::colorPicker));
+		style(t, true);
+	}
+
+	private void performance() {
+		Config.Performance p = cfg().performance;
+		var o = this.minecraft.options;
+		Runnable save = dev.vanillaclient.pvp.Performance::save;
+		list.add(new Ui.Header("FPS BOOST  §8· now " + this.minecraft.getFps() + " FPS"));
+		list.add(new Ui.Button("Boost FPS (one click)", i(Items.BEACON), () -> {
+			int n = dev.vanillaclient.pvp.Performance.boost();
+			Config.save();
+			say(n == 0 ? "Already boosted" : "Changed " + n + " settings · undo is right below");
+			buildPage();
+		}));
+		if (dev.vanillaclient.pvp.Performance.canUndo()) list.add(new Ui.Button("Undo the boost", i(Items.BARRIER), () -> {
+			dev.vanillaclient.pvp.Performance.undo();
+			say("Settings restored");
+			buildPage();
+		}));
+		list.add(new Ui.Info("Boost: clouds off, fewer particles, no entity shadows, no biome blend,", "no V-Sync / FPS cap, no fade-in or blur, far entities hidden."));
+		list.add(new Ui.Header("DISTANCE"));
+		list.add(new Ui.Slider("Render distance", 2, 32, 1, () -> o.renderDistance().get(), v -> {
+			o.renderDistance().set((int) Math.round(v));
+			save.run();
+		}, v -> (int) Math.round(v) + " chunks"));
+		list.add(new Ui.Slider("Simulation distance", 5, 32, 1, () -> o.simulationDistance().get(), v -> {
+			o.simulationDistance().set((int) Math.round(v));
+			save.run();
+		}, v -> (int) Math.round(v) + " chunks"));
+		list.add(new Ui.Slider("Entity distance", 0.5, 5.0, 0.25, () -> o.entityDistanceScaling().get(), v -> {
+			o.entityDistanceScaling().set(v);
+			save.run();
+		}, v -> Math.round(v * 100) + "%"));
+		list.add(new Ui.Header("HIDE FAR ENTITIES  §8· Vanilla Client"));
+		list.add(new Ui.Toggle("Don't draw far mobs & items", i(Items.ZOMBIE_HEAD), () -> p.cullEntities, v -> p.cullEntities = v));
+		list.add(new Ui.Slider("Mobs further than", 16, 128, 4, () -> p.entityDistance, v -> p.entityDistance = (int) Math.round(v), v -> (int) Math.round(v) + " blocks"));
+		list.add(new Ui.Slider("Items further than", 8, 64, 4, () -> p.itemDistance, v -> p.itemDistance = (int) Math.round(v), v -> (int) Math.round(v) + " blocks"));
+		list.add(new Ui.Toggle("Always draw players", null, () -> p.alwaysPlayers, v -> p.alwaysPlayers = v));
+		list.add(new Ui.Header("MINECRAFT VIDEO SETTINGS"));
+		list.add(new Ui.Slider("Max FPS", 10, 260, 10, () -> o.framerateLimit().get(), v -> {
+			o.framerateLimit().set((int) Math.round(v));
+			save.run();
+		}, v -> v >= 260 ? "Unlimited" : (int) Math.round(v) + ""));
+		list.add(new Ui.Toggle("V-Sync", null, () -> o.enableVsync().get(), v -> {
+			o.enableVsync().set(v);
+			save.run();
+		}));
+		list.add(new Ui.Cycle<>("Clouds", java.util.List.of(net.minecraft.client.CloudStatus.values()), () -> o.cloudStatus().get(), v -> {
+			o.cloudStatus().set(v);
+			save.run();
+		}, SettingsScreen::pretty));
+		list.add(new Ui.Cycle<>("Particles", java.util.List.of(net.minecraft.server.level.ParticleStatus.values()), () -> o.particles().get(), v -> {
+			o.particles().set(v);
+			save.run();
+		}, SettingsScreen::pretty));
+		list.add(new Ui.Toggle("Entity shadows", null, () -> o.entityShadows().get(), v -> {
+			o.entityShadows().set(v);
+			save.run();
+		}));
+		list.add(new Ui.Slider("Biome blend", 0, 7, 1, () -> o.biomeBlendRadius().get(), v -> {
+			o.biomeBlendRadius().set((int) Math.round(v));
+			save.run();
+		}, v -> (int) Math.round(v) == 0 ? "Off" : (int) Math.round(v) + ""));
+		list.add(new Ui.Toggle("Smooth lighting", null, () -> o.ambientOcclusion().get(), v -> {
+			o.ambientOcclusion().set(v);
+			save.run();
+		}));
+		list.add(new Ui.Toggle("Improved transparency (slow)", null, () -> o.improvedTransparency().get(), v -> {
+			o.improvedTransparency().set(v);
+			save.run();
+		}));
+		list.add(new Ui.Cycle<>("When not playing", java.util.List.of(net.minecraft.client.InactivityFpsLimit.values()), () -> o.inactivityFpsLimit().get(), v -> {
+			o.inactivityFpsLimit().set(v);
+			save.run();
+		}, SettingsScreen::pretty));
+	}
+
 	private void controls() {
 		list.add(new Ui.Header("VANILLA CLIENT  §8· click, then press a key · Esc = none · right-click = default"));
 		String[][] ours = {{"key.vanillaclient.open", "Open this menu"}, {"key.vanillaclient.zoom", "Zoom (hold)"},
 				{"key.vanillaclient.map", "World map"}, {"key.vanillaclient.waypoint", "Save a waypoint"},
 				{"key.vanillaclient.hud_editor", "Edit HUD"}, {"key.vanillaclient.toggle_todo", "Show / hide task list"},
 				{"key.vanillaclient.cosmetics", "Wardrobe"}, {"key.vanillaclient.tasks", "Task planner"},
-				{"key.vanillaclient.sort", "Sort open chest"}};
+				{"key.vanillaclient.sort", "Sort open chest"}, {"key.vanillaclient.hitboxes", "Toggle hitboxes"},
+				{"key.vanillaclient.fullbright", "Toggle fullbright"}};
 		for (String[] k : ours) {
 			net.minecraft.client.KeyMapping km = net.minecraft.client.KeyMapping.get(k[0]);
 			if (km != null) list.add(new Ui.KeyBind(k[1], km));

@@ -403,4 +403,50 @@ public final class InfoModules {
 			}
 		}
 	}
+
+	public static final class Reach extends TextModule {
+		public Reach() {
+			super("reach", "Reach Display");
+		}
+
+		@Override
+		public Config.TextHud settings() {
+			return Config.get().reach;
+		}
+
+		@Override
+		public ItemStack icon() {
+			return Icons.stack(Items.IRON_SWORD);
+		}
+
+		@Override
+		protected String value(boolean editing) {
+			double r = dev.vanillaclient.pvp.Combat.lastReach;
+			if (r < 0 || System.currentTimeMillis() - dev.vanillaclient.pvp.Combat.lastHitAt > 3000) return editing ? "2.87 blocks" : null;
+			return String.format(Locale.ROOT, "%.2f blocks", r);
+		}
+	}
+
+	public static final class Combo extends TextModule {
+		public Combo() {
+			super("combo", "Combo Counter");
+		}
+
+		@Override
+		public Config.TextHud settings() {
+			return Config.get().combo;
+		}
+
+		@Override
+		public ItemStack icon() {
+			return Icons.stack(Items.BLAZE_POWDER);
+		}
+
+		@Override
+		protected String value(boolean editing) {
+			int c = dev.vanillaclient.pvp.Combat.combo;
+			if (c < 2) return editing ? "3 hits" : null;
+			return c + " hits";
+		}
+	}
 }

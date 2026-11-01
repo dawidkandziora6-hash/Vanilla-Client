@@ -8,5 +8,7 @@
   "key.vanillaclient.waypoint": "Save a waypoint here",
   "key.vanillaclient.cosmetics": "Wardrobe",
   "key.vanillaclient.tasks": "Task planner",
-  "key.vanillaclient.sort": "Sort open chest"
+  "key.vanillaclient.sort": "Sort open chest",
+  "key.vanillaclient.hitboxes": "Toggle hitboxes",
+  "key.vanillaclient.fullbright": "Toggle fullbright"
 }

@@ -77,7 +77,12 @@ public final class VanillaClient implements ClientModInitializer {
 				"key.vanillaclient.tasks", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
 		KeyMapping sortKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.vanillaclient.sort", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
+		KeyMapping hitboxKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.vanillaclient.hitboxes", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
+		KeyMapping fullbrightKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.vanillaclient.fullbright", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
 		Zoom.init(zoom);
+		dev.vanillaclient.pvp.Combat.init();
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (openMenu.consumeClick()) {
@@ -100,6 +105,18 @@ public final class VanillaClient implements ClientModInitializer {
 			while (wardrobeKey.consumeClick()) {
 				if (client.gui.screen() == null) client.setScreenAndShow(new dev.vanillaclient.gui.CosmeticsScreen(null));
 			}
+			while (hitboxKey.consumeClick()) {
+				Config.Hitboxes hb = Config.get().hitboxes;
+				hb.enabled = !hb.enabled;
+				Config.save();
+				client.gui.hud.setOverlayMessage(Component.literal("Hitboxes " + (hb.enabled ? "§aon" : "§coff")), false);
+			}
+			while (fullbrightKey.consumeClick()) {
+				Config.Pvp pv = Config.get().pvp;
+				pv.fullbright = !pv.fullbright;
+				Config.save();
+				client.gui.hud.setOverlayMessage(Component.literal("Fullbright " + (pv.fullbright ? "§aon" : "§coff")), false);
+			}
 			while (tasksKey.consumeClick()) {
 				if (client.gui.screen() == null) client.setScreenAndShow(new dev.vanillaclient.gui.TasksScreen(null));
 			}
@@ -113,6 +130,7 @@ public final class VanillaClient implements ClientModInitializer {
 			dev.vanillaclient.map.WorldMap.tick(client);
 			dev.vanillaclient.features.Ranks.tick(client);
 			dev.vanillaclient.hud.InfoModules.tick(client);
+			dev.vanillaclient.pvp.Combat.tick(client);
 		});
 		// sort key also works while a chest is open (screens swallow normal key mappings)
 		ScreenEvents.BEFORE_INIT.register((client, screen, w, h) -> {
@@ -129,6 +147,7 @@ public final class VanillaClient implements ClientModInitializer {
 		HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
 				Identifier.fromNamespaceAndPath(MOD_ID, "hud"), HudManager::render);
 		HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, CrosshairRenderer::wrap);
+		HudElementRegistry.replaceElement(VanillaHudElements.SCOREBOARD, dev.vanillaclient.hud.ScoreboardModule::wrap);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "waypoints"), dev.vanillaclient.hud.WaypointBar::render);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "screenshot"), dev.vanillaclient.images.Screenshots::renderPopup);
 

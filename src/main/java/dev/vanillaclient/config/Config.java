@@ -315,7 +315,71 @@ public final class Config {
 	}
 
 	public Days days = (Days) new Days().at(0.01f, 0.01f);
-	public TextHud fps, ping, biome, clock, speed, light, session, rankHud, effects;
+	public TextHud fps, ping, biome, clock, speed, light, session, rankHud, effects, reach, combo;
+	public TargetHud targetHud;
+	public Scoreboard scoreboard;
+	public Hitboxes hitboxes = new Hitboxes();
+	public Pvp pvp = new Pvp();
+	public Performance performance = new Performance();
+
+	/** Hitboxes of other entities (like F3+B, but with your own look). */
+	public static class Hitboxes {
+		public boolean enabled = false;
+		public int color = 0xFFFFFFFF;
+		public int targetColor = 0xFF55FF55;
+		public int hurtColor = 0xFFFF5555;
+		public boolean targetHighlight = true;
+		public boolean hurtHighlight = true;
+		public float width = 2f;
+		public boolean fill = false;
+		public int fillColor = 0x22FFFFFF;
+		public boolean eyeLine = true;
+		public boolean lookLine = true;
+		public boolean players = true;
+		public boolean mobs = true;
+		public boolean animals = true;
+		public boolean items = false;
+		public boolean projectiles = true;
+		public boolean others = false;
+		public boolean self = false;
+		public int distance = 64;
+	}
+
+	/** Small PvP helpers. */
+	public static class Pvp {
+		public boolean fullbright = false;
+		public float fullbrightStrength = 1f;
+		/** How far the burning overlay is moved down (0 = vanilla). */
+		public float lowFire = 0f;
+	}
+
+	/** Health/armor of what you last hit. */
+	public static class TargetHud extends Hud {
+		public boolean playersOnly = false;
+		public boolean showArmor = true;
+		public boolean showDistance = true;
+		public float seconds = 4f;
+		public int barColor = 0xFF5AD06A;
+	}
+
+	/** The sidebar scoreboard, drawn by the mod (can be moved and styled). */
+	public static class Scoreboard extends Hud {
+		/** false = Minecraft draws it as usual and these settings don't apply. */
+		public boolean custom = true;
+		public boolean numbers = true;
+		public int numberColor = 0xFFFF5555;
+		public int titleBackground = 0x66000000;
+		public int maxLines = 15;
+		public boolean hideWhenEmpty = true;
+	}
+
+	/** Own performance options (vanilla video options are changed directly). */
+	public static class Performance {
+		public boolean cullEntities = false;
+		public int entityDistance = 48;
+		public int itemDistance = 24;
+		public boolean alwaysPlayers = true;
+	}
 	public Counter counter;
 	public Ranks ranks = new Ranks();
 	public Keystrokes keystrokes;
@@ -478,6 +542,24 @@ public final class Config {
 		if (session == null) session = (TextHud) new TextHud().label("Session").off().at(0.01f, 0.54f);
 		if (rankHud == null) rankHud = (TextHud) new TextHud().label("Rank").off().at(0.01f, 0.58f);
 		if (effects == null) effects = (TextHud) new TextHud().label("").off().at(0.99f, 0.40f);
+		if (reach == null) reach = (TextHud) new TextHud().label("Reach").off().at(0.5f, 0.62f);
+		if (combo == null) combo = (TextHud) new TextHud().label("Combo").off().at(0.5f, 0.66f);
+		if (targetHud == null) {
+			targetHud = new TargetHud();
+			targetHud.enabled = false;
+			targetHud.background = true;
+			targetHud.at(0.5f, 0.12f);
+		}
+		if (scoreboard == null) {
+			scoreboard = new Scoreboard();
+			scoreboard.background = true;
+			scoreboard.backgroundColor = 0x4C000000;
+			scoreboard.shadow = false;
+			scoreboard.at(1.0f, 0.5f);
+		}
+		if (hitboxes == null) hitboxes = new Hitboxes();
+		if (pvp == null) pvp = new Pvp();
+		if (performance == null) performance = new Performance();
 		if (counter == null) {
 			counter = new Counter();
 			counter.label = "";

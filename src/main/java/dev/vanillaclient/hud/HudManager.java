@@ -20,7 +20,9 @@ public final class HudManager {
 	public static final KeystrokesModule KEYSTROKES = new KeystrokesModule();
 	public static final List<HudModule> INFO = List.of(new InfoModules.Fps(), new InfoModules.Ping(), new InfoModules.Biome(),
 			new InfoModules.Clock(), new InfoModules.Speed(), new InfoModules.Light(), new InfoModules.Session(),
-new InfoModules.Effects(), new InfoModules.Counter());
+new InfoModules.Effects(), new InfoModules.Counter(), new InfoModules.Reach(), new InfoModules.Combo());
+	public static final TargetHudModule TARGET = new TargetHudModule();
+	public static final ScoreboardModule SCOREBOARD = new ScoreboardModule();
 	private static final Map<String, ImageModule> IMAGES = new HashMap<>();
 
 	private HudManager() {}
@@ -41,6 +43,8 @@ new InfoModules.Effects(), new InfoModules.Counter());
 		out.add(TODO);
 		out.add(ARMOR);
 		out.add(KEYSTROKES);
+		out.add(TARGET);
+		out.add(SCOREBOARD);
 		out.addAll(INFO);
 		return out;
 	}
