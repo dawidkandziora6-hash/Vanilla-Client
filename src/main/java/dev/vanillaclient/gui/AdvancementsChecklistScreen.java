@@ -15,70 +15,84 @@ import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.advancements.AdvancementTree;
 import net.minecraft.advancements.AdvancementType;
 import net.minecraft.advancements.DisplayInfo;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.stats.Stats;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /**
- * Every advancement in one list – also hidden ones and ones you haven't unlocked
- * the parent of yet (singleplayer). Shows what is still missing for multi-part
- * advancements (biomes, foods, mobs …) and a short hint what to do.
+ * All advancements at one glance (like an "all advancements" speedrun tracker):
+ * every category as a grid of icons that tick off by themselves, plus checklists
+ * for the multi-part ones (biomes, mobs, foods, animals, cats, wolves, nether biomes).
  */
 public final class AdvancementsChecklistScreen extends BaseScreen {
-	private record Entry(AdvancementHolder holder, DisplayInfo display, AdvancementProgress progress, int depth, String parent) {}
+	private record Entry(AdvancementHolder holder, DisplayInfo display, AdvancementProgress progress, String parentId) {}
 
-	private record Tab(AdvancementNode root, DisplayInfo display, List<Entry> entries) {}
+	private record Tab(DisplayInfo display, List<Entry> entries) {}
 
-	private static int tabIndex;
-	private static int filter; // 0 all, 1 to do, 2 done
+	private record Crit(String name, boolean done, ItemStack icon) {}
+
+	private record Tracker(String id, String title, Item icon, List<Crit> crits) {}
+
+	/** Multi-part advancements that get their own checklist panel. */
+	private static final String[][] TRACKED = {
+			{"adventure/adventuring_time", "Adventuring Time", "biome"},
+			{"adventure/kill_all_mobs", "Monsters Hunted", "mob"},
+			{"husbandry/balanced_diet", "A Balanced Diet", "item"},
+			{"husbandry/bred_all_animals", "Two by Two", "mob"},
+			{"husbandry/complete_catalogue", "A Complete Catalogue", "none"},
+			{"husbandry/whole_pack", "The Whole Pack", "none"},
+			{"nether/explore_nether", "Hot Tourist Destinations", "biome"}};
+
+	public static boolean names;
 	private final List<Tab> tabs = new ArrayList<>();
-	private final Set<String> expanded = new HashSet<>();
+	private final List<Tracker> trackers = new ArrayList<>();
+	private final Map<String, Boolean> doneById = new HashMap<>();
+	private final Map<String, Long> flash = new HashMap<>();
+	private Set<String> lastDone;
 	private String source = "";
 	private int scroll, contentH;
 	private long loadedAt;
+	private Entry hovered;
+	private Tracker hoveredTracker;
 
 	public AdvancementsChecklistScreen(Screen parent) {
 		super(Component.literal("Advancements"), parent);
 	}
 
-	private int left() {
-		return Math.max(6, this.width / 2 - 230);
-	}
-
-	private int tabsW() {
-		return 112;
-	}
-
-	private int listX() {
-		return left() + tabsW() + 6;
-	}
-
-	private int listW() {
-		return Math.min(this.width - listX() - 8, 340);
-	}
-
 	private int top() {
-		return 44;
+		return 34;
 	}
 
 	private int bottom() {
-		return this.height - 32;
+		return this.height - 30;
+	}
+
+	private int contentW() {
+		return this.width - 16;
+	}
+
+	private int tileW() {
+		return names ? 46 : 24;
+	}
+
+	private int tileH() {
+		return names ? 40 : 24;
 	}
 
 	@Override
 	protected void init() {
 		super.init();
 		load();
-		int y = this.height - 26;
-		action(this.width / 2 - 154, y, 100, switch (filter) {
-			case 1 -> "Show: §eTo do";
-			case 2 -> "Show: §aDone";
-			default -> "Show: All";
-		}, () -> {
-			filter = (filter + 1) % 3;
-			scroll = 0;
+		int y = this.height - 25;
+		action(this.width / 2 - 154, y, 100, names ? "Names: §aOn" : "Names: §7Off", () -> {
+			names = !names;
 			rebuildWidgets();
 		});
 		action(this.width / 2 - 50, y, 100, "Vanilla screen", () -> {
@@ -89,8 +103,12 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 		action(this.width / 2 + 54, y, 100, "✔ Done", this::onClose);
 	}
 
+	// ------------------------------------------------------------ data
+
 	private void load() {
 		tabs.clear();
+		trackers.clear();
+		doneById.clear();
 		loadedAt = System.currentTimeMillis();
 		var mc = this.minecraft;
 		AdvancementTree tree = null;
@@ -103,7 +121,7 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 					tree = srv.getAdvancements().tree();
 					var pa = sp.getAdvancements();
 					prog = pa::getOrStartProgress;
-					source = "§aAll advancements (singleplayer)";
+					source = "§aSingleplayer: every advancement";
 				}
 			}
 		} catch (RuntimeException e) {
@@ -114,33 +132,76 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 			tree = ca.tree();
 			Map<AdvancementHolder, AdvancementProgress> map = ca.progress();
 			prog = map::get;
-			source = "§7Only advancements the server has shown you";
+			source = "§7Server: only what the server shows you";
 		}
 		if (tree == null) {
 			source = "§7Join a world first";
 			return;
 		}
+		Map<String, Entry> byPath = new HashMap<>();
 		for (AdvancementNode root : tree.roots()) {
 			if (root.advancement().display().isEmpty()) continue;
 			List<Entry> list = new ArrayList<>();
-			collect(root, 0, null, list, prog);
-			tabs.add(new Tab(root, root.advancement().display().get(), list));
+			collect(root, null, list, prog);
+			tabs.add(new Tab(root.advancement().display().get(), list));
+			for (Entry e : list) {
+				byPath.put(e.holder().id().getPath(), e);
+				doneById.put(e.holder().id().toString(), done(e));
+			}
 		}
-		tabIndex = Math.max(0, Math.min(tabIndex, tabs.size() - 1));
+		// newly finished while the screen is open -> flash
+		Set<String> nowDone = new HashSet<>();
+		for (var en : doneById.entrySet()) if (en.getValue()) nowDone.add(en.getKey());
+		if (lastDone != null) for (String id : nowDone) if (!lastDone.contains(id)) flash.put(id, System.currentTimeMillis());
+		lastDone = nowDone;
+		for (String[] t : TRACKED) {
+			Entry e = byPath.get(t[0]);
+			if (e == null) continue;
+			List<Crit> crits = new ArrayList<>();
+			for (String c : e.holder().value().criteria().keySet()) {
+				boolean d = e.progress() != null && e.progress().getCriterion(c) != null && e.progress().getCriterion(c).isDone();
+				crits.add(new Crit(pretty(c), d, critIcon(c, t[2])));
+			}
+			crits.sort((a, b) -> a.name().compareToIgnoreCase(b.name()));
+			trackers.add(new Tracker(t[0], t[1], icon(e.display()).getItem(), crits));
+		}
 	}
 
-	private void collect(AdvancementNode node, int depth, String parent, List<Entry> out, Function<AdvancementHolder, AdvancementProgress> prog) {
-		var d = node.advancement().display();
-		String title = parent;
-		if (d.isPresent()) {
-			out.add(new Entry(node.holder(), d.get(), prog.apply(node.holder()), depth, parent));
-			title = d.get().title().getString();
+	private static ItemStack critIcon(String crit, String kind) {
+		try {
+			Identifier id = Identifier.tryParse(crit);
+			if (id == null) return ItemStack.EMPTY;
+			if (kind.equals("item")) {
+				Item it = BuiltInRegistries.ITEM.getValue(id);
+				return it == Items.AIR ? ItemStack.EMPTY : new ItemStack(it);
+			}
+			if (kind.equals("mob")) {
+				Item it = BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_spawn_egg"));
+				return it == Items.AIR ? ItemStack.EMPTY : new ItemStack(it);
+			}
+		} catch (RuntimeException ignored) {
+			// unknown id
 		}
-		for (AdvancementNode c : node.children()) collect(c, depth + 1, title, out, prog);
+		return ItemStack.EMPTY;
+	}
+
+	private void collect(AdvancementNode node, String parent, List<Entry> out, Function<AdvancementHolder, AdvancementProgress> prog) {
+		var d = node.advancement().display();
+		String me = parent;
+		if (d.isPresent()) {
+			out.add(new Entry(node.holder(), d.get(), prog.apply(node.holder()), parent));
+			me = node.holder().id().toString();
+		}
+		for (AdvancementNode c : node.children()) collect(c, me, out, prog);
 	}
 
 	private static boolean done(Entry e) {
 		return e.progress() != null && e.progress().isDone();
+	}
+
+	/** The one before it is done (or there is none): you can go for it now. */
+	private boolean ready(Entry e) {
+		return e.parentId() == null || doneById.getOrDefault(e.parentId(), false);
 	}
 
 	private static String pretty(String criterion) {
@@ -158,88 +219,12 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 		return b.toString();
 	}
 
-	private List<String> remaining(Entry e) {
+	private static List<String> remaining(Entry e) {
 		List<String> out = new ArrayList<>();
 		if (e.progress() == null) return out;
 		for (String s : e.progress().getRemainingCriteria()) out.add(pretty(s));
-		out.sort(String::compareTo);
+		out.sort(String::compareToIgnoreCase);
 		return out;
-	}
-
-	private int criteriaCount(Entry e) {
-		return e.holder().value().criteria().size();
-	}
-
-	private List<Entry> visible() {
-		if (tabs.isEmpty()) return List.of();
-		List<Entry> out = new ArrayList<>();
-		for (Entry e : tabs.get(tabIndex).entries()) {
-			boolean d = done(e);
-			if (filter == 1 && d) continue;
-			if (filter == 2 && !d) continue;
-			out.add(e);
-		}
-		return out;
-	}
-
-	// ------------------------------------------------------------ drawing
-
-	private int rowH(Entry e) {
-		int h = 30;
-		if (hint(e) != null) h += 10;
-		if (expanded.contains(e.holder().id().toString())) {
-			int n = remaining(e).size();
-			int perLine = Math.max(1, (listW() - 16) / 92);
-			h += ((n + perLine - 1) / perLine) * 10 + 4;
-		}
-		return h;
-	}
-
-	@Override
-	protected void extractForeground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
-		if (System.currentTimeMillis() - loadedAt > 2000) load();
-		float in = intro();
-		g.centeredText(this.font, "§l✦ Advancements", this.width / 2, 8, Theme.alpha(Theme.ACCENT, in));
-		int doneAll = 0, total = 0;
-		for (Tab t : tabs) for (Entry e : t.entries()) {
-			total++;
-			if (done(e)) doneAll++;
-		}
-		g.centeredText(this.font, source + " §8· §f" + doneAll + "§7/" + total + " done", this.width / 2, 19, 0xFFFFFFFF);
-		int bw = 200, bx = this.width / 2 - bw / 2;
-		g.fill(bx, 31, bx + bw, 34, 0x60000000);
-		if (total > 0) g.fill(bx, 31, bx + Math.round(bw * doneAll / (float) total), 34, 0xFF5AD06A);
-
-		// tabs
-		int tx = left(), ty = top();
-		Theme.panel(g, tx - 2, ty - 2, tabsW() + 4, bottom() - ty + 4);
-		for (int i = 0; i < tabs.size(); i++) {
-			Tab t = tabs.get(i);
-			int y = ty + i * 26;
-			int d = 0;
-			for (Entry e : t.entries()) if (done(e)) d++;
-			boolean sel = i == tabIndex;
-			boolean hov = mouseX >= tx && mouseX < tx + tabsW() && mouseY >= y && mouseY < y + 24;
-			g.fill(tx, y, tx + tabsW(), y + 24, sel ? 0x50FFFFFF : hov ? 0x30FFFFFF : 0x18000000);
-			if (sel) g.fill(tx, y, tx + 2, y + 24, Theme.ACCENT);
-			g.item(icon(t.display()), tx + 4, y + 4);
-			g.text(this.font, this.font.plainSubstrByWidth(t.display().title().getString(), tabsW() - 26), tx + 23, y + 3, sel ? Theme.ACCENT : 0xFFFFFFFF, false);
-			g.text(this.font, (d == t.entries().size() ? "§a" : "§7") + d + "/" + t.entries().size(), tx + 23, y + 13, 0xFFFFFFFF, false);
-		}
-
-		// list
-		int lx = listX(), lw = listW();
-		Theme.panel(g, lx - 2, ty - 2, lw + 4, bottom() - ty + 4);
-		g.enableScissor(lx, ty, lx + lw, bottom());
-		int y = ty + 2 - scroll;
-		for (Entry e : visible()) {
-			int h = rowH(e);
-			if (y + h >= ty && y < bottom()) drawRow(g, e, lx, y, lw, h, mouseX, mouseY);
-			y += h + 2;
-		}
-		contentH = y + scroll - ty;
-		if (visible().isEmpty()) g.centeredText(this.font, filter == 1 ? "§aEverything done here!" : "§7Nothing here", lx + lw / 2, ty + 20, 0xFFFFFFFF);
-		g.disableScissor();
 	}
 
 	private static ItemStack icon(DisplayInfo d) {
@@ -250,90 +235,277 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 		}
 	}
 
-	private void drawRow(GuiGraphicsExtractor g, Entry e, int x, int y, int w, int h, int mx, int my) {
+	// ------------------------------------------------------------ layout
+
+	/** Rows so that all category panels fit next to each other. */
+	private int rows() {
+		int w = contentW();
+		for (int r = 1; r < 200; r++) {
+			int sum = 0;
+			for (Tab t : tabs) sum += ((t.entries().size() + r - 1) / r) * tileW() + 8;
+			sum += (tabs.size() - 1) * 4;
+			if (sum <= w) return r;
+		}
+		return 200;
+	}
+
+	private static final int TRACK_LINES = 12, COL_W = 92;
+
+	private int trackerW(Tracker t) {
+		int cols = Math.max(1, (t.crits().size() + TRACK_LINES - 1) / TRACK_LINES);
+		return Math.max(110, cols * COL_W + 8);
+	}
+
+	private int trackerH(Tracker t) {
+		return 18 + Math.min(TRACK_LINES, t.crits().size()) * 9 + 4;
+	}
+
+	// ------------------------------------------------------------ drawing
+
+	private void small(GuiGraphicsExtractor g, String text, float x, float y, int color, float scale) {
+		g.pose().pushMatrix();
+		g.pose().translate(x, y);
+		g.pose().scale(scale, scale);
+		g.text(this.font, text, 0, 0, color, false);
+		g.pose().popMatrix();
+	}
+
+	@Override
+	protected void extractForeground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+		if (System.currentTimeMillis() - loadedAt > 1000) load();
+		float in = intro();
+		int doneAll = 0, total = 0;
+		for (Tab t : tabs) for (Entry e : t.entries()) {
+			total++;
+			if (done(e)) doneAll++;
+		}
+		// header: title · progress bar · time
+		int x0 = 8, x1 = this.width - 8;
+		g.text(this.font, "§l✦ ALL ADVANCEMENTS", x0, 7, Theme.alpha(Theme.ACCENT, in), true);
+		int pct = total == 0 ? 0 : Math.round(doneAll * 100f / total);
+		String ps = doneAll + " / " + total + " (" + pct + "%)";
+		int bw = Math.min(220, this.width / 3), bx = this.width / 2 - bw / 2;
+		g.fill(bx, 6, bx + bw, 17, 0x80000000);
+		if (total > 0) g.fill(bx, 6, bx + Math.round(bw * doneAll / (float) total), 17, 0xFF3FA34D);
+		g.outline(bx, 6, bw, 11, 0x40FFFFFF);
+		g.centeredText(this.font, ps, this.width / 2, 8, 0xFFFFFFFF);
+		String igt = playTime();
+		if (igt != null) g.text(this.font, "§7IGT §f" + igt, x1 - this.font.width("IGT " + igt), 7, 0xFFFFFFFF, true);
+		small(g, source + "   §a■ §7done   §f■ §7ready now   §8■ §7do the one before first   §8hover = details", x0, 21, 0xFFFFFFFF, 0.75f);
+
+		hovered = null;
+		hoveredTracker = null;
+		int top = top(), bottom = bottom();
+		g.enableScissor(0, top, this.width, bottom);
+		int y = top + 2 - scroll;
+		boolean inside = mouseY >= top && mouseY < bottom;
+
+		// ---- category panels
+		int rows = rows();
+		int x = x0;
+		for (Tab t : tabs) {
+			int n = t.entries().size();
+			int cols = (n + rows - 1) / rows;
+			int pw = cols * tileW() + 8, ph = rows * tileH() + 20;
+			int d = 0;
+			for (Entry e : t.entries()) if (done(e)) d++;
+			g.fill(x, y, x + pw, y + ph, 0x90101014);
+			g.outline(x, y, pw, ph, d == n ? 0xFF3FA34D : 0x30FFFFFF);
+			Icons.scaled(g, icon(t.display()), x + 3, y + 2, 0.75f);
+			String name = t.display().title().getString();
+			String cnt = (d == n ? "§a" : "§7") + d + "/" + n;
+			g.text(this.font, "§f" + this.font.plainSubstrByWidth(name, pw - 22 - this.font.width(cnt)), x + 17, y + 4, 0xFFFFFFFF, false);
+			g.text(this.font, cnt, x + pw - 4 - this.font.width(cnt), y + 4, 0xFFFFFFFF, false);
+			for (int i = 0; i < n; i++) {
+				Entry e = t.entries().get(i);
+				int tx = x + 4 + (i / rows) * tileW(), ty = y + 16 + (i % rows) * tileH();
+				boolean hov = inside && mouseX >= tx && mouseX < tx + tileW() && mouseY >= ty && mouseY < ty + tileH();
+				if (hov) hovered = e;
+				drawTile(g, e, tx, ty, hov);
+			}
+			x += pw + 4;
+		}
+		y += rows * tileH() + 20 + 8;
+
+		// ---- multi-part checklists
+		if (!trackers.isEmpty()) {
+			g.text(this.font, "§lCHECKLISTS §8· multi-part advancements", x0, y, Theme.ACCENT, false);
+			y += 12;
+			int tx = x0, rowH = 0;
+			for (Tracker t : trackers) {
+				int w = trackerW(t), h = trackerH(t);
+				if (tx + w > x1 && tx > x0) {
+					tx = x0;
+					y += rowH + 4;
+					rowH = 0;
+				}
+				boolean hov = inside && mouseX >= tx && mouseX < tx + w && mouseY >= y && mouseY < y + h;
+				if (hov) hoveredTracker = t;
+				drawTracker(g, t, tx, y, w, h);
+				tx += w + 4;
+				rowH = Math.max(rowH, h);
+			}
+			y += rowH + 6;
+		}
+		contentH = y + scroll - top;
+		g.disableScissor();
+		if (tabs.isEmpty()) g.centeredText(this.font, source, this.width / 2, this.height / 2, 0xFFFFFFFF);
+		// scrollbar
+		int view = bottom - top;
+		if (contentH > view) {
+			int sh = Math.max(16, view * view / contentH);
+			int sy = top + Math.round((view - sh) * (scroll / (float) (contentH - view)));
+			g.fill(this.width - 4, top, this.width - 2, bottom, 0x30FFFFFF);
+			g.fill(this.width - 4, sy, this.width - 2, sy + sh, 0xA0FFFFFF);
+		}
+		if (hovered != null) tooltip(g, hovered, mouseX, mouseY);
+	}
+
+	private void drawTile(GuiGraphicsExtractor g, Entry e, int x, int y, boolean hov) {
 		boolean d = done(e);
-		boolean hov = mx >= x && mx < x + w && my >= y && my < y + h;
+		boolean r = ready(e);
 		AdvancementType type = e.display().type();
-		int typeCol = type == AdvancementType.CHALLENGE ? 0xFFB46CFF : type == AdvancementType.GOAL ? 0xFF55D8FF : 0xFF8AE07A;
-		g.fill(x, y, x + w, y + h, d ? (hov ? 0x40306030 : 0x30204020) : (hov ? 0x40FFFFFF : 0x28000000));
-		g.fill(x, y, x + 2, y + h, typeCol);
-		int indent = Math.min(3, e.depth()) * 3;
-		g.item(icon(e.display()), x + 5 + indent, y + 6);
-		int tx = x + 25 + indent;
-		String title = e.display().title().getString();
-		String tag = type == AdvancementType.CHALLENGE ? " §5challenge" : type == AdvancementType.GOAL ? " §3goal" : "";
-		g.text(this.font, (d ? "§a✔ " : "§f") + this.font.plainSubstrByWidth(title, w - (tx - x) - 60) + tag, tx, y + 4, 0xFFFFFFFF, false);
-		String desc = e.display().description().getString();
-		g.text(this.font, "§7" + this.font.plainSubstrByWidth(desc, w - (tx - x) - 6), tx, y + 15, 0xFFFFFFFF, false);
-		// progress
-		int n = criteriaCount(e);
-		if (n > 1 && e.progress() != null) {
-			int left = remaining(e).size();
-			String ps = (n - left) + "/" + n;
-			g.text(this.font, (d ? "§a" : "§e") + ps, x + w - 6 - this.font.width(ps), y + 4, 0xFFFFFFFF, false);
-			if (!d) {
-				float f = (n - left) / (float) n;
-				g.fill(x + w - 46, y + 25, x + w - 6, y + 27, 0x60000000);
-				g.fill(x + w - 46, y + 25, x + w - 46 + Math.round(40 * f), y + 27, 0xFFFFD34D);
-				String more = expanded.contains(e.holder().id().toString()) ? "§8▴ missing" : "§8▾ missing";
-				g.text(this.font, more, x + w - 50 - this.font.width(more), y + 22, 0xFFFFFFFF, false);
+		int typeCol = type == AdvancementType.CHALLENGE ? 0xFFB46CFF : type == AdvancementType.GOAL ? 0xFF55D8FF : 0xFFB0B0B0;
+		int fx = x + (tileW() - 22) / 2, fy = y + 1;
+		int bg = d ? 0xFF2E5A2E : hov ? 0xFF4A4A52 : r ? 0xFF2C2C32 : 0xFF1A1A1E;
+		g.fill(fx, fy, fx + 22, fy + 22, bg);
+		g.outline(fx, fy, 22, 22, d ? 0xFF5AD06A : r ? typeCol : 0xFF303036);
+		if (type == AdvancementType.CHALLENGE) {
+			// little corner marks for challenges
+			g.fill(fx - 1, fy - 1, fx + 3, fy, typeCol);
+			g.fill(fx + 19, fy + 22, fx + 23, fy + 23, typeCol);
+		}
+		g.item(icon(e.display()), fx + 3, fy + 3);
+		if (!d) g.fill(fx + 1, fy + 1, fx + 21, fy + 21, r ? 0x40000000 : 0xA0101014);
+		if (d) g.text(this.font, "§a✔", fx + 15, fy + 13, 0xFFFFFFFF, true);
+		// partial progress
+		int n = e.holder().value().criteria().size();
+		if (!d && n > 1 && e.progress() != null) {
+			int left = e.progress().getRemainingCriteria() == null ? n : countRemaining(e);
+			float f = (n - left) / (float) n;
+			g.fill(fx + 2, fy + 19, fx + 20, fy + 21, 0xA0000000);
+			g.fill(fx + 2, fy + 19, fx + 2 + Math.round(18 * f), fy + 21, 0xFFFFD34D);
+		}
+		Long fl = flash.get(e.holder().id().toString());
+		if (fl != null) {
+			float t = (System.currentTimeMillis() - fl) / 1500f;
+			if (t < 1f) g.fill(fx - 2, fy - 2, fx + 24, fy + 24, Theme.alpha(0xFF8CFF8C, (1f - t) * 0.7f));
+		}
+		if (names) {
+			String title = e.display().title().getString();
+			List<String> lines = wrap(title, (int) ((tileW() - 2) / 0.6f), 2);
+			for (int i = 0; i < lines.size(); i++) {
+				String l = lines.get(i);
+				float w = this.font.width(l) * 0.6f;
+				small(g, (d ? "§a" : r ? "§f" : "§8") + l, x + (tileW() - w) / 2f, fy + 24 + i * 6, 0xFFFFFFFF, 0.6f);
 			}
 		}
-		int yy = y + 28;
-		String hint = hint(e);
-		if (hint != null) {
-			g.text(this.font, "§6➜ §e" + this.font.plainSubstrByWidth(hint, w - (tx - x) - 14), tx, yy, 0xFFFFFFFF, false);
-			yy += 10;
+	}
+
+	private static int countRemaining(Entry e) {
+		int n = 0;
+		for (String ignored : e.progress().getRemainingCriteria()) n++;
+		return n;
+	}
+
+	private List<String> wrap(String text, int width, int maxLines) {
+		List<String> out = new ArrayList<>();
+		String rest = text;
+		while (!rest.isEmpty() && out.size() < maxLines) {
+			if (this.font.width(rest) <= width) {
+				out.add(rest);
+				break;
+			}
+			int cut = this.font.plainSubstrByWidth(rest, width).length();
+			int sp = rest.lastIndexOf(' ', cut);
+			if (sp > 0 && out.size() < maxLines - 1) cut = sp;
+			if (out.size() == maxLines - 1 && cut < rest.length()) {
+				out.add(this.font.plainSubstrByWidth(rest, width - this.font.width("…")) + "…");
+				break;
+			}
+			out.add(rest.substring(0, cut).trim());
+			rest = rest.substring(cut).trim();
 		}
-		if (expanded.contains(e.holder().id().toString())) {
+		return out;
+	}
+
+	private void drawTracker(GuiGraphicsExtractor g, Tracker t, int x, int y, int w, int h) {
+		int d = 0;
+		for (Crit c : t.crits()) if (c.done()) d++;
+		int n = t.crits().size();
+		boolean all = d == n;
+		g.fill(x, y, x + w, y + h, 0x90101014);
+		g.outline(x, y, w, h, all ? 0xFF3FA34D : 0x30FFFFFF);
+		Icons.scaled(g, Icons.stack(t.icon()), x + 3, y + 2, 0.75f);
+		String cnt = (all ? "§a" : "§e") + d + "/" + n;
+		g.text(this.font, "§f" + this.font.plainSubstrByWidth(t.title(), w - 24 - this.font.width(cnt)), x + 17, y + 4, 0xFFFFFFFF, false);
+		g.text(this.font, cnt, x + w - 4 - this.font.width(cnt), y + 4, 0xFFFFFFFF, false);
+		g.fill(x + 3, y + 14, x + w - 3, y + 15, 0x60000000);
+		if (n > 0) g.fill(x + 3, y + 14, x + 3 + Math.round((w - 6) * d / (float) n), y + 15, 0xFF5AD06A);
+		for (int i = 0; i < n; i++) {
+			Crit c = t.crits().get(i);
+			int cx = x + 4 + (i / TRACK_LINES) * COL_W, cy = y + 18 + (i % TRACK_LINES) * 9;
+			int tx = cx;
+			if (!c.icon().isEmpty()) {
+				Icons.scaled(g, c.icon(), cx, cy, 0.5f);
+				tx += 10;
+			}
+			String label = this.font.plainSubstrByWidth(c.name(), COL_W - (tx - cx) - 10);
+			g.text(this.font, c.done() ? "§2✔ §8" + label : "§f" + label, tx, cy, 0xFFFFFFFF, false);
+		}
+	}
+
+	private void tooltip(GuiGraphicsExtractor g, Entry e, int mx, int my) {
+		List<String> lines = new ArrayList<>();
+		AdvancementType type = e.display().type();
+		String tc = type == AdvancementType.CHALLENGE ? "§d" : type == AdvancementType.GOAL ? "§b" : "§a";
+		lines.add(tc + "§l" + e.display().title().getString() + (done(e) ? "  §a✔" : ""));
+		lines.addAll(wrap("§7" + e.display().description().getString(), 200, 3));
+		String kind = type == AdvancementType.CHALLENGE ? "§5Challenge" : type == AdvancementType.GOAL ? "§3Goal" : "§2Advancement";
+		lines.add(kind + (done(e) ? " §8· §adone" : ready(e) ? " §8· §fready now" : " §8· §7do the one before first"));
+		String hint = HINTS.get(e.holder().id().getPath());
+		if (hint != null && !done(e)) lines.addAll(wrap("§6➜ §e" + hint, 200, 2));
+		int n = e.holder().value().criteria().size();
+		if (n > 1 && !done(e)) {
 			List<String> rem = remaining(e);
-			int perLine = Math.max(1, (w - 16) / 92);
-			for (int i = 0; i < rem.size(); i++) {
-				int cx = x + 10 + (i % perLine) * 92;
-				int cy = yy + 2 + (i / perLine) * 10;
-				g.text(this.font, "§c• §f" + this.font.plainSubstrByWidth(rem.get(i), 84), cx, cy, 0xFFFFFFFF, false);
-			}
+			lines.add("§e" + (n - rem.size()) + "/" + n + " §7· missing:");
+			int show = Math.min(rem.size(), 10);
+			for (int i = 0; i < show; i++) lines.add("§c• §f" + rem.get(i));
+			if (rem.size() > show) lines.add("§8+ " + (rem.size() - show) + " more (see checklists below)");
 		}
+		int w = 0;
+		for (String l : lines) w = Math.max(w, this.font.width(l));
+		int h = lines.size() * 10 + 6;
+		int x = mx + 12, y = my - 4;
+		if (x + w + 8 > this.width) x = mx - w - 16;
+		if (y + h > this.height - 4) y = this.height - 4 - h;
+		g.nextStratum();
+		g.fill(x, y, x + w + 8, y + h, 0xF0100010);
+		g.outline(x, y, w + 8, h, type == AdvancementType.CHALLENGE ? 0xFFB46CFF : 0xFF5050A0);
+		for (int i = 0; i < lines.size(); i++) g.text(this.font, lines.get(i), x + 4, y + 4 + i * 10, 0xFFFFFFFF, false);
+	}
+
+	private String playTime() {
+		var p = this.minecraft.player;
+		if (p == null) return null;
+		int ticks = p.getStats().getValue(Stats.CUSTOM.get(Stats.PLAY_TIME));
+		if (ticks <= 0) return null;
+		long s = ticks / 20L;
+		return String.format(Locale.ROOT, "%d:%02d:%02d", s / 3600, (s / 60) % 60, s % 60);
 	}
 
 	// ------------------------------------------------------------ input
-
-	@Override
-	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-		if (super.mouseClicked(event, doubleClick)) return true;
-		double mx = event.x(), my = event.y();
-		if (mx >= left() && mx < left() + tabsW()) {
-			int i = (int) ((my - top()) / 26);
-			if (my >= top() && i >= 0 && i < tabs.size()) {
-				dev.vanillaclient.gui.ui.Ui.click();
-				tabIndex = i;
-				scroll = 0;
-				return true;
-			}
-		}
-		if (mx >= listX() && mx < listX() + listW() && my >= top() && my < bottom()) {
-			int y = top() + 2 - scroll;
-			for (Entry e : visible()) {
-				int h = rowH(e);
-				if (my >= y && my < y + h) {
-					if (criteriaCount(e) > 1 && !done(e)) {
-						dev.vanillaclient.gui.ui.Ui.click();
-						String id = e.holder().id().toString();
-						if (!expanded.remove(id)) expanded.add(id);
-					}
-					return true;
-				}
-				y += h + 2;
-			}
-		}
-		return false;
-	}
 
 	@Override
 	public boolean mouseScrolled(double mx, double my, double h, double v) {
 		int max = Math.max(0, contentH - (bottom() - top()));
 		scroll = (int) Math.max(0, Math.min(max, scroll - v * 24));
 		return true;
+	}
+
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		return super.mouseClicked(event, doubleClick);
 	}
 
 	// ------------------------------------------------------------ hints
@@ -422,8 +594,4 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 		for (String[] e : h) HINTS.put(e[0], e[1]);
 	}
 
-	@SuppressWarnings("unused")
-	private static String lower(String s) {
-		return s.toLowerCase(Locale.ROOT);
-	}
 }

@@ -166,9 +166,19 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.takeScreenshot("w08b_chest_stored");
 			ctx.setScreen(() -> null);
 
+			for (String a : new String[] {"story/root", "story/mine_stone", "story/upgrade_tools", "story/smelt_iron", "nether/root", "adventure/root", "husbandry/root", "husbandry/plant_seed"})
+				s.runCommand("advancement grant @a only minecraft:" + a);
+			s.runCommand("advancement grant @a only minecraft:adventure/adventuring_time minecraft:plains");
+			s.runCommand("advancement grant @a only minecraft:husbandry/balanced_diet apple");
+			ctx.waitTicks(10);
 			ctx.setScreen(() -> new dev.vanillaclient.gui.AdvancementsChecklistScreen(null));
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w09_advancements");
+			ctx.runOnClient(mc -> dev.vanillaclient.gui.AdvancementsChecklistScreen.names = true);
+			ctx.setScreen(() -> new dev.vanillaclient.gui.AdvancementsChecklistScreen(null));
+			ctx.waitTicks(30);
+			ctx.takeScreenshot("w09b_advancements_names");
+			ctx.runOnClient(mc -> dev.vanillaclient.gui.AdvancementsChecklistScreen.names = false);
 			ctx.setScreen(() -> new dev.vanillaclient.gui.SettingsScreen(null));
 			ctx.waitTicks(5);
 			ctx.setScreen(() -> new dev.vanillaclient.gui.StatsOverviewScreen(null));
