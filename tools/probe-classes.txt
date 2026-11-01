@@ -1,16 +1,10 @@
-net/minecraft/client/renderer/debug/EntityHitboxDebugRenderer -c
-net/minecraft/client/renderer/entity/state/HitboxRenderState
-net/minecraft/client/renderer/entity/state/HitboxesRenderState
-net/minecraft/client/renderer/entity/EntityRenderDispatcher
-net/minecraft/client/renderer/entity/EntityRenderer
-net/minecraft/gizmos/Gizmos
-net/minecraft/gizmos/GizmoStyle
-net/minecraft/gizmos/GizmoProperties
-net/minecraft/client/renderer/debug/DebugRenderer
-net/minecraft/client/gui/components/debug/DebugScreenEntries
-net/minecraft/client/renderer/LightmapRenderStateExtractor -c
-net/minecraft/client/renderer/state/LightmapRenderState
-net/minecraft/client/renderer/ScreenEffectRenderer
-net/minecraft/client/gui/Gui
-net/minecraft/client/Options
-net/minecraft/client/gui/components/debug/DebugScreenEntryList
+net/minecraft/client/gui/Hud -c
+net/minecraft/world/scores/Scoreboard
+net/minecraft/world/scores/Objective
+net/minecraft/world/scores/PlayerScoreEntry
+net/minecraft/world/scores/PlayerTeam
+net/minecraft/world/scores/DisplaySlot
+net/fabricmc/fabric/api/client/rendering/v1/hud/VanillaHudElements
+net/fabricmc/fabric/api/event/player/AttackEntityCallback
+net/minecraft/client/renderer/ScreenEffectRenderer -c
+net/minecraft/client/renderer/state/level/CameraEntityRenderState
