@@ -30,10 +30,20 @@ public final class Hitboxes {
 		return h.others;
 	}
 
+	private static int logged;
+
 	public static void emit(float partial) {
 		Config.Hitboxes h = Config.get().hitboxes;
 		Minecraft mc = Minecraft.getInstance();
 		if (!h.enabled || mc.level == null || mc.player == null) return;
+		// make sure the shapes land in the frame's gizmo list
+		try (var ignored = mc.levelRenderer.collectPerFrameRenderThreadGizmos()) {
+			draw(h, mc, partial);
+		}
+	}
+
+	private static void draw(Config.Hitboxes h, Minecraft mc, float partial) {
+		int n = 0;
 		Entity cam = mc.getCameraEntity();
 		boolean firstPerson = mc.options.getCameraType().isFirstPerson();
 		double max = (double) h.distance * h.distance;
@@ -50,6 +60,7 @@ public final class Hitboxes {
 			else if (h.targetHighlight && e == target) col = h.targetColor;
 			GizmoStyle st = h.fill ? GizmoStyle.strokeAndFill(col, h.width, h.fillColor) : GizmoStyle.stroke(col, h.width);
 			Gizmos.cuboid(box, st);
+			n++;
 			if (e instanceof LivingEntity) {
 				if (h.eyeLine) {
 					double ey = box.minY + e.getEyeHeight();
@@ -60,6 +71,10 @@ public final class Hitboxes {
 					Gizmos.line(eye, eye.add(e.getViewVector(partial).scale(2.0)), 0xFF4060FF, h.width);
 				}
 			}
+		}
+		if (logged < 3) {
+			logged++;
+			Config.LOG.info("[hitboxes] drew {} boxes", n);
 		}
 	}
 }
