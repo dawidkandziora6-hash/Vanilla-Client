@@ -92,7 +92,7 @@ public class WorldTest implements FabricClientGameTest {
 			});
 			ctx.waitTicks(10);
 			ctx.runOnClient(mc -> {
-				for (var e : mc.level.entitiesForRendering()) if (e.getType() == net.minecraft.world.entity.EntityType.ZOMBIE) {
+				for (var e : mc.level.entitiesForRendering()) if (e.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER) {
 					dev.vanillaclient.pvp.Combat.targetId = e.getId();
 					dev.vanillaclient.pvp.Combat.targetAt = System.currentTimeMillis() + 60000;
 				}
