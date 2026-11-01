@@ -1,4 +1,16 @@
-net/minecraft/client/gui/components/AbstractButton
-net/minecraft/client/gui/components/Button
-net/minecraft/client/gui/components/AbstractWidget
-net/fabricmc/fabric/api/client/screen/v1/ScreenEvents
+net/minecraft/client/renderer/debug/EntityHitboxDebugRenderer -c
+net/minecraft/client/renderer/entity/state/HitboxRenderState
+net/minecraft/client/renderer/entity/state/HitboxesRenderState
+net/minecraft/client/renderer/entity/EntityRenderDispatcher
+net/minecraft/client/renderer/entity/EntityRenderer
+net/minecraft/gizmos/Gizmos
+net/minecraft/gizmos/GizmoStyle
+net/minecraft/gizmos/GizmoProperties
+net/minecraft/client/renderer/debug/DebugRenderer
+net/minecraft/client/gui/components/debug/DebugScreenEntries
+net/minecraft/client/renderer/LightmapRenderStateExtractor -c
+net/minecraft/client/renderer/state/LightmapRenderState
+net/minecraft/client/renderer/ScreenEffectRenderer
+net/minecraft/client/gui/Gui
+net/minecraft/client/Options
+net/minecraft/client/gui/components/debug/DebugScreenEntryList

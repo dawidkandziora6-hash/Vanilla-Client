@@ -30,3 +30,6 @@ GT=$(find ~/.gradle -name "fabric-client-gametest-api-v1*.jar" | head -1); [ -n 
 
 RJ=$(find ~/.gradle -name "fabric-rendering-v1*.jar" | head -1); unzip -l "$RJ" | awk '{print $4}' | grep "api.*\.class$" > probe/rendering-classes.txt 2>/dev/null || true
 for c in $(grep -i "layer\|feature" probe/rendering-classes.txt | sed 's/\.class$//'); do javap -p -cp "$RJ:$JAR" "$(echo $c | tr '/' '.')" >> probe/rendering-layer-api.txt 2>&1; done
+# fabric rendering / event api class names
+for j in $(find ~/.gradle -name 'fabric-rendering-v1*.jar' -o -name 'fabric-events-interaction*.jar' | head -4); do unzip -l "$j" | awk '{print $4}' | grep "\.class$"; done > probe/fabric-render-classes.txt 2>/dev/null || true
+grep -E "renderer/state/|HitboxesRenderState|Lightmap" probe/classes.txt > probe/state-classes.txt || true
