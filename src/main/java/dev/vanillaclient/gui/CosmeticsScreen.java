@@ -466,15 +466,22 @@ public final class CosmeticsScreen extends BaseScreen {
 		g.fill(x, y, x + w, y + 1, Theme.alpha(none ? 0xFF404040 : color, appear));
 		g.outline(x, y, w, h, Theme.alpha(worn(o) ? 0xFF5AD06A : Theme.lerpColor(0x22FFFFFF, 0x90FFFFFF, hover[i]), appear));
 		if (o instanceof Collection c) {
-			int th = Math.min(h - 8, w < 260 ? 40 : 999);
-			thumb(g, Kind.CAPE, c.id(), x + 6, y + 4, th * 20 / 32, th);
-			int ww = Math.min(w < 260 ? w / 4 : w / 3, th * 104 / 40);
-			thumb(g, Kind.WINGS, c.id(), x + 10 + th * 20 / 32, y + 4, ww, th);
-			thumb(g, Kind.SHIELD, c.id(), x + 14 + th * 20 / 32 + ww, y + 4 + th / 6, th * 2 / 3, th * 2 / 3);
-			int tx = x + 22 + th * 20 / 32 + ww + th * 2 / 3;
-			g.text(this.font, "§l" + this.font.plainSubstrByWidth(c.name(), Math.max(20, x + w - tx - 2)), tx, y + 5, Theme.alpha(c.accent(), appear), true);
-			if (h >= 46 && x + w - tx > 60) g.text(this.font, "§7" + this.font.plainSubstrByWidth(c.desc(), x + w - tx - 4), tx, y + 17, Theme.alpha(0xFFFFFFFF, appear), false);
-			if (h >= 60 && !Shop.ownsSet(c)) g.text(this.font, "§8Set price −20%", tx, y + 29, Theme.alpha(0xFFFFFFFF, appear), false);
+			boolean narrow = w < 260;
+			int th = narrow ? Math.max(14, h - 18) : h - 8;
+			int cw = th * 20 / 32;
+			int ww = Math.min(narrow ? (w - cw - th * 2 / 3 - 24) : w / 3, th * 104 / 40);
+			int ox = narrow ? x + (w - (cw + ww + th * 2 / 3 + 8)) / 2 : x + 6;
+			thumb(g, Kind.CAPE, c.id(), ox, y + 3, cw, th);
+			thumb(g, Kind.WINGS, c.id(), ox + cw + 4, y + 3, ww, th);
+			thumb(g, Kind.SHIELD, c.id(), ox + cw + ww + 8, y + 3 + th / 6, th * 2 / 3, th * 2 / 3);
+			if (narrow) {
+				g.text(this.font, "§l" + this.font.plainSubstrByWidth(c.name(), w - 60), x + 5, y + h - 12, Theme.alpha(c.accent(), appear), true);
+			} else {
+				int tx = ox + cw + ww + th * 2 / 3 + 16;
+				g.text(this.font, "§l" + c.name(), tx, y + 5, Theme.alpha(c.accent(), appear), true);
+				if (h >= 46) g.text(this.font, "§7" + this.font.plainSubstrByWidth(c.desc(), x + w - tx - 4), tx, y + 17, Theme.alpha(0xFFFFFFFF, appear), false);
+				if (h >= 60 && !Shop.ownsSet(c)) g.text(this.font, "§8Set price −20%", tx, y + 29, Theme.alpha(0xFFFFFFFF, appear), false);
+			}
 		} else {
 			Design d = (Design) o;
 			Kind k = Kind.values()[tab];
