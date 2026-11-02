@@ -12,23 +12,26 @@ changes no game mechanics – it only shows things. Cosmetics are only visible t
 | **More HUD modules** | FPS, ping, biome, real time, speed, light level, session time, rank, potion effects, item counter (totems, gapples, pearls …) |
 | **Ranks** | Client tiers Plus, Pro, Ultra, Ultra+, Elite, Legend, Creator, Partner, Staff, Dev, Owner – given by name in [`ranks.json`](ranks.json) (not obtainable yet). Perks: name color, bold/italic, gradient, animated gradient, name font, own badge |
 | **Shared cosmetics** | On LAN worlds and servers with Vanilla Client everyone sees each other's capes, wings, shields and ranks |
-| **PvP** | Hitboxes (colors, fill, aim/hurt highlight, eye line, look direction, per entity type), Fullbright, low fire, target HUD (health, armor, distance), reach display, combo counter, hurt-shake/FOV-effect/bobbing/attack-indicator shortcuts – toggle keys in Controls |
+| **PvP** | Hitboxes = F3+B in your own look (colors, fill, aim/hurt highlight, eye line, look direction, per entity type), Fullbright, low fire, target HUD (health, armor, distance), reach display, combo counter, hurt-shake/FOV-effect/bobbing/attack-indicator shortcuts – toggle keys in Controls |
 | **Scoreboard** | Sidebar as a movable module: scale, hide numbers, number color, max lines, background/title colors – or Minecraft's own |
-| **Performance** | One-click FPS boost (with undo), hide far mobs/items, all important video settings in one page |
+| **Performance** | Own features only: live FPS graph, hide far mobs / items / armor stands / block entities, particle limit, no explosion particles, hide own potion swirls |
+| **Enchant Glint** | Glint in any color or rainbow, strength |
+| **Shulker Preview** | Hover a shulker box to see what is inside; ender chest preview from the last time you opened it |
+| **Playtime** | HUD module: time played in this world, counting every second |
 | **Keystrokes** | W A S D, mouse with CPS, sneak/sprint, space – size, gap, rounded, colors, presets |
 | **Gallery** | Screenshot popup + nicer chat message ([View] [Open] [Folder]), in-game screenshot viewer, HUD pictures with previews |
 | **Chests** | Small sort + store icons in the top right corner of chests and shulker boxes (+ optional sort key) |
 | **Advancements** | All-advancements tracker like AATool: every category as an icon grid that ticks itself off, progress bar + in-game time, "ready now" marking, hover for hints & missing parts, checklists for biomes / mobs / foods / animals / cats / wolves / Nether biomes |
 | **Statistics** | Overview cards + most mined / killed / killed by / crafted |
 | **World Map** | Press **M** – biome-colored map of everything loaded/explored, saved per world; tasks show as markers |
-| **Waypoints** | Press **B** (or right-click the map) – icons, any color, drag to move; dots on the XP bar or a compass bar |
+| **Waypoints** | Press **B** (or right-click the map) – icons, any color, drag to move; markers at the top of the screen (no bar), dots on the XP bar or a compass bar |
 | **UHC Guide** | Exact villager trades (what you pay → what you get) for every level, best enchantments, brewing table with ingredients – also in Minecraft's Options |
 | **Tasks** | Task planner with categories + icons, priorities, coordinates ("Here" button), subtasks / material lists, progress bars |
 | **Armor** | Armor + durability in the real hotbar look, right next to the hotbar (or free to move) |
 | **Crosshair** | Paint your own pixel crosshair, crisp 1–5× size, CS/Valorant-style outline (1–3 px, opacity), vanilla inverting blend, color on targets |
 | **Zoom** | Hold **C**. Zoom level, smooth transition, scroll to adjust, cinematic camera, hide hand |
 | **Images** | PNG/JPG from your PC as overlays (e.g. build plans). Drag them into the menu |
-| **Wardrobe & Shop** | Collections (Inferno, Celestial, Void): animated capes, 3D flapping wings, round shields – bought with coins (coins come from `ranks.json`), plus your own PNG. Wings optionally only with an elytra |
+| **Wardrobe & Shop** | Collections (Inferno, Celestial, Void, Monochrome, Sakura): animated capes, 3D flapping wings, round shields – bought with coins (coins come from `ranks.json`), plus your own PNG. Wings optionally only with an elytra, shields optionally without a shield item |
 | **Held Items** | Size of items in your hand per category (swords, food, blocks …) or per single item; totem pop size |
 
 **Menu:** In the pause menu next to the small icon row: "Vanilla Client" (left) and "Wardrobe" (right) – or press **Right Shift**. All keys can be changed in Vanilla Client › Controls.

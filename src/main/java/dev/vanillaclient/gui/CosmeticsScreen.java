@@ -83,7 +83,8 @@ public final class CosmeticsScreen extends BaseScreen {
 
 	private int cols() {
 		int n = items().size();
-		return tab == SETS ? 1 : n > 6 ? 4 : n > 4 ? 3 : 2;
+		if (tab == SETS) return n > 3 ? 2 : 1;
+		return n > 6 ? 4 : n > 4 ? 3 : 2;
 	}
 
 	private int cardW() {
@@ -93,8 +94,8 @@ public final class CosmeticsScreen extends BaseScreen {
 	private int cardH() {
 		int avail = bottom() - gridTop() - 4;
 		if (tab == SETS) {
-			int n = Cosmetics.COLLECTIONS.size();
-			return Math.max(30, Math.min(70, (avail - (n - 1) * 6) / n));
+			int rows = (Cosmetics.COLLECTIONS.size() + cols() - 1) / cols();
+			return Math.max(30, Math.min(70, (avail - (rows - 1) * 6) / rows));
 		}
 		int rows = (items().size() + cols() - 1) / cols();
 		return Math.max(40, Math.min(88, (avail - (rows - 1) * 6) / rows));
@@ -352,7 +353,7 @@ public final class CosmeticsScreen extends BaseScreen {
 		if (tab == Kind.SHIELD.ordinal()) {
 			Config.Cosmetics c = Config.get().cosmetics;
 			int y = top() + 20, half = gridW() / 2;
-			pill(g, gridX(), y, half - 3, "Show without a shield item", c.shieldWithoutItem, mouseX, mouseY);
+			pill(g, gridX(), y, half - 3, "No shield item needed", c.shieldWithoutItem, mouseX, mouseY);
 			pill(g, gridX() + half + 3, y, half - 3, "Replace shield look", c.shieldReplace, mouseX, mouseY);
 		}
 
@@ -465,14 +466,14 @@ public final class CosmeticsScreen extends BaseScreen {
 		g.fill(x, y, x + w, y + 1, Theme.alpha(none ? 0xFF404040 : color, appear));
 		g.outline(x, y, w, h, Theme.alpha(worn(o) ? 0xFF5AD06A : Theme.lerpColor(0x22FFFFFF, 0x90FFFFFF, hover[i]), appear));
 		if (o instanceof Collection c) {
-			int th = h - 8;
+			int th = Math.min(h - 8, w < 260 ? 40 : 999);
 			thumb(g, Kind.CAPE, c.id(), x + 6, y + 4, th * 20 / 32, th);
-			int ww = Math.min(w / 3, th * 104 / 40);
+			int ww = Math.min(w < 260 ? w / 4 : w / 3, th * 104 / 40);
 			thumb(g, Kind.WINGS, c.id(), x + 10 + th * 20 / 32, y + 4, ww, th);
 			thumb(g, Kind.SHIELD, c.id(), x + 14 + th * 20 / 32 + ww, y + 4 + th / 6, th * 2 / 3, th * 2 / 3);
 			int tx = x + 22 + th * 20 / 32 + ww + th * 2 / 3;
-			g.text(this.font, "§l" + c.name(), tx, y + 5, Theme.alpha(c.accent(), appear), true);
-			if (h >= 46) g.text(this.font, "§7" + this.font.plainSubstrByWidth(c.desc(), x + w - tx - 4), tx, y + 17, Theme.alpha(0xFFFFFFFF, appear), false);
+			g.text(this.font, "§l" + this.font.plainSubstrByWidth(c.name(), Math.max(20, x + w - tx - 2)), tx, y + 5, Theme.alpha(c.accent(), appear), true);
+			if (h >= 46 && x + w - tx > 60) g.text(this.font, "§7" + this.font.plainSubstrByWidth(c.desc(), x + w - tx - 4), tx, y + 17, Theme.alpha(0xFFFFFFFF, appear), false);
 			if (h >= 60 && !Shop.ownsSet(c)) g.text(this.font, "§8Set price −20%", tx, y + 29, Theme.alpha(0xFFFFFFFF, appear), false);
 		} else {
 			Design d = (Design) o;
@@ -490,7 +491,9 @@ public final class CosmeticsScreen extends BaseScreen {
 				thumb(g, k, d.id(), -tw / 2, -th / 2, tw, th);
 				g.pose().popMatrix();
 			}
-			g.text(this.font, this.font.plainSubstrByWidth(d.name(), w - 8), x + 5, y + h - nameH + 1, Theme.alpha(0xFFFFFFFF, appear), true);
+			String nm = d.name();
+			if (this.font.width(nm) > w - 8) nm = nm.replace(" Shield", "").replace(" Cape", "").replace(" Wings", "");
+			g.text(this.font, this.font.plainSubstrByWidth(nm, w - 8), x + 5, y + h - nameH + 1, Theme.alpha(0xFFFFFFFF, appear), true);
 			if (none || d.id().equals(Cosmetics.CUSTOM)) {
 				g.text(this.font, "§7" + this.font.plainSubstrByWidth(d.desc(), w - 8), x + 5, y + h - 11, Theme.alpha(0xFFFFFFFF, appear), false);
 			}
