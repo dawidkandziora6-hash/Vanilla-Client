@@ -4,7 +4,9 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "AbstractClientPlayerMixin",
+    "ArmedStateMixin",
     "AvatarRendererMixin",
+    "BlockEntityCullingMixin",
     "CapeLayerMixin",
     "ChatComponentMixin",
     "ClientClockManagerAccessor",
@@ -21,10 +23,13 @@
     "LivingEntityRendererInvoker",
     "MouseHandlerMixin",
     "NameTagMixin",
+    "ParticleLimitMixin",
     "RenderContextMixin",
     "ScreenEffectRendererMixin",
     "ShieldSpecialRendererMixin",
-    "ShowNameMixin"
+    "ShowNameMixin",
+    "TooltipImageMixin",
+    "VanillaHitboxMixin"
   ],
   "injectors": {
     "defaultRequire": 1

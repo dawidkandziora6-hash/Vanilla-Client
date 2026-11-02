@@ -36,6 +36,7 @@ public final class SettingsScreen extends BaseScreen {
 		SESSION("HUD", "Session Time", Items.COMPASS, 6),
 		EFFECTS("HUD", "Effects", Items.POTION, 7),
 		COUNTER("HUD", "Item Counter", Items.TOTEM_OF_UNDYING, 8),
+		PLAYTIME("HUD", "Playtime", Items.DAYLIGHT_DETECTOR, 11),
 		SCOREBOARD("HUD", "Scoreboard", Items.OAK_SIGN),
 		PVP("PVP", "PvP Tweaks", Items.DIAMOND_SWORD),
 		HITBOXES("PVP", "Hitboxes", Items.GLASS),
@@ -45,6 +46,8 @@ public final class SettingsScreen extends BaseScreen {
 		CROSSHAIR("VISUALS", "Crosshair", Items.TARGET),
 		ZOOM("VISUALS", "Zoom", Items.SPYGLASS),
 		HELD("VISUALS", "Held Items", Items.TOTEM_OF_UNDYING),
+		GLINT("VISUALS", "Enchant Glint", Items.ENCHANTED_BOOK),
+		PREVIEW("VISUALS", "Shulker Preview", Items.SHULKER_BOX),
 		RANK("ACCOUNT", "Rank", Items.NETHER_STAR),
 		PERFORMANCE("GENERAL", "Performance", Items.BEACON),
 		CONTROLS("GENERAL", "Controls", Items.LEVER),
@@ -175,12 +178,14 @@ public final class SettingsScreen extends BaseScreen {
 			case IMAGES -> images();
 			case KEYS -> keystrokes();
 			case WAYPOINTS -> waypoints();
-			case FPS, PING, BIOME, CLOCK, SPEED, LIGHT, SESSION, EFFECTS, COUNTER, REACH, COMBO -> info(page.module);
+			case FPS, PING, BIOME, CLOCK, SPEED, LIGHT, SESSION, EFFECTS, COUNTER, REACH, COMBO, PLAYTIME -> info(page.module);
 			case SCOREBOARD -> scoreboard();
 			case PVP -> pvp();
 			case HITBOXES -> hitboxes();
 			case TARGET -> targetHud();
 			case PERFORMANCE -> performance();
+			case GLINT -> glint();
+			case PREVIEW -> preview();
 			case CROSSHAIR -> crosshair();
 			case ZOOM -> zoom();
 			case HELD -> held();
@@ -207,8 +212,10 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Chip("Name Tag", i(Items.NAME_TAG), () -> c.ranks.ownNameTag, v -> c.ranks.ownNameTag = v, () -> go(Page.RANK)));
 		list.add(new Ui.Chip("Keystrokes", i(Items.STONE_BUTTON), () -> c.keystrokes.enabled, v -> c.keystrokes.enabled = v, () -> go(Page.KEYS)));
 		list.add(new Ui.Chip("Scoreboard", i(Items.OAK_SIGN), () -> c.scoreboard.enabled, v -> c.scoreboard.enabled = v, () -> go(Page.SCOREBOARD)));
-		list.add(new Ui.Chip("Hitboxes", i(Items.GLASS), () -> c.hitboxes.enabled, v -> c.hitboxes.enabled = v, () -> go(Page.HITBOXES)));
+		list.add(new Ui.Chip("Hitboxes", i(Items.GLASS), dev.vanillaclient.pvp.Hitboxes::on, dev.vanillaclient.pvp.Hitboxes::set, () -> go(Page.HITBOXES)));
 		list.add(new Ui.Chip("Fullbright", i(Items.GLOWSTONE), () -> c.pvp.fullbright, v -> c.pvp.fullbright = v, () -> go(Page.PVP)));
+		list.add(new Ui.Chip("Enchant Glint", i(Items.ENCHANTED_BOOK), () -> c.glint.enabled, v -> c.glint.enabled = v, () -> go(Page.GLINT)));
+		list.add(new Ui.Chip("Shulker Preview", i(Items.SHULKER_BOX), () -> c.preview.enabled, v -> c.preview.enabled = v, () -> go(Page.PREVIEW)));
 		list.add(new Ui.Chip("Target HUD", i(Items.PLAYER_HEAD), () -> c.targetHud.enabled, v -> c.targetHud.enabled = v, () -> go(Page.TARGET)));
 		java.util.List<dev.vanillaclient.hud.HudModule> info = dev.vanillaclient.hud.HudManager.INFO;
 		for (int k = 0; k < info.size(); k++) {
@@ -226,7 +233,7 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Tile("Advancements", "Every one, what to do", i(Items.GOLDEN_APPLE), () -> open(new AdvancementsChecklistScreen(this))));
 		list.add(new Ui.Tile("Statistics", "Your world in numbers", i(Items.BOOK), () -> open(new StatsOverviewScreen(this))));
 		list.add(new Ui.Tile("Gallery", "Screenshots & pictures", i(Items.PAINTING), () -> open(new GalleryScreen(this))));
-		list.add(new Ui.Tile("Performance", "More FPS in one click", i(Items.BEACON), () -> go(Page.PERFORMANCE)));
+		list.add(new Ui.Tile("Performance", "Hide far things, fewer particles", i(Items.BEACON), () -> go(Page.PERFORMANCE)));
 	}
 
 	private void drawRankBanner(GuiGraphicsExtractor g, int x, int y, int w, float a) {
@@ -441,32 +448,125 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Button("Move it in the HUD editor", i(Items.ITEM_FRAME), () -> open(new HudEditorScreen(this))));
 	}
 
+	private static final String[] ARROWS = {"↑", "↗", "→", "↘", "↓", "↙", "←", "↖"};
+	private long deleteArmedAt;
+	private Config.Waypoint deleteArmed;
+
 	private void waypoints() {
 		Config.WaypointHud w = cfg().waypointHud;
-		list.add(new Ui.Header("WAYPOINTS"));
-		list.add(new Ui.Cycle<>("Show waypoints", List.of(1, 2, 0), () -> w.mode, v -> w.mode = v,
-				v -> switch (v) {
-					case 1 -> "On the XP bar";
-					case 2 -> "Compass at the top";
-					default -> "Off";
-				}));
+		list.add(new Ui.Header("HOW TO SHOW THEM"));
+		int[] hoverMode = {-1};
+		int[] modes = {0, 1, 2, 3};
+		String[] names = {"Off", "XP bar", "Compass", "Top markers"};
+		list.add(new Ui.Custom(46, (g, x, y, cw, h, mx, my, a) -> {
+			hoverMode[0] = -1;
+			int tw = (cw - 3 * 4) / 4;
+			for (int k = 0; k < 4; k++) {
+				int tx = x + k * (tw + 4);
+				boolean sel = w.mode == modes[k];
+				boolean hov = mx >= tx && mx < tx + tw && my >= y && my < y + 44;
+				if (hov) hoverMode[0] = k;
+				g.fill(tx, y, tx + tw, y + 44, Theme.alpha(sel ? 0x603FA34D : hov ? 0x40FFFFFF : 0x40000000, a));
+				g.outline(tx, y, tw, 44, Theme.alpha(sel ? 0xFF5AD06A : 0x30FFFFFF, a));
+				// tiny picture of each style
+				int px = tx + tw / 2, py = y + 15;
+				switch (k) {
+					case 0 -> g.centeredText(this.font, "§8✖", px, py - 3, 0xFFFFFFFF);
+					case 1 -> {
+						g.fill(px - 22, py + 4, px + 22, py + 7, Theme.alpha(0xFF2A6A2A, a));
+						g.fill(px - 8, py + 2, px - 5, py + 9, 0xFFFFD34D);
+						g.fill(px + 9, py + 2, px + 12, py + 9, 0xFF55D8FF);
+					}
+					case 2 -> {
+						g.fill(px - 24, py - 4, px + 24, py + 5, Theme.alpha(0x90000000, a));
+						g.text(this.font, "§cN", px - 3, py - 3, 0xFFFFFFFF, false);
+						g.fill(px + 12, py - 1, px + 15, py + 2, 0xFFFFD34D);
+					}
+					default -> {
+						g.fill(px - 14, py - 6, px - 10, py - 2, 0xFFFFD34D);
+						g.fill(px + 8, py - 6, px + 12, py - 2, 0xFF55D8FF);
+						g.text(this.font, "§7120m", px - 12, py + 1, 0xFFFFFFFF, false);
+					}
+				}
+				g.centeredText(this.font, (sel ? "§a" : "§f") + names[k], px, y + 32, 0xFFFFFFFF);
+			}
+		}, () -> {
+			if (hoverMode[0] >= 0) {
+				w.mode = modes[hoverMode[0]];
+				Config.save();
+				buildPage();
+			}
+		}));
 		list.add(new Ui.Toggle("Show distance", null, () -> w.showDistance, v -> w.showDistance = v));
+		if (w.mode == 3) list.add(new Ui.Toggle("Top markers: always show names", null, () -> w.topNames, v -> w.topNames = v));
 		list.add(new Ui.Slider("Hide farther than", 0, 5000, 100, () -> w.maxDistance, v -> w.maxDistance = (int) v,
 				v -> v <= 0 ? "never" : (int) v + " m"));
-		list.add(new Ui.Button("Open the world map", i(Items.FILLED_MAP), () -> open(new WorldMapScreen(this))));
-		list.add(new Ui.Info("Press B in game to save a waypoint where you stand.",
-				"Right-click the world map to place one anywhere.",
-				"Look towards a waypoint to see its name and distance."));
-		java.util.List<Config.Waypoint> here = dev.vanillaclient.map.Waypoints.here();
-		if (!here.isEmpty()) list.add(new Ui.Header("IN THIS WORLD"));
+		java.util.List<Config.Waypoint> here = new java.util.ArrayList<>(dev.vanillaclient.map.Waypoints.here());
 		var pl = this.minecraft.player;
+		if (pl != null) here.sort(java.util.Comparator.comparingDouble(wp -> Math.hypot(wp.x - pl.getX(), wp.z - pl.getZ())));
+		list.add(new Ui.Header("YOUR WAYPOINTS  §8· " + here.size() + " in this world"));
+		Ui.Button add = new Ui.Button("+ Save one where you stand", i(Items.RECOVERY_COMPASS), () -> {
+			dev.vanillaclient.map.Waypoints.addHere();
+			buildPage();
+		});
+		add.span = 2;
+		list.add(add);
+		Ui.Button map = new Ui.Button("Open the world map", i(Items.FILLED_MAP), () -> open(new WorldMapScreen(this)));
+		map.span = 2;
+		list.add(map);
+		if (here.isEmpty()) list.add(new Ui.Info("No waypoints yet. Press B in game to save one,", "or right-click the world map."));
 		for (Config.Waypoint wp : here) {
-			String dist = pl == null ? "" : " §7" + Math.round(Math.hypot(wp.x - pl.getX(), wp.z - pl.getZ())) + "m";
-			ItemStack ic = dev.vanillaclient.map.Waypoints.iconStack(wp);
-			list.add(new Ui.Toggle("§f" + wp.name + dist + " §8" + wp.x + " " + wp.y + " " + wp.z,
-					ic.isEmpty() ? i(Items.RECOVERY_COMPASS) : ic, () -> wp.visible, v -> wp.visible = v));
+			int[] zone = {0}; // 1 = eye, 2 = delete
+			list.add(new Ui.Custom(28, (g, x, y, cw, h, mx, my, a) -> {
+				int col = wp.color | 0xFF000000;
+				boolean hov = mx >= x && mx < x + cw && my >= y && my < y + 26;
+				g.fill(x, y, x + cw, y + 26, Theme.alpha(hov ? 0x50202028 : 0x40000000, a));
+				g.fill(x, y, x + 3, y + 26, Theme.alpha(col, a));
+				ItemStack ic = dev.vanillaclient.map.Waypoints.iconStack(wp);
+				if (!ic.isEmpty()) g.item(ic, x + 7, y + 5);
+				else {
+					g.fill(x + 11, y + 9, x + 19, y + 17, 0xFF000000);
+					g.fill(x + 12, y + 10, x + 18, y + 16, col);
+				}
+				String dist = "", arrow = "";
+				if (pl != null) {
+					double dx = wp.x + 0.5 - pl.getX(), dz = wp.z + 0.5 - pl.getZ();
+					dist = Math.round(Math.hypot(dx, dz)) + "m";
+					float rel = (float) Math.toDegrees(Math.atan2(-dx, dz)) - pl.getYRot();
+					rel = ((rel % 360) + 360) % 360;
+					arrow = ARROWS[Math.round(rel / 45f) % 8];
+				}
+				g.text(this.font, (wp.visible ? "" : "§8") + "§l" + wp.name, x + 28, y + 4, Theme.alpha(wp.visible ? col : 0xFF808080, a), true);
+				g.text(this.font, "§7" + wp.x + " " + wp.y + " " + wp.z + "  §f" + dist + " §e" + arrow, x + 28, y + 15, Theme.alpha(0xFFFFFFFF, a), false);
+				// buttons: show/hide, delete
+				int ex = x + cw - 62, dx2 = x + cw - 24;
+				boolean hEye = hov && mx >= ex && mx < ex + 36, hDel = hov && mx >= dx2 && mx < dx2 + 20;
+				zone[0] = hEye ? 1 : hDel ? 2 : 0;
+				g.fill(ex, y + 6, ex + 36, y + 20, Theme.alpha(wp.visible ? (hEye ? 0xFF4CB85C : 0xFF3A8A48) : (hEye ? 0xFF606060 : 0xFF404040), a));
+				g.centeredText(this.font, wp.visible ? "Shown" : "§7Hidden", ex + 18, y + 9, 0xFFFFFFFF);
+				boolean armed = deleteArmed == wp && System.currentTimeMillis() - deleteArmedAt < 2500;
+				g.fill(dx2, y + 6, dx2 + 20, y + 20, Theme.alpha(armed ? 0xFFD03030 : hDel ? 0xFF803030 : 0xFF402020, a));
+				g.centeredText(this.font, armed ? "§l?" : "✖", dx2 + 10, y + 9, 0xFFFFFFFF);
+			}, () -> {
+				if (zone[0] == 1) {
+					wp.visible = !wp.visible;
+					Config.save();
+				} else if (zone[0] == 2) {
+					if (deleteArmed == wp && System.currentTimeMillis() - deleteArmedAt < 2500) {
+						cfg().waypoints.remove(wp);
+						Config.save();
+						deleteArmed = null;
+						say("Deleted " + wp.name);
+						buildPage();
+					} else {
+						deleteArmed = wp;
+						deleteArmedAt = System.currentTimeMillis();
+						say("Click ✖ again to delete " + wp.name);
+					}
+				}
+			}));
 		}
-		if (!here.isEmpty()) list.add(new Ui.Info("Click a waypoint on the world map to rename it,", "give it an icon or a color, or drag it."));
+		if (!here.isEmpty()) list.add(new Ui.Info("Rename, recolor, change the icon or move: click it on the world map."));
 	}
 
 	private void crosshair() {
@@ -725,7 +825,8 @@ public final class SettingsScreen extends BaseScreen {
 	private void hitboxes() {
 		Config.Hitboxes h = cfg().hitboxes;
 		list.add(new Ui.Header("HITBOXES"));
-		list.add(new Ui.Toggle("Show hitboxes", i(Items.GLASS), () -> h.enabled, v -> h.enabled = v));
+		list.add(new Ui.Toggle("Show hitboxes  §8(same as F3+B)", i(Items.GLASS), dev.vanillaclient.pvp.Hitboxes::on, dev.vanillaclient.pvp.Hitboxes::set));
+		list.add(new Ui.Toggle("Vanilla Client look (off = Minecraft's white boxes)", null, () -> h.customStyle, v -> h.customStyle = v));
 		list.add(new Ui.ColorPick("Box color", () -> h.color, v -> h.color = v, this::colorPicker));
 		list.add(new Ui.Slider("Line width", 1.0, 6.0, 0.5, () -> h.width, v -> h.width = (float) v, v -> String.format(java.util.Locale.ROOT, "%.1f", v)));
 		list.add(new Ui.Toggle("Fill the box", null, () -> h.fill, v -> h.fill = v));
@@ -759,78 +860,81 @@ public final class SettingsScreen extends BaseScreen {
 		style(t, true);
 	}
 
+	private static final float[] FPS_HIST = new float[90];
+	private static int fpsIdx;
+	private static long fpsAt;
+
 	private void performance() {
 		Config.Performance p = cfg().performance;
-		var o = this.minecraft.options;
-		Runnable save = dev.vanillaclient.pvp.Performance::save;
-		list.add(new Ui.Header("FPS BOOST  §8· now " + this.minecraft.getFps() + " FPS"));
-		list.add(new Ui.Button("Boost FPS (one click)", i(Items.BEACON), () -> {
-			int n = dev.vanillaclient.pvp.Performance.boost();
-			Config.save();
-			say(n == 0 ? "Already boosted" : "Changed " + n + " settings · undo is right below");
-			buildPage();
-		}));
-		if (dev.vanillaclient.pvp.Performance.canUndo()) list.add(new Ui.Button("Undo the boost", i(Items.BARRIER), () -> {
-			dev.vanillaclient.pvp.Performance.undo();
-			say("Settings restored");
-			buildPage();
-		}));
-		list.add(new Ui.Info("Clouds off, fewer particles, no shadows,", "no biome blend, no V-Sync, far mobs hidden."));
-		list.add(new Ui.Header("DISTANCE"));
-		list.add(new Ui.Slider("Render distance", 2, 32, 1, () -> o.renderDistance().get(), v -> {
-			o.renderDistance().set((int) Math.round(v));
-			save.run();
-		}, v -> (int) Math.round(v) + " chunks"));
-		list.add(new Ui.Slider("Simulation distance", 5, 32, 1, () -> o.simulationDistance().get(), v -> {
-			o.simulationDistance().set((int) Math.round(v));
-			save.run();
-		}, v -> (int) Math.round(v) + " chunks"));
-		list.add(new Ui.Slider("Entity distance", 0.5, 5.0, 0.25, () -> o.entityDistanceScaling().get(), v -> {
-			o.entityDistanceScaling().set(v);
-			save.run();
-		}, v -> Math.round(v * 100) + "%"));
-		list.add(new Ui.Header("HIDE FAR ENTITIES  §8· Vanilla Client"));
-		list.add(new Ui.Toggle("Don't draw far mobs & items", i(Items.ZOMBIE_HEAD), () -> p.cullEntities, v -> p.cullEntities = v));
+		list.add(new Ui.Header("LIVE FPS"));
+		Ui.Custom graph = new Ui.Custom(40, (g, x, y, w, h, mx, my, a) -> {
+			long now = System.currentTimeMillis();
+			if (now - fpsAt > 250) {
+				fpsAt = now;
+				FPS_HIST[fpsIdx++ % FPS_HIST.length] = this.minecraft.getFps();
+			}
+			g.fill(x, y, x + w, y + 38, Theme.alpha(0x70000000, a));
+			float max = 30;
+			for (float f : FPS_HIST) max = Math.max(max, f);
+			int n = FPS_HIST.length;
+			float bw = (w - 60) / (float) n;
+			for (int k = 0; k < n; k++) {
+				float f = FPS_HIST[(fpsIdx + k) % n];
+				int bh = Math.round(f / max * 30);
+				int col = f >= 60 ? 0xFF5AD06A : f >= 30 ? 0xFFE0B030 : 0xFFE04040;
+				int bx = x + 56 + Math.round(k * bw);
+				g.fill(bx, y + 34 - bh, bx + Math.max(1, Math.round(bw) - 1), y + 34, Theme.alpha(col, a));
+			}
+			g.text(this.font, "§l" + this.minecraft.getFps(), x + 6, y + 8, Theme.alpha(0xFFFFFFFF, a), true);
+			g.text(this.font, "§7FPS", x + 6, y + 20, Theme.alpha(0xFFFFFFFF, a), false);
+		});
+		list.add(graph);
+		list.add(new Ui.Header("HIDE FAR ENTITIES"));
+		list.add(new Ui.Toggle("Don't draw far mobs, items & decorations", i(Items.ZOMBIE_HEAD), () -> p.cullEntities, v -> p.cullEntities = v));
 		list.add(new Ui.Slider("Mobs further than", 16, 128, 4, () -> p.entityDistance, v -> p.entityDistance = (int) Math.round(v), v -> (int) Math.round(v) + " blocks"));
-		list.add(new Ui.Slider("Items further than", 8, 64, 4, () -> p.itemDistance, v -> p.itemDistance = (int) Math.round(v), v -> (int) Math.round(v) + " blocks"));
+		list.add(new Ui.Slider("Dropped items further than", 8, 64, 4, () -> p.itemDistance, v -> p.itemDistance = (int) Math.round(v), v -> (int) Math.round(v) + " blocks"));
+		list.add(new Ui.Slider("Armor stands & frames further than", 8, 96, 4, () -> p.decorDistance, v -> p.decorDistance = (int) Math.round(v), v -> (int) Math.round(v) + " blocks"));
 		list.add(new Ui.Toggle("Always draw players", null, () -> p.alwaysPlayers, v -> p.alwaysPlayers = v));
-		list.add(new Ui.Header("MINECRAFT VIDEO SETTINGS"));
-		list.add(new Ui.Slider("Max FPS", 10, 260, 10, () -> o.framerateLimit().get(), v -> {
-			o.framerateLimit().set((int) Math.round(v));
-			save.run();
-		}, v -> v >= 260 ? "Unlimited" : (int) Math.round(v) + ""));
-		list.add(new Ui.Toggle("V-Sync", null, () -> o.enableVsync().get(), v -> {
-			o.enableVsync().set(v);
-			save.run();
-		}));
-		list.add(new Ui.Cycle<>("Clouds", java.util.List.of(net.minecraft.client.CloudStatus.values()), () -> o.cloudStatus().get(), v -> {
-			o.cloudStatus().set(v);
-			save.run();
-		}, SettingsScreen::pretty));
-		list.add(new Ui.Cycle<>("Particles", java.util.List.of(net.minecraft.server.level.ParticleStatus.values()), () -> o.particles().get(), v -> {
-			o.particles().set(v);
-			save.run();
-		}, SettingsScreen::pretty));
-		list.add(new Ui.Toggle("Entity shadows", null, () -> o.entityShadows().get(), v -> {
-			o.entityShadows().set(v);
-			save.run();
-		}));
-		list.add(new Ui.Slider("Biome blend", 0, 7, 1, () -> o.biomeBlendRadius().get(), v -> {
-			o.biomeBlendRadius().set((int) Math.round(v));
-			save.run();
-		}, v -> (int) Math.round(v) == 0 ? "Off" : (int) Math.round(v) + ""));
-		list.add(new Ui.Toggle("Smooth lighting", null, () -> o.ambientOcclusion().get(), v -> {
-			o.ambientOcclusion().set(v);
-			save.run();
-		}));
-		list.add(new Ui.Toggle("Improved transparency (slow)", null, () -> o.improvedTransparency().get(), v -> {
-			o.improvedTransparency().set(v);
-			save.run();
-		}));
-		list.add(new Ui.Cycle<>("When not playing", java.util.List.of(net.minecraft.client.InactivityFpsLimit.values()), () -> o.inactivityFpsLimit().get(), v -> {
-			o.inactivityFpsLimit().set(v);
-			save.run();
-		}, SettingsScreen::pretty));
+		list.add(new Ui.Header("HIDE FAR BLOCK ENTITIES"));
+		list.add(new Ui.Toggle("Don't draw far chests, signs, banners, heads", i(Items.CHEST), () -> p.cullBlockEntities, v -> p.cullBlockEntities = v));
+		list.add(new Ui.Slider("Further than", 16, 128, 4, () -> p.blockEntityDistance, v -> p.blockEntityDistance = (int) Math.round(v), v -> (int) Math.round(v) + " blocks"));
+		list.add(new Ui.Header("PARTICLES"));
+		list.add(new Ui.Slider("Only particles closer than", 0, 64, 4, () -> p.particleDistance, v -> p.particleDistance = (int) Math.round(v),
+				v -> v < 1 ? "All" : (int) Math.round(v) + " blocks"));
+		list.add(new Ui.Toggle("No explosion particles", i(Items.TNT), () -> p.noExplosionParticles, v -> p.noExplosionParticles = v));
+		list.add(new Ui.Toggle("Hide your own potion swirls (first person)", i(Items.POTION), () -> p.hideOwnPotionParticles, v -> p.hideOwnPotionParticles = v));
+		list.add(new Ui.Header("COSMETICS"));
+		list.add(new Ui.Toggle("Show other players' cosmetics", i(Items.ELYTRA), () -> cfg().ranks.showOthers, v -> cfg().ranks.showOthers = v));
+		list.add(new Ui.Info("Minecraft's own video settings stay in Options › Video Settings."));
+	}
+
+	private void glint() {
+		Config.Glint gl = cfg().glint;
+		list.add(new Ui.Header("ENCHANT GLINT  §8· only on your screen"));
+		list.add(new Ui.Toggle("Own glint color", i(Items.ENCHANTED_BOOK), () -> gl.enabled, v -> gl.enabled = v));
+		Ui.Custom prev = new Ui.Custom(34, (g, x, y, w, h, mx, my, a) -> {
+			g.fill(x, y, x + w, y + 32, Theme.alpha(0x70000000, a));
+			net.minecraft.world.item.Item[] its = {Items.DIAMOND_SWORD, Items.NETHERITE_CHESTPLATE, Items.BOW, Items.TRIDENT, Items.DIAMOND_PICKAXE, Items.ELYTRA};
+			int sx = x + w / 2 - its.length * 13;
+			for (int k = 0; k < its.length; k++) {
+				ItemStack st = new ItemStack(its[k]);
+				st.set(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+				Icons.scaled(g, st, sx + k * 26, y + 4, 1.5f);
+			}
+		});
+		prev.span = 1;
+		list.add(prev);
+		list.add(new Ui.ColorPick("Glint color", () -> gl.color, v -> gl.color = v, this::colorPicker));
+		list.add(new Ui.Toggle("Rainbow (slowly changes color)", null, () -> gl.rainbow, v -> gl.rainbow = v));
+		list.add(new Ui.Slider("Strength", 0.3, 2.0, 0.1, () -> gl.strength, v -> gl.strength = (float) v, v -> Math.round(v * 100) + "%"));
+	}
+
+	private void preview() {
+		Config.Preview pv = cfg().preview;
+		list.add(new Ui.Header("CONTAINER PREVIEW  §8· hover an item in your inventory"));
+		list.add(new Ui.Toggle("Show what's inside shulker boxes", i(Items.SHULKER_BOX), () -> pv.enabled, v -> pv.enabled = v));
+		list.add(new Ui.Toggle("Ender chest (contents from the last time you opened it)", i(Items.ENDER_CHEST), () -> pv.enderChest, v -> pv.enderChest = v));
+		list.add(new Ui.Toggle("Only while holding Shift", null, () -> pv.shiftOnly, v -> pv.shiftOnly = v));
 	}
 
 	private void controls() {
@@ -845,11 +949,7 @@ public final class SettingsScreen extends BaseScreen {
 			net.minecraft.client.KeyMapping km = net.minecraft.client.KeyMapping.get(k[0]);
 			if (km != null) list.add(new Ui.KeyBind(k[1], km));
 		}
-		list.add(new Ui.Header("MINECRAFT"));
-		for (net.minecraft.client.KeyMapping km : this.minecraft.options.keyMappings) {
-			if (km.getName().startsWith("key.vanillaclient")) continue;
-			list.add(new Ui.KeyBind(Component.translatable(km.getName()).getString(), km));
-		}
+		list.add(new Ui.Info("Minecraft's own keys stay in Options › Controls."));
 	}
 
 	private void general() {
@@ -857,6 +957,7 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Header("MENU"));
 		list.add(new Ui.Toggle("Vanilla Client & Wardrobe in the pause menu", i(Items.WRITABLE_BOOK), () -> c.pauseMenuButton, v -> c.pauseMenuButton = v));
 		list.add(new Ui.Toggle("Advancement & stats helper buttons", i(Items.GOLDEN_APPLE), () -> c.helperButtons, v -> c.helperButtons = v));
+		list.add(new Ui.Toggle("L opens the Vanilla Client advancements", i(Items.KNOWLEDGE_BOOK), () -> c.ownAdvancementsScreen, v -> c.ownAdvancementsScreen = v));
 		list.add(new Ui.Header("WORLD MAP"));
 		list.add(new Ui.Toggle("Record explored land", i(Items.FILLED_MAP), () -> c.worldMap.enabled, v -> c.worldMap.enabled = v));
 		list.add(new Ui.Slider("Map radius", 0, 32, 1, () -> c.worldMap.radius, v -> c.worldMap.radius = (int) v,

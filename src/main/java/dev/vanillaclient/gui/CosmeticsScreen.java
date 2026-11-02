@@ -74,7 +74,7 @@ public final class CosmeticsScreen extends BaseScreen {
 	}
 
 	private int gridTop() {
-		return top() + 22 + (tab == Kind.WINGS.ordinal() ? 16 : 0);
+		return top() + 22 + (tab == Kind.WINGS.ordinal() || tab == Kind.SHIELD.ordinal() ? 16 : 0);
 	}
 
 	private int bottom() {
@@ -82,7 +82,8 @@ public final class CosmeticsScreen extends BaseScreen {
 	}
 
 	private int cols() {
-		return tab == SETS ? 1 : items().size() > 4 ? 3 : 2;
+		int n = items().size();
+		return tab == SETS ? 1 : n > 6 ? 4 : n > 4 ? 3 : 2;
 	}
 
 	private int cardW() {
@@ -95,7 +96,8 @@ public final class CosmeticsScreen extends BaseScreen {
 			int n = Cosmetics.COLLECTIONS.size();
 			return Math.max(30, Math.min(70, (avail - (n - 1) * 6) / n));
 		}
-		return Math.max(44, Math.min(88, (avail - 6) / 2));
+		int rows = (items().size() + cols() - 1) / cols();
+		return Math.max(40, Math.min(88, (avail - (rows - 1) * 6) / rows));
 	}
 
 	private List<?> items() {
@@ -238,10 +240,17 @@ public final class CosmeticsScreen extends BaseScreen {
 				return true;
 			}
 		}
-		if (tab == Kind.WINGS.ordinal() && my >= top() + 20 && my < top() + 32) {
+		if ((tab == Kind.WINGS.ordinal() || tab == Kind.SHIELD.ordinal()) && my >= top() + 20 && my < top() + 32) {
 			Config.Cosmetics c = Config.get().cosmetics;
-			if (mx >= gridX() && mx < gridX() + gridW() / 2) c.wingsOnlyWithElytra = !c.wingsOnlyWithElytra;
-			else if (mx >= gridX() + gridW() / 2 && mx < gridX() + gridW()) c.wingsReplaceElytra = !c.wingsReplaceElytra;
+			boolean leftHalf = mx >= gridX() && mx < gridX() + gridW() / 2;
+			boolean rightHalf = mx >= gridX() + gridW() / 2 && mx < gridX() + gridW();
+			if (tab == Kind.WINGS.ordinal()) {
+				if (leftHalf) c.wingsOnlyWithElytra = !c.wingsOnlyWithElytra;
+				else if (rightHalf) c.wingsReplaceElytra = !c.wingsReplaceElytra;
+			} else {
+				if (leftHalf) c.shieldWithoutItem = !c.shieldWithoutItem;
+				else if (rightHalf) c.shieldReplace = !c.shieldReplace;
+			}
 			Config.save();
 			Ui.click();
 			return true;
@@ -340,6 +349,12 @@ public final class CosmeticsScreen extends BaseScreen {
 
 		drawTabs(g, mouseX, mouseY, dt);
 		if (tab == Kind.WINGS.ordinal()) drawWingToggles(g, mouseX, mouseY);
+		if (tab == Kind.SHIELD.ordinal()) {
+			Config.Cosmetics c = Config.get().cosmetics;
+			int y = top() + 20, half = gridW() / 2;
+			pill(g, gridX(), y, half - 3, "Show without a shield item", c.shieldWithoutItem, mouseX, mouseY);
+			pill(g, gridX() + half + 3, y, half - 3, "Replace shield look", c.shieldReplace, mouseX, mouseY);
+		}
 
 		int idx = buying == null ? indexAt(mouseX, mouseY) : -1;
 		hovered = buying != null ? buying : idx >= 0 ? items().get(idx) : null;

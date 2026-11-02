@@ -18,6 +18,24 @@ import net.minecraft.world.phys.Vec3;
 public final class Hitboxes {
 	private Hitboxes() {}
 
+	private static final net.minecraft.resources.Identifier ENTRY = net.minecraft.client.gui.components.debug.DebugScreenEntries.ENTITY_HITBOXES;
+
+	/** Same switch as F3+B. */
+	public static boolean on() {
+		Minecraft mc = Minecraft.getInstance();
+		return mc.debugEntries != null && mc.debugEntries.isCurrentlyEnabled(ENTRY);
+	}
+
+	public static void set(boolean on) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.debugEntries != null && on() != on) mc.debugEntries.toggleStatus(ENTRY);
+	}
+
+	/** true = our look replaces Minecraft's white boxes. */
+	public static boolean ownStyle() {
+		return Config.get().hitboxes.customStyle;
+	}
+
 	public static boolean shows(Entity e) {
 		Config.Hitboxes h = Config.get().hitboxes;
 		if (e instanceof Player) return h.players;
@@ -33,7 +51,7 @@ public final class Hitboxes {
 	public static void emit(float partial) {
 		Config.Hitboxes h = Config.get().hitboxes;
 		Minecraft mc = Minecraft.getInstance();
-		if (!h.enabled || mc.level == null || mc.player == null) return;
+		if (!h.customStyle || !on() || mc.level == null || mc.player == null) return;
 		// make sure the shapes land in the frame's gizmo list
 		try (var ignored = mc.levelRenderer.collectPerFrameRenderThreadGizmos()) {
 			draw(h, mc, partial);

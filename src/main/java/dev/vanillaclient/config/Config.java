@@ -177,8 +177,10 @@ public final class Config {
 	}
 
 	public static class WaypointHud {
-		/** 0 = off, 1 = dots on the XP bar, 2 = compass bar at the top */
+		/** 0 = off, 1 = dots on the XP bar, 2 = compass bar at the top, 3 = markers at the top (no bar) */
 		public int mode = 1;
+		/** Top markers: always show names (else only the one you look at). */
+		public boolean topNames = false;
 		public boolean showDistance = true;
 		/** Hide waypoints farther away than this (0 = never). */
 		public int maxDistance = 0;
@@ -245,6 +247,10 @@ public final class Config {
 		public boolean wingsOnlyWithElytra = false;
 		/** With an elytra on: show the wings instead of the elytra. */
 		public boolean wingsReplaceElytra = true;
+		/** Real shields get your design's look. */
+		public boolean shieldReplace = true;
+		/** Show your shield design in the off hand even without a shield item. */
+		public boolean shieldWithoutItem = false;
 	}
 
 	/** Smaller (or bigger) items in your own first-person hands. Purely visual. */
@@ -315,16 +321,36 @@ public final class Config {
 	}
 
 	public Days days = (Days) new Days().at(0.01f, 0.01f);
-	public TextHud fps, ping, biome, clock, speed, light, session, rankHud, effects, reach, combo;
+	public TextHud fps, ping, biome, clock, speed, light, session, rankHud, effects, reach, combo, playtime;
 	public TargetHud targetHud;
 	public Scoreboard scoreboard;
 	public Hitboxes hitboxes = new Hitboxes();
 	public Pvp pvp = new Pvp();
+	public Glint glint = new Glint();
+	public Preview preview = new Preview();
+
+	/** Shulker box / ender chest preview in tooltips. */
+	public static class Preview {
+		public boolean enabled = true;
+		public boolean enderChest = true;
+		public boolean shiftOnly = false;
+	}
+
+	/** Enchant glint in your own color. */
+	public static class Glint {
+		public boolean enabled = false;
+		public int color = 0xFFFF6FB0;
+		public boolean rainbow = false;
+		public float strength = 1.0f;
+	}
 	public Performance performance = new Performance();
 
 	/** Hitboxes of other entities (like F3+B, but with your own look). */
 	public static class Hitboxes {
+		/** Old switch (now F3+B decides). */
 		public boolean enabled = false;
+		/** Draw them in our colors instead of Minecraft's white boxes. */
+		public boolean customStyle = true;
 		public int color = 0xFFFFFFFF;
 		public int targetColor = 0xFF55FF55;
 		public int hurtColor = 0xFFFF5555;
@@ -379,6 +405,15 @@ public final class Config {
 		public int entityDistance = 48;
 		public int itemDistance = 24;
 		public boolean alwaysPlayers = true;
+		/** Armor stands, item frames, paintings. */
+		public int decorDistance = 32;
+		public boolean cullBlockEntities = false;
+		/** Chests, signs, banners, heads … */
+		public int blockEntityDistance = 40;
+		/** 0 = all particles. */
+		public int particleDistance = 0;
+		public boolean noExplosionParticles = false;
+		public boolean hideOwnPotionParticles = false;
 	}
 	public Counter counter;
 	public Ranks ranks = new Ranks();
@@ -412,6 +447,8 @@ public final class Config {
 	public boolean screenshotMessage = true;
 	public boolean screenshotPopup = true;
 	public boolean helperButtons = true;
+	/** L opens the Vanilla Client advancements tracker. */
+	public boolean ownAdvancementsScreen = true;
 
 	public static List<Category> defaultCategories() {
 		return new ArrayList<>(List.of(new Category("Farms", 0), new Category("Builds", 1),
@@ -542,6 +579,7 @@ public final class Config {
 		if (session == null) session = (TextHud) new TextHud().label("Session").off().at(0.01f, 0.54f);
 		if (rankHud == null) rankHud = (TextHud) new TextHud().label("Rank").off().at(0.01f, 0.58f);
 		if (effects == null) effects = (TextHud) new TextHud().label("").off().at(0.99f, 0.40f);
+		if (playtime == null) playtime = (TextHud) new TextHud().label("Playtime").off().at(0.01f, 0.62f);
 		if (reach == null) reach = (TextHud) new TextHud().label("Reach").off().at(0.5f, 0.62f);
 		if (combo == null) combo = (TextHud) new TextHud().label("Combo").off().at(0.5f, 0.66f);
 		if (targetHud == null) {
@@ -559,6 +597,8 @@ public final class Config {
 		}
 		if (hitboxes == null) hitboxes = new Hitboxes();
 		if (pvp == null) pvp = new Pvp();
+		if (glint == null) glint = new Glint();
+		if (preview == null) preview = new Preview();
 		if (performance == null) performance = new Performance();
 		if (counter == null) {
 			counter = new Counter();

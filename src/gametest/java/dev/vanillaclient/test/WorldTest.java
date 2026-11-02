@@ -31,6 +31,10 @@ public class WorldTest implements FabricClientGameTest {
 			c.crosshair.outline = true;
 			c.crosshair.outlineThickness = 2;
 			c.keystrokes.enabled = true;
+			c.waypointHud.mode = 3;
+			c.playtime.enabled = true;
+			c.glint.enabled = true;
+			c.glint.color = 0xFF40E0FF;
 			dev.vanillaclient.features.ClientRanks.put("Player0", "owner");
 			// coins + everything except the void shield (so the shop shows a price)
 			dev.vanillaclient.features.Shop.wallet().coins = 50000;
@@ -54,7 +58,7 @@ public class WorldTest implements FabricClientGameTest {
 			s.runCommand("give @a golden_apple 5");
 			s.runCommand("give @a ender_pearl 16");
 			s.runCommand("item replace entity @a weapon.offhand with shield");
-			s.runCommand("item replace entity @a weapon.mainhand with diamond_sword");
+			s.runCommand("item replace entity @a weapon.mainhand with diamond_sword[enchantment_glint_override=true]");
 			s.runCommand("effect give @a speed 300 1");
 			s.runCommand("effect give @a regeneration 300 0");
 			ctx.waitTicks(20);
@@ -82,7 +86,7 @@ public class WorldTest implements FabricClientGameTest {
 			s.runCommand("execute as @p at @s run summon pig ^2 ^ ^5 {NoAI:1b}");
 			s.runCommand("execute as @p at @s run summon arrow ^-1 ^1 ^3");
 			ctx.runOnClient(mc -> {
-				Config.get().hitboxes.enabled = true;
+				dev.vanillaclient.pvp.Hitboxes.set(true);
 				Config.get().reach.enabled = true;
 				Config.get().combo.enabled = true;
 				Config.get().targetHud.enabled = true;
@@ -108,7 +112,7 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.takeScreenshot("w01e_night_fullbright");
 			ctx.runOnClient(mc -> {
 				Config.get().pvp.fullbright = false;
-				Config.get().hitboxes.enabled = false;
+				dev.vanillaclient.pvp.Hitboxes.set(false);
 				mc.player.setXRot(10f);
 			});
 			s.runCommand("time set noon");
@@ -117,12 +121,19 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.runOnClient(mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK));
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w02_third_person_cape");
-			ctx.runOnClient(mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT));
+			s.runCommand("item replace entity @a weapon.offhand with air");
+			ctx.runOnClient(mc -> {
+				Config.get().cosmetics.shieldWithoutItem = true;
+				Config.get().cosmetics.shield = "sakura";
+				Config.get().cosmetics.wings = "sakura";
+				Config.get().cosmetics.cape = "sakura";
+				mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+			});
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w03_front_nametag_shield");
 
 			ctx.runOnClient(mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK));
-			ctx.runOnClient(mc -> { Config.get().cosmetics.wings = "inferno"; Config.get().cosmetics.cape = "inferno"; });
+			ctx.runOnClient(mc -> { Config.get().cosmetics.wings = "monochrome"; Config.get().cosmetics.cape = "monochrome"; });
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w04_wings_inferno_back");
 			ctx.runOnClient(mc -> { Config.get().cosmetics.wings = "void"; Config.get().cosmetics.cape = "void"; mc.player.setYRot(60f); mc.player.setYHeadRot(60f); mc.player.yBodyRot = 60f; });
@@ -193,7 +204,7 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.setScreen(() -> new dev.vanillaclient.gui.SettingsScreen(null));
 			ctx.waitTicks(20);
 			ctx.takeScreenshot("w12_settings");
-			for (String pg : new String[] {"HOME", "RANK", "KEYS", "FPS", "PVP", "HITBOXES", "PERFORMANCE", "SCOREBOARD"}) {
+			for (String pg : new String[] {"HOME", "WAYPOINTS", "PERFORMANCE", "GLINT", "CONTROLS", "HITBOXES"}) {
 				ctx.setScreen(() -> dev.vanillaclient.gui.SettingsScreen.at(null, pg));
 				ctx.waitTicks(15);
 				ctx.takeScreenshot("p_" + pg.toLowerCase());

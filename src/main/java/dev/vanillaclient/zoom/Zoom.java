@@ -88,4 +88,13 @@ public final class Zoom {
 	public static float currentFactor() {
 		return current;
 	}
+
+	private static float lastLevel = 4f;
+
+	/** 0 = hand fully visible, 1 = fully away (follows the zoom animation). */
+	public static float handHidden() {
+		if (held()) lastLevel = Math.max(1.5f, target());
+		float span = Math.max(0.5f, lastLevel - 1f);
+		return Config.clamp((current - 1f) / span, 0f, 1f);
+	}
 }

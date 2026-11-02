@@ -34,6 +34,10 @@ public final class WaypointBar {
 		if (p == null || cfg.mode == 0 || mc.gui.screen() instanceof dev.vanillaclient.gui.HudEditorScreen) return;
 		List<Config.Waypoint> list = Waypoints.here();
 		if (cfg.mode == 1 && list.isEmpty()) return;
+		if (cfg.mode == 3) {
+			topMarkers(g, mc, p, list, cfg);
+			return;
+		}
 		Font font = mc.font;
 		int sw = g.guiWidth(), sh = g.guiHeight();
 		int cx = sw / 2;
@@ -115,6 +119,70 @@ public final class WaypointBar {
 			g.fill(lx, ly + 9, lx + w, ly + 10, focused.color | 0xFF000000);
 			if (iw > 0) dev.vanillaclient.gui.Icons.scaled(g, icon, lx + 3, ly - 1, 0.5f);
 			g.text(font, label, lx + 4 + iw, ly, focused.color | 0xFF000000, true);
+		}
+	}
+
+	/**
+	 * Markers at the top edge, exactly above the direction of each waypoint
+	 * (no bar, no compass). Turn around and they slide into view.
+	 */
+	private static void topMarkers(GuiGraphicsExtractor g, Minecraft mc, LocalPlayer p, List<Config.Waypoint> list, Config.WaypointHud cfg) {
+		Font font = mc.font;
+		int sw = g.guiWidth(), sh = g.guiHeight();
+		int cx = sw / 2;
+		double vfov = Math.toRadians(mc.options.fov().get());
+		double zoom = Math.max(1.0, dev.vanillaclient.zoom.Zoom.currentFactor());
+		double tanH = Math.tan(vfov / 2) * sw / (double) sh / zoom;
+		float yaw = p.getYRot();
+		java.util.List<Object[]> shown = new java.util.ArrayList<>();
+		for (Config.Waypoint w : list) {
+			if (!w.visible) continue;
+			double dx = w.x + 0.5 - p.getX(), dz = w.z + 0.5 - p.getZ();
+			double dist = Math.sqrt(dx * dx + dz * dz);
+			if (cfg.maxDistance > 0 && dist > cfg.maxDistance) continue;
+			float rel = wrap((float) Math.toDegrees(Math.atan2(-dx, dz)) - yaw);
+			shown.add(new Object[] {w, dist, rel});
+		}
+		shown.sort((a, b) -> Double.compare((double) b[1], (double) a[1])); // far ones first, near ones on top
+		for (Object[] o : shown) {
+			Config.Waypoint w = (Config.Waypoint) o[0];
+			double dist = (double) o[1];
+			float rel = (float) o[2];
+			int col = w.color | 0xFF000000;
+			double sxD = Math.abs(rel) < 89 ? cx + Math.tan(Math.toRadians(rel)) / tanH * (sw / 2.0) : (rel > 0 ? sw * 4 : -sw * 4);
+			boolean off = sxD < 10 || sxD > sw - 10;
+			int x = (int) Math.round(Math.max(10, Math.min(sw - 10, sxD)));
+			int y = 6;
+			if (off) {
+				// at the screen edge: small arrow pointing where to turn
+				g.text(font, sxD < 10 ? "◂" : "▸", sxD < 10 ? 2 : sw - 8, y, Theme.alpha(col, 0.85f), true);
+				continue;
+			}
+			net.minecraft.world.item.ItemStack icon = Waypoints.iconStack(w);
+			if (!icon.isEmpty()) {
+				g.fill(x - 6, y - 2, x + 6, y + 10, 0x70000000);
+				g.fill(x - 6, y + 10, x + 6, y + 11, col);
+				dev.vanillaclient.gui.Icons.scaled(g, icon, x - 5, y - 1, 0.625f);
+			} else {
+				diamond(g, x, y + 4, 5, 0xFF000000);
+				diamond(g, x, y + 4, 4, col);
+			}
+			double dy = w.y - p.getY();
+			String arrow = dy > 6 ? " ▴" : dy < -6 ? " ▾" : "";
+			boolean focus = Math.abs(x - cx) < 30;
+			String dtext = (cfg.showDistance ? (int) Math.round(dist) + "m" : "") + arrow;
+			if (focus || cfg.topNames) {
+				String label = w.name + (dtext.isEmpty() ? "" : " §7" + dtext);
+				int lw = font.width(label);
+				g.fill(x - lw / 2 - 3, y + 13, x + lw / 2 + 3, y + 24, 0x90000000);
+				g.text(font, label, x - lw / 2, y + 15, col, true);
+			} else if (!dtext.isEmpty()) {
+				g.pose().pushMatrix();
+				g.pose().translate(x, y + 14);
+				g.pose().scale(0.75f, 0.75f);
+				g.centeredText(font, "§7" + dtext, 0, 0, 0xFFFFFFFF);
+				g.pose().popMatrix();
+			}
 		}
 	}
 

@@ -51,6 +51,8 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 			{"nether/explore_nether", "Hot Tourist Destinations", "biome"}};
 
 	public static boolean names;
+	/** Set when you ask for Minecraft's own screen, so L doesn't send you back here. */
+	public static boolean vanillaWanted;
 	private final List<Tab> tabs = new ArrayList<>();
 	private final List<Tracker> trackers = new ArrayList<>();
 	private final Map<String, Boolean> doneById = new HashMap<>();
@@ -97,6 +99,7 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 		});
 		action(this.width / 2 - 50, y, 100, "Vanilla screen", () -> {
 			if (this.minecraft.getConnection() != null) {
+				vanillaWanted = true;
 				this.minecraft.setScreenAndShow(new net.minecraft.client.gui.screens.advancements.AdvancementsScreen(this.minecraft.getConnection().getAdvancements()));
 			}
 		});

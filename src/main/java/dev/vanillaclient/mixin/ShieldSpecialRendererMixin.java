@@ -59,7 +59,8 @@ public class ShieldSpecialRendererMixin {
 			Cosmetics.Tex t = r == null || !dev.vanillaclient.config.Config.get().ranks.showOthers ? null : Cosmetics.texture(Cosmetics.Kind.SHIELD, r.shield());
 			tex = t == null ? null : t.id();
 		} else {
-			tex = Cosmetics.shieldTexture();
+			var cc = dev.vanillaclient.config.Config.get().cosmetics;
+			tex = cc.shieldReplace || cc.shieldWithoutItem ? Cosmetics.shieldTexture() : null;
 		}
 		if (tex == null) return;
 		if (data != null) {

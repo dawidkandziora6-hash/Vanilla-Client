@@ -449,4 +449,54 @@ public final class InfoModules {
 			return c + " hits";
 		}
 	}
+
+	/** Time played in this world, counting up every second. */
+	public static final class Playtime extends TextModule {
+		private static int baseTicks = -1;
+		private static long baseAt;
+
+		public Playtime() {
+			super("playtime", "Playtime");
+		}
+
+		@Override
+		public Config.TextHud settings() {
+			return Config.get().playtime;
+		}
+
+		@Override
+		public ItemStack icon() {
+			return Icons.stack(Items.DAYLIGHT_DETECTOR);
+		}
+
+		static long ticks() {
+			Minecraft mc = mc();
+			if (mc.player == null) {
+				baseTicks = -1;
+				return -1;
+			}
+			var stat = net.minecraft.stats.Stats.CUSTOM.get(net.minecraft.stats.Stats.PLAY_TIME);
+			var srv = mc.getSingleplayerServer();
+			if (srv != null) {
+				var sp = srv.getPlayerList().getPlayer(mc.player.getUUID());
+				if (sp != null) return sp.getStats().getValue(stat);
+			}
+			// servers: last known value from the statistics + time since then
+			int known = mc.player.getStats().getValue(stat);
+			if (known != baseTicks) {
+				baseTicks = known;
+				baseAt = System.currentTimeMillis();
+			}
+			return baseTicks + (System.currentTimeMillis() - baseAt) / 50L;
+		}
+
+		@Override
+		protected String value(boolean editing) {
+			long t = ticks();
+			if (t < 0) return editing ? "2:14:07" : null;
+			long s = t / 20L;
+			long d = s / 86400, h = (s / 3600) % 24, m = (s / 60) % 60, sec = s % 60;
+			return d > 0 ? String.format(Locale.ROOT, "%dd %d:%02d:%02d", d, h, m, sec) : String.format(Locale.ROOT, "%d:%02d:%02d", h, m, sec);
+		}
+	}
 }

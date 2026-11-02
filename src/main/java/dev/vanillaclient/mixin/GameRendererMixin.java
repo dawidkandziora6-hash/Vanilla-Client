@@ -1,6 +1,7 @@
 package dev.vanillaclient.mixin;
 
-import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.vanillaclient.config.Config;
 import dev.vanillaclient.zoom.Zoom;
@@ -29,12 +30,22 @@ public class GameRendererMixin {
 		return projection;
 	}
 
-	@WrapWithCondition(
+	@WrapOperation(
 			method = "renderItemInHand(Lnet/minecraft/client/renderer/state/level/CameraRenderState;Lnet/minecraft/client/renderer/state/level/PlayerRenderState;Lcom/mojang/renderpearl/api/textures/GpuTextureView;)V",
 			at = @At(value = "INVOKE",
 					target = "Lnet/minecraft/client/renderer/FirstPersonHandsAndItemsRenderer;submitHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/PlayerRenderState;Lnet/minecraft/client/renderer/state/level/FirstPersonHandsAndItemsRenderState;)V"))
-	private boolean vc$hideHandWhileZooming(FirstPersonHandsAndItemsRenderer renderer, float partialTick, PoseStack pose,
-			SubmitNodeCollector collector, PlayerRenderState player, FirstPersonHandsAndItemsRenderState hands) {
-		return !(Config.get().zoom.hideHand && Zoom.currentFactor() > 1.05f);
+	private void vc$hideHandWhileZooming(FirstPersonHandsAndItemsRenderer renderer, float partialTick, PoseStack pose,
+			SubmitNodeCollector collector, PlayerRenderState player, FirstPersonHandsAndItemsRenderState hands, Operation<Void> original) {
+		float k = Config.get().zoom.hideHand ? Zoom.handHidden() : 0f;
+		if (k >= 0.999f) return; // fully zoomed: no hand
+		if (k <= 0.001f) {
+			original.call(renderer, partialTick, pose, collector, player, hands);
+			return;
+		}
+		// while zooming in/out the hand slides smoothly down / back up instead of popping
+		pose.pushPose();
+		pose.translate(0f, -k * k * 0.9f, 0f);
+		original.call(renderer, partialTick, pose, collector, player, hands);
+		pose.popPose();
 	}
 }

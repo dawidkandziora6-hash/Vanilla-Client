@@ -83,6 +83,7 @@ public final class VanillaClient implements ClientModInitializer {
 				"key.vanillaclient.fullbright", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
 		Zoom.init(zoom);
 		dev.vanillaclient.pvp.Combat.init();
+		net.fabricmc.fabric.api.client.rendering.v1.ClientTooltipComponentCallback.EVENT.register(dev.vanillaclient.features.ContainerPreview::client);
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (openMenu.consumeClick()) {
@@ -106,10 +107,9 @@ public final class VanillaClient implements ClientModInitializer {
 				if (client.gui.screen() == null) client.setScreenAndShow(new dev.vanillaclient.gui.CosmeticsScreen(null));
 			}
 			while (hitboxKey.consumeClick()) {
-				Config.Hitboxes hb = Config.get().hitboxes;
-				hb.enabled = !hb.enabled;
-				Config.save();
-				client.gui.hud.setOverlayMessage(Component.literal("Hitboxes " + (hb.enabled ? "§aon" : "§coff")), false);
+				boolean nowOn = !dev.vanillaclient.pvp.Hitboxes.on();
+				dev.vanillaclient.pvp.Hitboxes.set(nowOn);
+				client.gui.hud.setOverlayMessage(Component.literal("Hitboxes " + (nowOn ? "§aon" : "§coff")), false);
 			}
 			while (fullbrightKey.consumeClick()) {
 				Config.Pvp pv = Config.get().pvp;
@@ -131,6 +131,8 @@ public final class VanillaClient implements ClientModInitializer {
 			dev.vanillaclient.features.Ranks.tick(client);
 			dev.vanillaclient.hud.InfoModules.tick(client);
 			dev.vanillaclient.pvp.Combat.tick(client);
+			dev.vanillaclient.visual.Glint.tick(client);
+			dev.vanillaclient.features.EnderChestCache.tick(client);
 		});
 		// sort key also works while a chest is open (screens swallow normal key mappings)
 		ScreenEvents.BEFORE_INIT.register((client, screen, w, h) -> {
@@ -205,6 +207,16 @@ public final class VanillaClient implements ClientModInitializer {
 	}
 
 	private static void afterScreenInit(Minecraft client, Screen screen, int w, int h) {
+		// L (advancements) opens the Vanilla Client tracker
+		if (screen instanceof net.minecraft.client.gui.screens.advancements.AdvancementsScreen && Config.get().ownAdvancementsScreen) {
+			if (!dev.vanillaclient.gui.AdvancementsChecklistScreen.vanillaWanted) {
+				client.execute(() -> {
+					if (client.gui.screen() == screen) client.setScreenAndShow(new dev.vanillaclient.gui.AdvancementsChecklistScreen(null));
+				});
+				return;
+			}
+			ScreenEvents.remove(screen).register(s -> dev.vanillaclient.gui.AdvancementsChecklistScreen.vanillaWanted = false);
+		}
 		List<AbstractWidget> widgets = Screens.getWidgets(screen);
 		if (dev.vanillaclient.features.ChestTools.supported(screen)) {
 			dev.vanillaclient.features.ChestTools.addButtons(screen, widgets);

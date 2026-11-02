@@ -19,7 +19,9 @@ public class EntityCullingMixin {
 		Config.Performance p = Config.get().performance;
 		if (!p.cullEntities) return;
 		if (entity instanceof Player && p.alwaysPlayers) return;
-		int d = entity instanceof ItemEntity ? p.itemDistance : p.entityDistance;
+		int d = entity instanceof ItemEntity ? p.itemDistance
+				: entity instanceof net.minecraft.world.entity.decoration.ArmorStand || entity instanceof net.minecraft.world.entity.decoration.HangingEntity ? p.decorDistance
+				: p.entityDistance;
 		if (entity.distanceToSqr(x, y, z) > (double) d * d) cir.setReturnValue(false);
 	}
 }
