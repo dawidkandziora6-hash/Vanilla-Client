@@ -287,7 +287,7 @@ public final class SettingsScreen extends BaseScreen {
 		Config.Days s = cfg().days;
 		list.add(new Ui.Header("DAYS"));
 		list.add(new Ui.Toggle("Show on screen", i(Items.CLOCK), () -> s.enabled, v -> s.enabled = v));
-		list.add(new Ui.Info("Counts from day 1, exactly like your world's days."));
+		list.add(new Ui.Info("Counts from day 0: a new world starts at Day 0."));
 		labelOptions(s, "e.g. \"Day\", \"UHC Day\", \"Tag\" …");
 		style(s, true);
 	}

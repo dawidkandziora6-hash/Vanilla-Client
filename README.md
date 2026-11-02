@@ -7,7 +7,7 @@ changes no game mechanics – it only shows things. Cosmetics are only visible t
 
 | Module | What it does |
 |---|---|
-| **Days** | "Day 37" on screen, counted from day 1, your own label |
+| **Days** | "Day 37" on screen, counted from day 0, your own label |
 | **Coordinates** | XYZ, facing, Nether/Overworld position, chunk – every label editable |
 | **More HUD modules** | FPS, ping, biome, real time, speed, light level, session time, rank, potion effects, item counter (totems, gapples, pearls …) |
 | **Ranks** | Client tiers Plus, Pro, Ultra, Ultra+, Elite, Legend, Creator, Partner, Staff, Dev, Owner – given by name in [`ranks.json`](ranks.json) (not obtainable yet). Perks: name color, bold/italic, gradient, animated gradient, name font, own badge |

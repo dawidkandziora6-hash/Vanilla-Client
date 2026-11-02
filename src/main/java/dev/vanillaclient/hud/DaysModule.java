@@ -5,7 +5,7 @@ import dev.vanillaclient.gui.Icons;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-/** "Day 37" – always counted from day 1, with your own label. */
+/** "Day 37" – counted from day 0 (a new world starts at Day 0), with your own label. */
 public final class DaysModule extends TextModule {
 	public DaysModule() {
 		super("days", "Days");
@@ -23,6 +23,6 @@ public final class DaysModule extends TextModule {
 
 	@Override
 	protected String value(boolean editing) {
-		return String.valueOf(WorldTime.day(true));
+		return String.valueOf(WorldTime.day(false));
 	}
 }
