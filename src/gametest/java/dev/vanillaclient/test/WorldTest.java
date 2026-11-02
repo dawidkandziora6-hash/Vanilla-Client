@@ -177,6 +177,9 @@ public class WorldTest implements FabricClientGameTest {
 			ctx.takeScreenshot("w08b_chest_stored");
 			ctx.setScreen(() -> null);
 
+			s.runCommand("advancement grant @a only minecraft:story/mine_diamond");
+			ctx.waitTicks(40);
+			ctx.takeScreenshot("w08c_advancement_chat");
 			for (String a : new String[] {"story/root", "story/mine_stone", "story/upgrade_tools", "story/smelt_iron", "nether/root", "adventure/root", "husbandry/root", "husbandry/plant_seed"})
 				s.runCommand("advancement grant @a only minecraft:" + a);
 			s.runCommand("advancement grant @a only minecraft:adventure/adventuring_time minecraft:plains");

@@ -449,6 +449,8 @@ public final class Config {
 	public boolean helperButtons = true;
 	/** L opens the Vanilla Client advancements tracker. */
 	public boolean ownAdvancementsScreen = true;
+	/** "✦ 38/126 advancements" in the chat after you get one. */
+	public boolean advancementChat = true;
 
 	public static List<Category> defaultCategories() {
 		return new ArrayList<>(List.of(new Category("Farms", 0), new Category("Builds", 1),

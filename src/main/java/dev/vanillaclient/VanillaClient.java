@@ -45,6 +45,10 @@ public final class VanillaClient implements ClientModInitializer {
 		dev.vanillaclient.net.ClientSync.init();
 		// /vcgallery [file] – opened from the screenshot chat message
 		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, ctx) -> {
+			dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("vctracker").executes(c -> {
+				pending = () -> Minecraft.getInstance().setScreenAndShow(new dev.vanillaclient.gui.AdvancementsChecklistScreen(null));
+				return 1;
+			}));
 			dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("vcgallery")
 					.executes(c -> {
 						pending = () -> Minecraft.getInstance().setScreenAndShow(new dev.vanillaclient.gui.GalleryScreen(null));
@@ -132,6 +136,7 @@ public final class VanillaClient implements ClientModInitializer {
 			dev.vanillaclient.hud.InfoModules.tick(client);
 			dev.vanillaclient.pvp.Combat.tick(client);
 			dev.vanillaclient.visual.Glint.tick(client);
+			dev.vanillaclient.features.AdvancementProgressChat.tick(client, Config.get().advancementChat, "vctracker");
 			dev.vanillaclient.features.EnderChestCache.tick(client);
 		});
 		// sort key also works while a chest is open (screens swallow normal key mappings)

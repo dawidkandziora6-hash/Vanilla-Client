@@ -18,14 +18,29 @@ import net.minecraft.resources.Identifier;
  * multi-part ones. Minecraft's own screen is one click away.
  */
 public final class AATracker implements ClientModInitializer {
+	private static boolean openNext;
+
 	@Override
 	public void onInitializeClient() {
+		net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback.EVENT.register((dispatcher, ctx) ->
+				dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal("aatracker").executes(c -> {
+					openNext = true; // open after the chat screen has closed
+					return 1;
+				})));
 		KeyMapping.Category cat = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("aatracker", "main"));
 		KeyMapping open = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.aatracker.open", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), cat));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (open.consumeClick()) {
 				if (client.gui.screen() == null) client.setScreenAndShow(new TrackerScreen(null));
+			}
+			if (openNext && !(client.gui.screen() instanceof net.minecraft.client.gui.screens.ChatScreen)) {
+				openNext = false;
+				client.setScreenAndShow(new TrackerScreen(null));
+			}
+			// Vanilla Client already writes the same line – don't write it twice
+			if (!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("vanillaclient")) {
+				AdvancementProgressChat.tick(client, true, "aatracker");
 			}
 		});
 		ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
