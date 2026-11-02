@@ -473,7 +473,133 @@ def anim(fn, name):
     strip([fn(i / NF) for i in range(NF)], name)
 
 
-for coll in ("inferno", "celestial", "void"):
+# ======================================================================== AESTHETIC SETS: Monochrome & Sakura
+
+def petals(cv, t, seed, n, col, speed=1.0, glow=0.3):
+    """Falling petals / ink flakes that drift sideways (loops every animation)."""
+    rng = np.random.default_rng(seed)
+    for _ in range(n):
+        x0, y0, ph = rng.uniform(0, cv.w), rng.uniform(0, cv.h), rng.uniform(0, 1)
+        k = (t * speed + ph) % 1
+        y = (y0 + k * cv.h) % cv.h
+        x = (x0 + math.sin(TAU * (k * 2 + ph)) * 2) % cv.w
+        cv.px(x, y, col, glow)
+        if (int(t * NF) + int(ph * 10)) % 2 == 0:
+            cv.px(x + 1, y, mix(cv.c[int(y) % cv.h, int(x + 1) % cv.w], col, 0.6))
+
+
+def blossom_mask(cv, cx, cy, r, rot, petals_n=5, notch=True):
+    """Five-petal cherry blossom as a soft coverage mask."""
+    dx, dy = cv.X - cx, cv.Y - cy
+    m = np.zeros_like(dx)
+    for i in range(petals_n):
+        a = rot + TAU * i / petals_n
+        u = dx * math.cos(a) + dy * math.sin(a)
+        v = -dx * math.sin(a) + dy * math.cos(a)
+        p = ((u - r * 0.55) / (r * 0.55)) ** 2 + (v / (r * 0.36)) ** 2
+        inside = np.clip(1.6 - p * 1.6, 0, 1)
+        if notch:
+            inside *= ~((u > r * 0.95) & (np.abs(v) < r * 0.08))
+        m = np.maximum(m, inside)
+    return m
+
+
+def cape_monochrome(t):
+    cv = Canvas(20, 32)
+    cv.c = np.zeros_like(cv.c) + C("#0d0d0f")
+    # manga screentone: dots get bigger towards the bottom
+    tone = ((cv.X + (cv.Y // 2) % 2) % 2 == 0) & ((cv.Y % 2) == 0) & (cv.Y > 18 - 4 * np.sin(cv.X * 0.6))
+    cv.c = np.where(tone[..., None], C("#3a3a3e"), cv.c)
+    # crescent moon
+    moon = cv.cov(lambda d, s: d.ellipse([5.5 * s, 4 * s, 14.5 * s, 13 * s], fill=255))
+    cut = cv.cov(lambda d, s: d.ellipse([8 * s, 2.6 * s, 17 * s, 11.6 * s], fill=255))
+    cv.paint(np.clip(moon - cut, 0, 1), C("#f4f4f4"), 0.5)
+    # ink rain lines falling
+    rng = np.random.default_rng(51)
+    for _ in range(5):
+        x, y0, ph = int(rng.uniform(2, 18)), rng.uniform(0, 32), rng.uniform(0, 1)
+        y = (y0 + (t + ph) * 32) % 32
+        for k in range(3):
+            cv.px(x, (y - k) % 32, mix(C("#0d0d0f"), C("#e8e8e8"), 1 - k * 0.3))
+    petals(cv, t, 52, 6, C("#ffffff"), glow=0.2)
+    border(cv, C("#f0f0f0"), 0)
+    border(cv, C("#2a2a2e"), 1)
+    return cape_frame(cv, C("#121214"))
+
+
+def cape_sakura(t):
+    cv = Canvas(20, 32)
+    # anime night: navy sky to a soft pink horizon
+    cv.c = mix(C("#1b1940"), C("#f2a6c4"), np.clip((cv.Y - 6) / 26, 0, 1) ** 1.4)
+    twinkle(cv, t, 61, 7, C("#ffffff"), region=12, glow=0.6)
+    # big pale moon
+    cv.paint(cv.cov(lambda d, s: d.ellipse([9 * s, 3 * s, 17 * s, 11 * s], fill=255)), C("#fff3f6"), 0.6)
+    # branch across the cape
+    br = cv.cov(lambda d, s: [d.line([(0, 20 * s), (6 * s, 17 * s), (12 * s, 15.5 * s), (20 * s, 12 * s)], fill=255, width=int(1.3 * s)),
+                               d.line([(6 * s, 17 * s), (9 * s, 21 * s)], fill=255, width=int(1.0 * s))])
+    cv.c = mix(cv.c, C("#3a2028"), br)
+    for (x, y, r) in ((3, 18.5, 2.2), (8, 15.5, 2.4), (13, 14.5, 2.0), (17, 12, 2.3), (9.5, 21.5, 2.0)):
+        m = blossom_mask(cv, x, y, r, TAU * t / 5 + x)
+        cv.paint(m, C("#ffc4d8"), 0.15)
+        cv.px(x, y, C("#ff6f9c"))
+    petals(cv, t, 62, 9, C("#ffb3cc"), glow=0.25)
+    border(cv, C("#ffd6e4"), 0)
+    return cape_frame(cv, C("#2a1f40"))
+
+
+def shield_monochrome(t):
+    cv = round_canvas()
+    c = (SD - 1) / 2
+    dx, dy = cv.X - c, cv.Y - c
+    R = SD / 2 - 4
+    # yin-yang
+    right = dx > 0
+    top_small = np.hypot(dx, dy + R / 2) < R / 2
+    bot_small = np.hypot(dx, dy - R / 2) < R / 2
+    white = (right & ~bot_small) | top_small
+    cv.c = np.where(white[..., None], C("#f2f2f2"), C("#101012"))
+    cv.c = np.where((np.hypot(dx, dy + R / 2) < R / 7)[..., None], C("#101012"), cv.c)
+    cv.c = np.where((np.hypot(dx, dy - R / 2) < R / 7)[..., None], C("#f2f2f2"), cv.c)
+    # slow shine sweep
+    pos = (t * 1.3 - 0.15) * SD * 2
+    s = np.clip(1 - np.abs(cv.X + cv.Y - pos) / 3, 0, 1) * (cv.r < R)
+    cv.c = mix(cv.c, C("#ffffff"), s * 0.35)
+    rim(cv, C("#c8c8d0"))
+    return shield_frame(cv, C("#2a2a2e"))
+
+
+def shield_sakura(t):
+    cv = round_canvas()
+    cv.c = mix(C("#ffe3ee"), C("#f4a3c2"), cv.r / (SD / 2))
+    ring = np.abs(cv.r - 12.5) < 0.6
+    cv.c = np.where(ring[..., None], mix(cv.c, C("#ffffff"), 0.7), cv.c)
+    m = blossom_mask(cv, 17.5, 17.5, 10, TAU * t / 5 - math.pi / 2)
+    cv.paint(m, C("#fff5f8"), 0.2)
+    inner = blossom_mask(cv, 17.5, 17.5, 5, TAU * t / 5 - math.pi / 2, notch=False)
+    cv.paint(inner * 0.6, C("#ff9fbf"))
+    cv.paint(cv.cov(lambda d, s: d.ellipse([15.5 * s, 15.5 * s, 19.5 * s, 19.5 * s], fill=255)), C("#e8457a"), 0.3)
+    petals(cv, t, 72, 5, C("#ff8fb5"))
+    cv.e *= (cv.r < SD / 2 - 5)[..., None]
+    rim(cv, C("#e8c060"))
+    return shield_frame(cv, C("#c98aa2"))
+
+
+def wing_monochrome(t):
+    cv = feather_wing(t, C("#1c1c20"), C("#f2f2f2"), C("#050506"), 81)
+    pos = (t * 1.4 - 0.2) * (W + H)
+    s = np.clip(1 - np.abs(cv.X + cv.Y * 0.6 - pos) / 4, 0, 1) * cv.a
+    cv.c = mix(cv.c, C("#ffffff"), s * 0.6)
+    return cv
+
+
+def wing_sakura(t):
+    cv = feather_wing(t, C("#ffeef4"), C("#e2a3bb"), C("#ff8fb5"), 91)
+    petals(cv, t, 92, 8, C("#ff9fc0"), glow=0.3)
+    twinkle(cv, t, 93, 6, C("#ffffff"), glow=0.6)
+    return cv
+
+
+for coll in ("inferno", "celestial", "void", "monochrome", "sakura"):
     anim(globals()[f"cape_{coll}"], f"cape_{coll}.png")
     anim(globals()[f"shield_{coll}"], f"shield_{coll}.png")
     wings(coll, globals()[f"wing_{coll}"])

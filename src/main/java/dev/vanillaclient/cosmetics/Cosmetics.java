@@ -48,26 +48,34 @@ public final class Cosmetics {
 	public static final List<Collection> COLLECTIONS = List.of(
 			new Collection("inferno", "Inferno", "Living fire & demon wings", 0xFFE0401A, 0xFFFFB040),
 			new Collection("celestial", "Celestial", "Gold sun & angel wings", 0xFFF2C440, 0xFFFFF4C0),
-			new Collection("void", "Void", "Galaxy & ender energy", 0xFF8C3CDC, 0xFFD8A0FF));
+			new Collection("void", "Void", "Galaxy & ender energy", 0xFF8C3CDC, 0xFFD8A0FF),
+			new Collection("monochrome", "Monochrome", "Black & white · moon & ink", 0xFFB8B8C0, 0xFFFFFFFF),
+			new Collection("sakura", "Sakura", "Anime night & cherry blossoms", 0xFFFF8FB5, 0xFFFFD6E4));
 
 	public static final List<Design> CAPES = List.of(
 			new Design(NONE, "None", "No cape", 0xFF555555),
 			new Design("inferno", "Inferno Cape", "✦ Rising flames", 0xFFE0401A),
 			new Design("celestial", "Celestial Cape", "✦ Turning sun", 0xFFF2C440),
 			new Design("void", "Void Cape", "✦ Spinning galaxy", 0xFF8C3CDC),
+			new Design("monochrome", "Monochrome Cape", "✦ Crescent moon · ink rain", 0xFFB8B8C0),
+			new Design("sakura", "Sakura Cape", "✦ Falling petals", 0xFFFF8FB5),
 			new Design(CUSTOM, "Your Image", "cosmetics/cape.png", 0xFFFFFFFF));
 
 	public static final List<Design> WINGS = List.of(
 			new Design(NONE, "None", "No wings", 0xFF555555),
 			new Design("inferno", "Inferno Wings", "✦ Lava veins · flapping", 0xFFE0401A),
 			new Design("celestial", "Celestial Wings", "✦ Golden feathers", 0xFFF2C440),
-			new Design("void", "Void Wings", "✦ Ender energy", 0xFF8C3CDC));
+			new Design("void", "Void Wings", "✦ Ender energy", 0xFF8C3CDC),
+			new Design("monochrome", "Monochrome Wings", "✦ Ink feathers", 0xFFB8B8C0),
+			new Design("sakura", "Sakura Wings", "✦ Petal feathers", 0xFFFF8FB5));
 
 	public static final List<Design> SHIELDS = List.of(
 			new Design(NONE, "Vanilla", "Normal shield", 0xFF555555),
 			new Design("inferno", "Inferno Shield", "✦ Flame crest", 0xFFE0401A),
 			new Design("celestial", "Celestial Shield", "✦ Golden sun", 0xFFF2C440),
 			new Design("void", "Void Shield", "✦ Ender eye", 0xFF8C3CDC),
+			new Design("monochrome", "Monochrome Shield", "✦ Yin & yang", 0xFFB8B8C0),
+			new Design("sakura", "Sakura Shield", "✦ Turning blossom", 0xFFFF8FB5),
 			new Design(CUSTOM, "Your Image", "cosmetics/shield.png", 0xFFFFFFFF));
 
 	/** Wears all three parts of a collection. */

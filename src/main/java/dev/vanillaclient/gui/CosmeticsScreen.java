@@ -91,7 +91,10 @@ public final class CosmeticsScreen extends BaseScreen {
 
 	private int cardH() {
 		int avail = bottom() - gridTop() - 4;
-		if (tab == SETS) return Math.max(34, Math.min(70, (avail - 12) / 3));
+		if (tab == SETS) {
+			int n = Cosmetics.COLLECTIONS.size();
+			return Math.max(30, Math.min(70, (avail - (n - 1) * 6) / n));
+		}
 		return Math.max(44, Math.min(88, (avail - 6) / 2));
 	}
 

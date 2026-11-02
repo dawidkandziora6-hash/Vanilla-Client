@@ -25,13 +25,14 @@ mkdir -p probe/assets
 while read -r a; do [ -z "$a" ] && continue; unzip -p "$JAR" "$a" > "probe/assets/$(echo $a | tr '/' '_')" 2>/dev/null; done < tools/probe-assets.txt
 unzip -l "$JAR" | awk '{print $4}' | grep -E "sprites/hud/(crosshair|locator|experience)" > probe/hud-sprites.txt || true
 # who uses ItemActivation / displayItemActivation
-mkdir -p /tmp/x && cd /tmp/x && unzip -qo "$JAR" 'net/minecraft/client/*' && grep -rl "ItemActivation" . > "$OLDPWD/probe/itemactivation-users.txt" || true
+ROOT=$(pwd)
+mkdir -p /tmp/x && (cd /tmp/x && unzip -qo "$JAR" 'net/minecraft/client/*' && grep -rl "ItemActivation" . > "$ROOT/probe/itemactivation-users.txt") || true
 GT=$(find ~/.gradle -name "fabric-client-gametest-api-v1*.jar" | head -1); [ -n "$GT" ] && unzip -l "$GT" | awk "{print \$4}" | grep "\.class$" > "$OLDPWD/probe/gametest-classes.txt" 2>/dev/null; unzip -l "$GT" | awk "{print \$4}" | grep "\.class$" > probe/gametest-classes.txt 2>/dev/null || true
 
 RJ=$(find ~/.gradle -name "fabric-rendering-v1*.jar" | head -1); unzip -l "$RJ" | awk '{print $4}' | grep "api.*\.class$" > probe/rendering-classes.txt 2>/dev/null || true
 for c in $(grep -i "layer\|feature" probe/rendering-classes.txt | sed 's/\.class$//'); do javap -p -cp "$RJ:$JAR" "$(echo $c | tr '/' '.')" >> probe/rendering-layer-api.txt 2>&1; done
 # fabric rendering / event api class names
-for j in $(find ~/.gradle -name 'fabric-rendering-v1*.jar' -o -name 'fabric-events-interaction*.jar' | head -4); do unzip -l "$j" | awk '{print $4}' | grep "\.class$"; done > probe/fabric-render-classes.txt 2>/dev/null || true
+for j in $(find ~/.gradle -name 'fabric-*.jar' -path '*fabric-api*'); do unzip -l "$j" | awk '{print $4}' | grep -iE "tooltip.*\.class$"; done > probe/fabric-tooltip-classes.txt 2>/dev/null || true
 grep -E "renderer/state/|HitboxesRenderState|Lightmap" probe/classes.txt > probe/state-classes.txt || true
 unzip -l "$JAR" | awk '{print $4}' | grep -iE "glint" > probe/glint.txt || true
 grep -iE "tooltip" probe/classes.txt > probe/tooltip-classes.txt || true
