@@ -1,1 +1,13 @@
-net/minecraft/client/renderer/debug/DebugRenderer -c
+net/minecraft/client/gui/screens/inventory/tooltip/ClientTooltipComponent
+net/fabricmc/fabric/api/client/rendering/v1/TooltipComponentCallback
+net/minecraft/world/item/component/ItemContainerContents
+net/minecraft/world/inventory/tooltip/TooltipComponent
+net/minecraft/client/particle/ParticleEngine
+net/minecraft/client/renderer/blockentity/BlockEntityRenderDispatcher
+net/minecraft/client/renderer/entity/layers/ItemInHandLayer -c
+net/minecraft/client/renderer/texture/TextureManager
+net/minecraft/client/renderer/texture/DynamicTexture
+net/minecraft/client/renderer/item/ItemStackRenderState
+net/minecraft/client/renderer/entity/ItemRenderer
+net/minecraft/client/model/HumanoidModel
+net/minecraft/world/item/ItemStack

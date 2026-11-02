@@ -33,3 +33,5 @@ for c in $(grep -i "layer\|feature" probe/rendering-classes.txt | sed 's/\.class
 # fabric rendering / event api class names
 for j in $(find ~/.gradle -name 'fabric-rendering-v1*.jar' -o -name 'fabric-events-interaction*.jar' | head -4); do unzip -l "$j" | awk '{print $4}' | grep "\.class$"; done > probe/fabric-render-classes.txt 2>/dev/null || true
 grep -E "renderer/state/|HitboxesRenderState|Lightmap" probe/classes.txt > probe/state-classes.txt || true
+unzip -l "$JAR" | awk '{print $4}' | grep -iE "glint" > probe/glint.txt || true
+grep -iE "tooltip" probe/classes.txt > probe/tooltip-classes.txt || true
