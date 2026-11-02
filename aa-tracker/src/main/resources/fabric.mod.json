@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "aatracker",
+  "version": "${version}",
+  "name": "All Advancements Tracker",
+  "description": "Press L: every advancement as an icon grid that ticks itself off (like AATool), progress bar, in-game time, hints, and checklists for biomes, mobs, foods, animals, cats, wolves and Nether biomes. Client-side only.",
+  "authors": ["Dawid"],
+  "license": "MIT",
+  "icon": "assets/aatracker/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.aatracker.AATracker"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "fabric-api": "*",
+    "minecraft": ">=26.3- <26.4",
+    "java": ">=25"
+  }
+}

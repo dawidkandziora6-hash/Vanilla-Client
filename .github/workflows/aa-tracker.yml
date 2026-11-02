@@ -1,0 +1,40 @@
+name: aa-tracker
+on:
+  push:
+    branches: [main]
+    paths: ['aa-tracker/**', '.github/workflows/aa-tracker.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - name: Build
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew -p aa-tracker build --no-daemon 2>&1 | tee build.log
+      - name: Publish build log
+        if: always()
+        run: |
+          mkdir -p ci && cp build.log ci/ 2>/dev/null || echo "no log" > ci/build.log
+          cd ci && git init -q && git checkout -q -b aa-log
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          git add -A && git commit -qm "log ${GITHUB_SHA::7}" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" aa-log
+      - name: Release "aa-tracker"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete aa-tracker -y --cleanup-tag || true
+          gh release create aa-tracker aa-tracker/build/libs/*.jar \
+            --title "All Advancements Tracker (MC 26.3)" \
+            --notes "Standalone mod: only the All Advancements tracker from Vanilla Client. Needs Fabric Loader ≥ 0.19.5 and Fabric API 0.161.0+26.3." \
+            --latest=false
