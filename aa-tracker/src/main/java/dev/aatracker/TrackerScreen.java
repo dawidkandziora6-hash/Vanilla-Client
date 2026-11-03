@@ -260,8 +260,7 @@ public final class TrackerScreen extends Screen {
 	private int panelW(Tab t, int rows) {
 		int n = t.entries().size();
 		int tiles = ((n + rows - 1) / rows) * tileW() + 8;
-		int title = 26 + this.font.width(t.display().title().getString()) + this.font.width(n + "/" + n) + 6;
-		return Math.max(tiles, title);
+		return tiles;
 	}
 
 	private int rows() {
@@ -313,8 +312,15 @@ public final class TrackerScreen extends Screen {
 		g.blitSprite(RenderPipelines.GUI_TEXTURED, TITLE_BOX, x, y, w, 20);
 		if (!icon.isEmpty()) Icons.scaled(g, icon, x + 3, y + 3, 0.875f);
 		int room = w - 22 - this.font.width(count) - 4;
-		String t = this.font.width(title) <= room ? title : this.font.plainSubstrByWidth(title, room - this.font.width("…")) + "…";
-		g.text(this.font, t, x + 20, y + 6, 0xFFFFFFFF, true);
+		if (this.font.width(title) <= room) {
+			g.text(this.font, title, x + 20, y + 6, 0xFFFFFFFF, true);
+		} else if (this.font.width(title) * 0.7f <= room) {
+			g.pose().pushMatrix();
+			g.pose().translate(x + 20, y + 7.5f);
+			g.pose().scale(0.7f, 0.7f);
+			g.text(this.font, title, 0, 0, 0xFFFFFFFF, true);
+			g.pose().popMatrix();
+		} // too narrow: icon + count only
 		g.text(this.font, count, x + w - 4 - this.font.width(count), y + 6, complete ? 0xFF80FF20 : 0xFFFFFFFF, true);
 	}
 
