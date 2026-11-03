@@ -256,11 +256,19 @@ public final class TrackerScreen extends Screen {
 
 	// ------------------------------------------------------------ layout
 
+	/** Panel width: enough for the tiles and the full tab name. */
+	private int panelW(Tab t, int rows) {
+		int n = t.entries().size();
+		int tiles = ((n + rows - 1) / rows) * tileW() + 8;
+		int title = 26 + this.font.width(t.display().title().getString()) + this.font.width(n + "/" + n) + 6;
+		return Math.max(tiles, title);
+	}
+
 	private int rows() {
 		int w = this.width - 16;
 		for (int r = 1; r < 200; r++) {
 			int sum = 0;
-			for (Tab t : tabs) sum += ((t.entries().size() + r - 1) / r) * tileW() + 8;
+			for (Tab t : tabs) sum += panelW(t, r);
 			sum += (tabs.size() - 1) * 6;
 			if (sum <= w) return r;
 		}
@@ -342,18 +350,19 @@ public final class TrackerScreen extends Screen {
 		// ---- one panel per tab
 		int rows = rows();
 		int totalW = 0;
-		for (Tab t : tabs) totalW += ((t.entries().size() + rows - 1) / rows) * tileW() + 8 + 6;
+		for (Tab t : tabs) totalW += panelW(t, rows) + 6;
 		int x = Math.max(8, (this.width - totalW + 6) / 2);
 		for (Tab t : tabs) {
 			int n = t.entries().size();
 			int cols = (n + rows - 1) / rows;
-			int pw = cols * tileW() + 8, ph = rows * tileH() + 26;
+			int pw = panelW(t, rows), ph = rows * tileH() + 26;
+			int ox = x + (pw - (cols * tileW() + 8)) / 2;
 			int d = 0;
 			for (Entry e : t.entries()) if (done(e)) d++;
 			panel(g, x, y, pw, ph, icon(t.display()), t.display().title().getString(), d + "/" + n, d == n);
 			for (int i = 0; i < n; i++) {
 				Entry e = t.entries().get(i);
-				int tx = x + 4 + (i / rows) * tileW(), ty = y + 22 + (i % rows) * tileH();
+				int tx = ox + 4 + (i / rows) * tileW(), ty = y + 22 + (i % rows) * tileH();
 				boolean hov = inside && mouseX >= tx && mouseX < tx + tileW() && mouseY >= ty && mouseY < ty + tileH();
 				if (hov) hovered = e;
 				drawTile(g, e, tx, ty, hov);
