@@ -1,0 +1,9 @@
+./net/minecraft/client/player/ItemActivation.class
+./net/minecraft/client/player/LocalPlayer.class
+./net/minecraft/client/multiplayer/ClientPacketListener.class
+./net/minecraft/client/multiplayer/MultiPlayerGameMode.class
+./net/minecraft/client/renderer/ScreenEffectRenderer.class
+./net/minecraft/client/renderer/state/level/PlayerRenderState$ItemActivationRenderState.class
+./net/minecraft/client/renderer/state/level/PlayerRenderState.class
+./net/minecraft/client/renderer/extract/LevelExtractor.class
+./net/minecraft/client/renderer/GameRenderer.class

@@ -1,0 +1,10 @@
+net/fabricmc/fabric/api/client/rendering/v1/ClientTooltipComponentCallback.class
+net/fabricmc/fabric/mixin/client/rendering/ClientTooltipComponentMixin.class
+net/fabricmc/fabric/impl/resource/client/PackTooltipComponent.class
+net/fabricmc/fabric/mixin/resource/client/ClientTooltipComponentMixin.class
+net/fabricmc/fabric/api/item/v1/FabricTooltipFlag.class
+net/fabricmc/fabric/api/item/v1/ItemComponentTooltipProviderRegistry.class
+net/fabricmc/fabric/impl/item/ItemComponentTooltipProviderRegistryImpl$TooltipPair.class
+net/fabricmc/fabric/impl/item/ItemComponentTooltipProviderRegistryImpl.class
+net/fabricmc/fabric/impl/item/VanillaTooltipProviderOrder.class
+net/fabricmc/fabric/api/client/item/v1/ItemTooltipCallback.class

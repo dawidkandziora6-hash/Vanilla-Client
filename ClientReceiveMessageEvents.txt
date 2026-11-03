@@ -1,0 +1,26 @@
+Compiled from "ClientReceiveMessageEvents.java"
+public final class net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents {
+  public static final net.fabricmc.fabric.api.event.Event<net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$AllowChat> ALLOW_CHAT;
+  public static final net.fabricmc.fabric.api.event.Event<net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$AllowGame> ALLOW_GAME;
+  public static final net.fabricmc.fabric.api.event.Event<net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$ModifyGame> MODIFY_GAME;
+  public static final net.fabricmc.fabric.api.event.Event<net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$Chat> CHAT;
+  public static final net.fabricmc.fabric.api.event.Event<net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$Game> GAME;
+  public static final net.fabricmc.fabric.api.event.Event<net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$ChatCanceled> CHAT_CANCELED;
+  public static final net.fabricmc.fabric.api.event.Event<net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$GameCanceled> GAME_CANCELED;
+  private net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents();
+  private static net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$GameCanceled lambda$static$12(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$GameCanceled[]);
+  private static void lambda$static$13(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$GameCanceled[], net.minecraft.network.chat.Component, boolean);
+  private static net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$ChatCanceled lambda$static$10(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$ChatCanceled[]);
+  private static void lambda$static$11(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$ChatCanceled[], net.minecraft.network.chat.Component, net.minecraft.network.chat.PlayerChatMessage, com.mojang.authlib.GameProfile, net.minecraft.network.chat.ChatType$Bound, java.time.Instant);
+  private static net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$Game lambda$static$8(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$Game[]);
+  private static void lambda$static$9(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$Game[], net.minecraft.network.chat.Component, boolean);
+  private static net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$Chat lambda$static$6(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$Chat[]);
+  private static void lambda$static$7(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$Chat[], net.minecraft.network.chat.Component, net.minecraft.network.chat.PlayerChatMessage, com.mojang.authlib.GameProfile, net.minecraft.network.chat.ChatType$Bound, java.time.Instant);
+  private static net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$ModifyGame lambda$static$4(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$ModifyGame[]);
+  private static net.minecraft.network.chat.Component lambda$static$5(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$ModifyGame[], net.minecraft.network.chat.Component, boolean);
+  private static net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$AllowGame lambda$static$2(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$AllowGame[]);
+  private static boolean lambda$static$3(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$AllowGame[], net.minecraft.network.chat.Component, boolean);
+  private static net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$AllowChat lambda$static$0(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$AllowChat[]);
+  private static boolean lambda$static$1(net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents$AllowChat[], net.minecraft.network.chat.Component, net.minecraft.network.chat.PlayerChatMessage, com.mojang.authlib.GameProfile, net.minecraft.network.chat.ChatType$Bound, java.time.Instant);
+  static {};
+}

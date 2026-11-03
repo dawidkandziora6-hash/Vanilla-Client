@@ -1,0 +1,7 @@
+assets/minecraft/shaders/core/glint.fsh
+assets/minecraft/shaders/core/glint.vsh
+assets/minecraft/textures/misc/enchanted_glint_armor.png
+assets/minecraft/textures/misc/enchanted_glint_item.png
+assets/minecraft/textures/misc/enchanted_glint_item.png.mcmeta
+assets/minecraft/textures/misc/enchanted_glint_armor.png.mcmeta
+assets/minecraft/textures/particle/glint.png
