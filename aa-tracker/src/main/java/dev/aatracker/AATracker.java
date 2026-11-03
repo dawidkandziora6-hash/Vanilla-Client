@@ -19,6 +19,7 @@ import net.minecraft.resources.Identifier;
  */
 public final class AATracker implements ClientModInitializer {
 	private static boolean openNext;
+	private static final boolean VC = net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("vanillaclient");
 
 	@Override
 	public void onInitializeClient() {
@@ -27,6 +28,8 @@ public final class AATracker implements ClientModInitializer {
 					openNext = true; // open after the chat screen has closed
 					return 1;
 				})));
+		// with Vanilla Client installed, it already does the chat count + sound
+		net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.MODIFY_GAME.register((msg, overlay) -> overlay || VC ? msg : AdvancementProgressChat.modify(msg));
 		KeyMapping.Category cat = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("aatracker", "main"));
 		KeyMapping open = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.aatracker.open", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), cat));
@@ -38,10 +41,7 @@ public final class AATracker implements ClientModInitializer {
 				openNext = false;
 				client.setScreenAndShow(new TrackerScreen(null));
 			}
-			// Vanilla Client already writes the same line – don't write it twice
-			if (!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("vanillaclient")) {
-				AdvancementProgressChat.tick(client, true, "aatracker");
-			}
+			if (!VC) AdvancementProgressChat.tick(client);
 		});
 		ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
 			if (!(screen instanceof AdvancementsScreen)) return;
@@ -52,7 +52,7 @@ public final class AATracker implements ClientModInitializer {
 				return;
 			}
 			ScreenEvents.remove(screen).register(s -> TrackerScreen.vanillaWanted = false);
-			Screens.getWidgets(screen).add(Button.builder(Component.literal("✦ All advancements"),
+			Screens.getWidgets(screen).add(Button.builder(Component.literal("All Advancements"),
 					b -> {
 						TrackerScreen.vanillaWanted = false;
 						client.setScreenAndShow(new TrackerScreen(null));

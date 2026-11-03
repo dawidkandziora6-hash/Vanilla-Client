@@ -87,6 +87,7 @@ public final class VanillaClient implements ClientModInitializer {
 				"key.vanillaclient.fullbright", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
 		Zoom.init(zoom);
 		dev.vanillaclient.pvp.Combat.init();
+		net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.MODIFY_GAME.register((msg, overlay) -> overlay ? msg : dev.vanillaclient.features.AdvancementProgressChat.modify(msg));
 		net.fabricmc.fabric.api.client.rendering.v1.ClientTooltipComponentCallback.EVENT.register(dev.vanillaclient.features.ContainerPreview::client);
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -136,7 +137,8 @@ public final class VanillaClient implements ClientModInitializer {
 			dev.vanillaclient.hud.InfoModules.tick(client);
 			dev.vanillaclient.pvp.Combat.tick(client);
 			dev.vanillaclient.visual.Glint.tick(client);
-			dev.vanillaclient.features.AdvancementProgressChat.tick(client, Config.get().advancementChat, "vctracker");
+			dev.vanillaclient.features.AdvancementProgressChat.enabled = Config.get().advancementChat;
+			dev.vanillaclient.features.AdvancementProgressChat.tick(client);
 			dev.vanillaclient.features.EnderChestCache.tick(client);
 		});
 		// sort key also works while a chest is open (screens swallow normal key mappings)

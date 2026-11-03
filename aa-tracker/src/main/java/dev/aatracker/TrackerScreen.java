@@ -15,9 +15,11 @@ import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.advancements.AdvancementTree;
 import net.minecraft.advancements.AdvancementType;
 import net.minecraft.advancements.DisplayInfo;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.stats.Stats;
@@ -26,33 +28,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 /**
- * All advancements at one glance (like an "all advancements" speedrun tracker):
- * every category as a grid of icons that tick off by themselves, plus checklists
- * for the multi-part ones (biomes, mobs, foods, animals, cats, wolves, nether biomes).
+ * All advancements at one glance, in Minecraft's own look: every tab as a grid of
+ * advancement frames that turn gold when done, the XP bar as progress bar, and
+ * checklists for the multi-part advancements.
  */
 public final class TrackerScreen extends Screen {
-	private final Screen parent;
-	private final long openedAt = System.currentTimeMillis();
-
-	private float intro() {
-		return Theme.easeOut((System.currentTimeMillis() - openedAt) / 250f);
-	}
-
-	private net.minecraft.client.gui.components.Button action(int x, int y, int w, String label, Runnable run) {
-		return addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.literal(label), b -> run.run()).bounds(x, y, w, 20).build());
-	}
-
-	@Override
-	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
-		super.extractRenderState(g, mouseX, mouseY, delta);
-		extractForeground(g, mouseX, mouseY, delta);
-	}
-
-	@Override
-	public void onClose() {
-		this.minecraft.setScreenAndShow(parent);
-	}
-
 	private record Entry(AdvancementHolder holder, DisplayInfo display, AdvancementProgress progress, String parentId) {}
 
 	private record Tab(DisplayInfo display, List<Entry> entries) {}
@@ -61,7 +41,6 @@ public final class TrackerScreen extends Screen {
 
 	private record Tracker(String id, String title, Item icon, List<Crit> crits) {}
 
-	/** Multi-part advancements that get their own checklist panel. */
 	private static final String[][] TRACKED = {
 			{"adventure/adventuring_time", "Adventuring Time", "biome"},
 			{"adventure/kill_all_mobs", "Monsters Hunted", "mob"},
@@ -71,9 +50,16 @@ public final class TrackerScreen extends Screen {
 			{"husbandry/whole_pack", "The Whole Pack", "none"},
 			{"nether/explore_nether", "Hot Tourist Destinations", "biome"}};
 
+	private static final Identifier XP_BG = Identifier.withDefaultNamespace("hud/experience_bar_background");
+	private static final Identifier XP_FILL = Identifier.withDefaultNamespace("hud/experience_bar_progress");
+	private static final Identifier TITLE_BOX = Identifier.withDefaultNamespace("advancements/title_box");
+	private static final int TILE = 28, TILE_NAMES_W = 54, TILE_NAMES_H = 42;
+
 	public static boolean names;
 	/** Set when you ask for Minecraft's own screen, so L doesn't send you back here. */
 	public static boolean vanillaWanted;
+
+	private final Screen parent;
 	private final List<Tab> tabs = new ArrayList<>();
 	private final List<Tracker> trackers = new ArrayList<>();
 	private final Map<String, Boolean> doneById = new HashMap<>();
@@ -82,49 +68,48 @@ public final class TrackerScreen extends Screen {
 	private String source = "";
 	private int scroll, contentH;
 	private long loadedAt;
-	private Entry hovered;
-	private Tracker hoveredTracker;
 
 	public TrackerScreen(Screen parent) {
 		super(Component.literal("All Advancements"));
 		this.parent = parent;
 	}
 
+	@Override
+	public void onClose() {
+		this.minecraft.setScreenAndShow(parent);
+	}
+
 	private int top() {
-		return 34;
+		return 36;
 	}
 
 	private int bottom() {
 		return this.height - 30;
 	}
 
-	private int contentW() {
-		return this.width - 16;
-	}
-
 	private int tileW() {
-		return names ? 46 : 24;
+		return names ? TILE_NAMES_W : TILE;
 	}
 
 	private int tileH() {
-		return names ? 40 : 24;
+		return names ? TILE_NAMES_H : TILE;
 	}
 
 	@Override
 	protected void init() {
 		load();
 		int y = this.height - 25;
-		action(this.width / 2 - 154, y, 100, names ? "Names: §aOn" : "Names: §7Off", () -> {
+		addRenderableWidget(Button.builder(Component.literal(names ? "Names: ON" : "Names: OFF"), b -> {
 			names = !names;
 			this.rebuildWidgets();
-		});
-		action(this.width / 2 - 50, y, 100, "Vanilla screen", () -> {
+		}).bounds(this.width / 2 - 154, y, 100, 20).build());
+		addRenderableWidget(Button.builder(Component.translatable("gui.advancements"), b -> {
 			if (this.minecraft.getConnection() != null) {
 				vanillaWanted = true;
 				this.minecraft.setScreenAndShow(new net.minecraft.client.gui.screens.advancements.AdvancementsScreen(this.minecraft.getConnection().getAdvancements()));
 			}
-		});
-		action(this.width / 2 + 54, y, 100, "✔ Done", this::onClose);
+		}).bounds(this.width / 2 - 50, y, 100, 20).build());
+		addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose()).bounds(this.width / 2 + 54, y, 100, 20).build());
 	}
 
 	// ------------------------------------------------------------ data
@@ -271,13 +256,12 @@ public final class TrackerScreen extends Screen {
 
 	// ------------------------------------------------------------ layout
 
-	/** Rows so that all category panels fit next to each other. */
 	private int rows() {
-		int w = contentW();
+		int w = this.width - 16;
 		for (int r = 1; r < 200; r++) {
 			int sum = 0;
 			for (Tab t : tabs) sum += ((t.entries().size() + r - 1) / r) * tileW() + 8;
-			sum += (tabs.size() - 1) * 4;
+			sum += (tabs.size() - 1) * 6;
 			if (sum <= w) return r;
 		}
 		return 200;
@@ -287,11 +271,11 @@ public final class TrackerScreen extends Screen {
 
 	private int trackerW(Tracker t) {
 		int cols = Math.max(1, (t.crits().size() + TRACK_LINES - 1) / TRACK_LINES);
-		return Math.max(110, cols * COL_W + 8);
+		return Math.max(118, cols * COL_W + 8);
 	}
 
 	private int trackerH(Tracker t) {
-		return 18 + Math.min(TRACK_LINES, t.crits().size()) * 9 + 4;
+		return 24 + Math.min(TRACK_LINES, t.crits().size()) * 9 + 4;
 	}
 
 	// ------------------------------------------------------------ drawing
@@ -304,138 +288,158 @@ public final class TrackerScreen extends Screen {
 		g.pose().popMatrix();
 	}
 
-	private void extractForeground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+	/** Text with a black outline, like the level number above the XP bar. */
+	private void outlined(GuiGraphicsExtractor g, String s, int cx, int y, int color) {
+		int x = cx - this.font.width(s) / 2;
+		g.text(this.font, s, x + 1, y, 0xFF000000, false);
+		g.text(this.font, s, x - 1, y, 0xFF000000, false);
+		g.text(this.font, s, x, y + 1, 0xFF000000, false);
+		g.text(this.font, s, x, y - 1, 0xFF000000, false);
+		g.text(this.font, s, x, y, color, false);
+	}
+
+	/** Panel with a vanilla title box on top. */
+	private void panel(GuiGraphicsExtractor g, int x, int y, int w, int h, ItemStack icon, String title, String count, boolean complete) {
+		g.fill(x, y + 10, x + w, y + h, 0xB0101010);
+		g.outline(x, y + 10, w, h - 10, complete ? 0xFF7FB238 : 0xFF000000);
+		g.blitSprite(RenderPipelines.GUI_TEXTURED, TITLE_BOX, x, y, w, 20);
+		if (!icon.isEmpty()) Icons.scaled(g, icon, x + 3, y + 3, 0.875f);
+		int room = w - 22 - this.font.width(count) - 4;
+		String t = this.font.width(title) <= room ? title : this.font.plainSubstrByWidth(title, room - this.font.width("…")) + "…";
+		g.text(this.font, t, x + 20, y + 6, 0xFFFFFFFF, true);
+		g.text(this.font, count, x + w - 4 - this.font.width(count), y + 6, complete ? 0xFF80FF20 : 0xFFFFFFFF, true);
+	}
+
+	@Override
+	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+		super.extractRenderState(g, mouseX, mouseY, delta);
 		if (System.currentTimeMillis() - loadedAt > 1000) load();
-		float in = intro();
 		int doneAll = 0, total = 0;
 		for (Tab t : tabs) for (Entry e : t.entries()) {
 			total++;
 			if (done(e)) doneAll++;
 		}
-		// header: title · progress bar · time
-		int x0 = 8, x1 = this.width - 8;
-		g.text(this.font, "§l✦ ALL ADVANCEMENTS", x0, 7, Theme.alpha(Theme.ACCENT, in), true);
-		int pct = total == 0 ? 0 : Math.round(doneAll * 100f / total);
-		String ps = doneAll + " / " + total + " (" + pct + "%)";
-		int bw = Math.min(220, this.width / 3), bx = this.width / 2 - bw / 2;
-		g.fill(bx, 6, bx + bw, 17, 0x80000000);
-		if (total > 0) g.fill(bx, 6, bx + Math.round(bw * doneAll / (float) total), 17, 0xFF3FA34D);
-		g.outline(bx, 6, bw, 11, 0x40FFFFFF);
-		g.centeredText(this.font, ps, this.width / 2, 8, 0xFFFFFFFF);
+		// header: title, level-style number, XP bar
+		g.centeredText(this.font, this.title, this.width / 2, 5, 0xFFFFFFFF);
+		outlined(g, doneAll + " / " + total, this.width / 2, 16, 0xFF80FF20);
+		int bx = this.width / 2 - 91;
+		g.blitSprite(RenderPipelines.GUI_TEXTURED, XP_BG, bx, 27, 182, 5);
+		int fill = total == 0 ? 0 : Math.round(182f * doneAll / total);
+		if (fill > 0) g.blitSprite(RenderPipelines.GUI_TEXTURED, XP_FILL, 182, 5, 0, 0, bx, 27, fill, 5);
 		String igt = playTime();
-		if (igt != null) g.text(this.font, "§7IGT §f" + igt, x1 - this.font.width("IGT " + igt), 7, 0xFFFFFFFF, true);
-		small(g, source + "   §a■ §7done   §f■ §7ready now   §8■ §7do the one before first   §8hover = details", x0, 21, 0xFFFFFFFF, 0.75f);
+		if (igt != null) g.text(this.font, igt, this.width - 8 - this.font.width(igt), 5, 0xFFAAAAAA, true);
+		if (tabs.isEmpty()) {
+			g.centeredText(this.font, source, this.width / 2, this.height / 2, 0xFFAAAAAA);
+			return;
+		}
 
-		hovered = null;
-		hoveredTracker = null;
+		Entry hovered = null;
 		int top = top(), bottom = bottom();
+		boolean inside = mouseY >= top && mouseY < bottom;
 		g.enableScissor(0, top, this.width, bottom);
 		int y = top + 2 - scroll;
-		boolean inside = mouseY >= top && mouseY < bottom;
 
-		// ---- category panels
+		// ---- one panel per tab
 		int rows = rows();
-		int x = x0;
+		int totalW = 0;
+		for (Tab t : tabs) totalW += ((t.entries().size() + rows - 1) / rows) * tileW() + 8 + 6;
+		int x = Math.max(8, (this.width - totalW + 6) / 2);
 		for (Tab t : tabs) {
 			int n = t.entries().size();
 			int cols = (n + rows - 1) / rows;
-			int pw = cols * tileW() + 8, ph = rows * tileH() + 20;
+			int pw = cols * tileW() + 8, ph = rows * tileH() + 26;
 			int d = 0;
 			for (Entry e : t.entries()) if (done(e)) d++;
-			g.fill(x, y, x + pw, y + ph, 0x90101014);
-			g.outline(x, y, pw, ph, d == n ? 0xFF3FA34D : 0x30FFFFFF);
-			Icons.scaled(g, icon(t.display()), x + 3, y + 2, 0.75f);
-			String name = t.display().title().getString();
-			String cnt = (d == n ? "§a" : "§7") + d + "/" + n;
-			int room = pw - 22 - this.font.width(cnt);
-			if (this.font.width(name) <= room) g.text(this.font, "§f" + name, x + 17, y + 4, 0xFFFFFFFF, false);
-			else small(g, "§f" + this.font.plainSubstrByWidth(name, (int) (room / 0.7f)), x + 17, y + 5, 0xFFFFFFFF, 0.7f);
-			g.text(this.font, cnt, x + pw - 4 - this.font.width(cnt), y + 4, 0xFFFFFFFF, false);
+			panel(g, x, y, pw, ph, icon(t.display()), t.display().title().getString(), d + "/" + n, d == n);
 			for (int i = 0; i < n; i++) {
 				Entry e = t.entries().get(i);
-				int tx = x + 4 + (i / rows) * tileW(), ty = y + 16 + (i % rows) * tileH();
+				int tx = x + 4 + (i / rows) * tileW(), ty = y + 22 + (i % rows) * tileH();
 				boolean hov = inside && mouseX >= tx && mouseX < tx + tileW() && mouseY >= ty && mouseY < ty + tileH();
 				if (hov) hovered = e;
 				drawTile(g, e, tx, ty, hov);
 			}
-			x += pw + 4;
+			x += pw + 6;
 		}
-		y += rows * tileH() + 20 + 8;
+		y += rows * tileH() + 26 + 10;
 
-		// ---- multi-part checklists
-		if (!trackers.isEmpty()) {
-			g.text(this.font, "§lCHECKLISTS §8· multi-part advancements", x0, y, Theme.ACCENT, false);
-			y += 12;
-			int tx = x0, rowH = 0;
-			for (Tracker t : trackers) {
-				int w = trackerW(t), h = trackerH(t);
-				if (tx + w > x1 && tx > x0) {
-					tx = x0;
-					y += rowH + 4;
-					rowH = 0;
-				}
-				boolean hov = inside && mouseX >= tx && mouseX < tx + w && mouseY >= y && mouseY < y + h;
-				if (hov) hoveredTracker = t;
-				drawTracker(g, t, tx, y, w, h);
-				tx += w + 4;
-				rowH = Math.max(rowH, h);
+		// ---- checklists
+		int tx = 8, rowH = 0;
+		int lineW = this.width - 16;
+		for (Tracker t : trackers) {
+			int w = trackerW(t), h = trackerH(t);
+			if (tx + w > 8 + lineW && tx > 8) {
+				tx = 8;
+				y += rowH + 6;
+				rowH = 0;
 			}
-			y += rowH + 6;
+			drawTracker(g, t, tx, y, w, h);
+			tx += w + 6;
+			rowH = Math.max(rowH, h);
 		}
+		y += rowH + 6;
 		contentH = y + scroll - top;
 		g.disableScissor();
-		if (tabs.isEmpty()) g.centeredText(this.font, source, this.width / 2, this.height / 2, 0xFFFFFFFF);
-		// scrollbar
 		int view = bottom - top;
 		if (contentH > view) {
 			int sh = Math.max(16, view * view / contentH);
 			int sy = top + Math.round((view - sh) * (scroll / (float) (contentH - view)));
-			g.fill(this.width - 4, top, this.width - 2, bottom, 0x30FFFFFF);
-			g.fill(this.width - 4, sy, this.width - 2, sy + sh, 0xA0FFFFFF);
+			g.fill(this.width - 5, top, this.width - 3, bottom, 0x40000000);
+			g.fill(this.width - 5, sy, this.width - 3, sy + sh, 0xFFC0C0C0);
 		}
-		if (hovered != null) tooltip(g, hovered, mouseX, mouseY);
+		if (hovered != null) g.setComponentTooltipForNextFrame(this.font, tooltip(hovered), mouseX, mouseY);
 	}
 
 	private void drawTile(GuiGraphicsExtractor g, Entry e, int x, int y, boolean hov) {
-		boolean d = done(e);
-		boolean r = ready(e);
+		boolean d = done(e), r = ready(e);
 		AdvancementType type = e.display().type();
-		int typeCol = type == AdvancementType.CHALLENGE ? 0xFFB46CFF : type == AdvancementType.GOAL ? 0xFF55D8FF : 0xFFB0B0B0;
-		int fx = x + (tileW() - 22) / 2, fy = y + 1;
-		int bg = d ? 0xFF2E5A2E : hov ? 0xFF4A4A52 : r ? 0xFF2C2C32 : 0xFF1A1A1E;
-		g.fill(fx, fy, fx + 22, fy + 22, bg);
-		g.outline(fx, fy, 22, 22, d ? 0xFF5AD06A : r ? typeCol : Theme.lerpColor(typeCol, 0xFF202024, 0.6f));
-		g.item(icon(e.display()), fx + 3, fy + 3);
-		if (!d && !r) g.fill(fx + 1, fy + 1, fx + 21, fy + 21, 0x60101014);
-		if (d) g.text(this.font, "§a✔", fx + 15, fy + 13, 0xFFFFFFFF, true);
-		// partial progress
+		String kind = type == AdvancementType.CHALLENGE ? "challenge" : type == AdvancementType.GOAL ? "goal" : "task";
+		int fx = x + (tileW() - 26) / 2, fy = y + 1;
+		g.blitSprite(RenderPipelines.GUI_TEXTURED, Identifier.withDefaultNamespace("advancements/" + kind + "_frame_" + (d ? "obtained" : "unobtained")), fx, fy, 26, 26);
+		g.item(icon(e.display()), fx + 5, fy + 5);
+		if (!d && !r) g.fill(fx + 2, fy + 2, fx + 24, fy + 24, 0x80101010);
+		if (hov) g.fill(fx + 2, fy + 2, fx + 24, fy + 24, 0x40FFFFFF);
 		int n = e.holder().value().criteria().size();
 		if (!d && n > 1 && e.progress() != null) {
-			int left = e.progress().getRemainingCriteria() == null ? n : countRemaining(e);
+			int left = 0;
+			for (String ignored : e.progress().getRemainingCriteria()) left++;
 			float f = (n - left) / (float) n;
-			g.fill(fx + 2, fy + 19, fx + 20, fy + 21, 0xA0000000);
-			g.fill(fx + 2, fy + 19, fx + 2 + Math.round(18 * f), fy + 21, 0xFFFFD34D);
+			g.fill(fx + 4, fy + 22, fx + 22, fy + 24, 0xFF000000);
+			g.fill(fx + 4, fy + 22, fx + 4 + Math.round(18 * f), fy + 24, 0xFF80FF20);
 		}
 		Long fl = flash.get(e.holder().id().toString());
 		if (fl != null) {
 			float t = (System.currentTimeMillis() - fl) / 1500f;
-			if (t < 1f) g.fill(fx - 2, fy - 2, fx + 24, fy + 24, Theme.alpha(0xFF8CFF8C, (1f - t) * 0.7f));
+			if (t < 1f) g.fill(fx, fy, fx + 26, fy + 26, ((int) ((1f - t) * 160) << 24) | 0xFFFFFF);
 		}
 		if (names) {
-			String title = e.display().title().getString();
-			List<String> lines = wrap(title, (int) ((tileW() - 2) / 0.6f), 2);
+			List<String> lines = wrap(e.display().title().getString(), (int) ((tileW() - 2) / 0.6f), 2);
 			for (int i = 0; i < lines.size(); i++) {
 				String l = lines.get(i);
 				float w = this.font.width(l) * 0.6f;
-				small(g, (d ? "§a" : r ? "§f" : "§8") + l, x + (tileW() - w) / 2f, fy + 24 + i * 6, 0xFFFFFFFF, 0.6f);
+				small(g, l, x + (tileW() - w) / 2f, fy + 27 + i * 6, d ? 0xFFFFFF55 : r ? 0xFFFFFFFF : 0xFF808080, 0.6f);
 			}
 		}
 	}
 
-	private static int countRemaining(Entry e) {
-		int n = 0;
-		for (String ignored : e.progress().getRemainingCriteria()) n++;
-		return n;
+	private List<Component> tooltip(Entry e) {
+		List<Component> out = new ArrayList<>();
+		AdvancementType type = e.display().type();
+		int col = type == AdvancementType.CHALLENGE ? 0xFFAA00AA : 0xFF55FF55;
+		out.add(e.display().title().copy().withColor(col & 0xFFFFFF));
+		for (String l : wrap(e.display().description().getString(), 200, 4)) out.add(Component.literal(l).withColor(0xAAAAAA));
+		boolean d = done(e);
+		out.add(Component.literal(d ? "✔ Done" : ready(e) ? "Ready to get" : "Get the one before first").withColor(d ? 0x55FF55 : ready(e) ? 0xFFFFFF : 0x777777));
+		String hint = HINTS.get(e.holder().id().getPath());
+		if (hint != null && !d) for (String l : wrap("➜ " + hint, 200, 3)) out.add(Component.literal(l).withColor(0xFFFF55));
+		int n = e.holder().value().criteria().size();
+		if (n > 1 && !d) {
+			List<String> rem = remaining(e);
+			out.add(Component.literal((n - rem.size()) + "/" + n + " · missing:").withColor(0xFFFF55));
+			int show = Math.min(rem.size(), 10);
+			for (int i = 0; i < show; i++) out.add(Component.literal("• " + rem.get(i)).withColor(0xFFFFFF));
+			if (rem.size() > show) out.add(Component.literal("+ " + (rem.size() - show) + " more below").withColor(0x777777));
+		}
+		return out;
 	}
 
 	private List<String> wrap(String text, int width, int maxLines) {
@@ -448,11 +452,11 @@ public final class TrackerScreen extends Screen {
 			}
 			int cut = this.font.plainSubstrByWidth(rest, width).length();
 			int sp = rest.lastIndexOf(' ', cut);
-			if (sp > 0 && out.size() < maxLines - 1) cut = sp;
-			if (out.size() == maxLines - 1 && cut < rest.length()) {
+			if (out.size() == maxLines - 1) {
 				out.add(this.font.plainSubstrByWidth(rest, width - this.font.width("…")) + "…");
 				break;
 			}
+			if (sp > 0) cut = sp;
 			out.add(rest.substring(0, cut).trim());
 			rest = rest.substring(cut).trim();
 		}
@@ -463,56 +467,19 @@ public final class TrackerScreen extends Screen {
 		int d = 0;
 		for (Crit c : t.crits()) if (c.done()) d++;
 		int n = t.crits().size();
-		boolean all = d == n;
-		g.fill(x, y, x + w, y + h, 0x90101014);
-		g.outline(x, y, w, h, all ? 0xFF3FA34D : 0x30FFFFFF);
-		Icons.scaled(g, Icons.stack(t.icon()), x + 3, y + 2, 0.75f);
-		String cnt = (all ? "§a" : "§e") + d + "/" + n;
-		g.text(this.font, "§f" + this.font.plainSubstrByWidth(t.title(), w - 24 - this.font.width(cnt)), x + 17, y + 4, 0xFFFFFFFF, false);
-		g.text(this.font, cnt, x + w - 4 - this.font.width(cnt), y + 4, 0xFFFFFFFF, false);
-		g.fill(x + 3, y + 14, x + w - 3, y + 15, 0x60000000);
-		if (n > 0) g.fill(x + 3, y + 14, x + 3 + Math.round((w - 6) * d / (float) n), y + 15, 0xFF5AD06A);
+		panel(g, x, y, w, h, Icons.stack(t.icon()), t.title(), d + "/" + n, d == n);
 		for (int i = 0; i < n; i++) {
 			Crit c = t.crits().get(i);
-			int cx = x + 4 + (i / TRACK_LINES) * COL_W, cy = y + 18 + (i % TRACK_LINES) * 9;
+			int cx = x + 4 + (i / TRACK_LINES) * COL_W, cy = y + 23 + (i % TRACK_LINES) * 9;
 			int tx = cx;
 			if (!c.icon().isEmpty()) {
 				Icons.scaled(g, c.icon(), cx, cy, 0.5f);
 				tx += 10;
 			}
-			String label = this.font.plainSubstrByWidth(c.name(), COL_W - (tx - cx) - 10);
-			g.text(this.font, c.done() ? "§2✔ §8" + label : "§f" + label, tx, cy, 0xFFFFFFFF, false);
+			String label = this.font.plainSubstrByWidth(c.name(), COL_W - (tx - cx) - 4);
+			g.text(this.font, label, tx, cy, c.done() ? 0xFF55FF55 : 0xFFFFFFFF, false);
+			if (c.done()) g.fill(tx, cy + 4, tx + this.font.width(label), cy + 5, 0xFF55FF55);
 		}
-	}
-
-	private void tooltip(GuiGraphicsExtractor g, Entry e, int mx, int my) {
-		List<String> lines = new ArrayList<>();
-		AdvancementType type = e.display().type();
-		String tc = type == AdvancementType.CHALLENGE ? "§d" : type == AdvancementType.GOAL ? "§b" : "§a";
-		lines.add(tc + "§l" + e.display().title().getString() + (done(e) ? "  §a✔" : ""));
-		lines.addAll(wrap("§7" + e.display().description().getString(), 200, 3));
-		String kind = type == AdvancementType.CHALLENGE ? "§5Challenge" : type == AdvancementType.GOAL ? "§3Goal" : "§2Advancement";
-		lines.add(kind + (done(e) ? " §8· §adone" : ready(e) ? " §8· §fready now" : " §8· §7do the one before first"));
-		String hint = HINTS.get(e.holder().id().getPath());
-		if (hint != null && !done(e)) lines.addAll(wrap("§6➜ §e" + hint, 200, 2));
-		int n = e.holder().value().criteria().size();
-		if (n > 1 && !done(e)) {
-			List<String> rem = remaining(e);
-			lines.add("§e" + (n - rem.size()) + "/" + n + " §7· missing:");
-			int show = Math.min(rem.size(), 10);
-			for (int i = 0; i < show; i++) lines.add("§c• §f" + rem.get(i));
-			if (rem.size() > show) lines.add("§8+ " + (rem.size() - show) + " more (see checklists below)");
-		}
-		int w = 0;
-		for (String l : lines) w = Math.max(w, this.font.width(l));
-		int h = lines.size() * 10 + 6;
-		int x = mx + 12, y = my - 4;
-		if (x + w + 8 > this.width) x = mx - w - 16;
-		if (y + h > this.height - 4) y = this.height - 4 - h;
-		g.nextStratum();
-		g.fill(x, y, x + w + 8, y + h, 0xF0100010);
-		g.outline(x, y, w + 8, h, type == AdvancementType.CHALLENGE ? 0xFFB46CFF : 0xFF5050A0);
-		for (int i = 0; i < lines.size(); i++) g.text(this.font, lines.get(i), x + 4, y + 4 + i * 10, 0xFFFFFFFF, false);
 	}
 
 	private String playTime() {
@@ -524,15 +491,12 @@ public final class TrackerScreen extends Screen {
 		return String.format(Locale.ROOT, "%d:%02d:%02d", s / 3600, (s / 60) % 60, s % 60);
 	}
 
-	// ------------------------------------------------------------ input
-
 	@Override
 	public boolean mouseScrolled(double mx, double my, double h, double v) {
 		int max = Math.max(0, contentH - (bottom() - top()));
 		scroll = (int) Math.max(0, Math.min(max, scroll - v * 24));
 		return true;
 	}
-
 
 	// ------------------------------------------------------------ hints
 

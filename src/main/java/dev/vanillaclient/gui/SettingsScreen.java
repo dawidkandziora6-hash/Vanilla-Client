@@ -958,7 +958,7 @@ public final class SettingsScreen extends BaseScreen {
 		list.add(new Ui.Toggle("Vanilla Client & Wardrobe in the pause menu", i(Items.WRITABLE_BOOK), () -> c.pauseMenuButton, v -> c.pauseMenuButton = v));
 		list.add(new Ui.Toggle("Advancement & stats helper buttons", i(Items.GOLDEN_APPLE), () -> c.helperButtons, v -> c.helperButtons = v));
 		list.add(new Ui.Toggle("L opens the Vanilla Client advancements", i(Items.KNOWLEDGE_BOOK), () -> c.ownAdvancementsScreen, v -> c.ownAdvancementsScreen = v));
-		list.add(new Ui.Toggle("Chat: \"38/126 advancements\" after each one", i(Items.GOLDEN_APPLE), () -> c.advancementChat, v -> c.advancementChat = v));
+		list.add(new Ui.Toggle("Advancement sound + \"38/126\" in the chat", i(Items.GOLDEN_APPLE), () -> c.advancementChat, v -> c.advancementChat = v));
 		list.add(new Ui.Header("WORLD MAP"));
 		list.add(new Ui.Toggle("Record explored land", i(Items.FILLED_MAP), () -> c.worldMap.enabled, v -> c.worldMap.enabled = v));
 		list.add(new Ui.Slider("Map radius", 0, 32, 1, () -> c.worldMap.radius, v -> c.worldMap.radius = (int) v,

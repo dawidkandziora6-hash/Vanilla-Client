@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "aatracker-test",
+  "version": "1.0.0",
+  "name": "AA Tracker test",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-client-gametest": ["dev.aatracker.test.TrackerTest"]
+  },
+  "depends": {"aatracker": "*"}
+}

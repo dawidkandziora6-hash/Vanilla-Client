@@ -33,3 +33,16 @@ java {
 	targetCompatibility = JavaVersion.VERSION_25
 }
 
+
+// CI-only: `./gradlew -p aa-tracker runClientGameTest -Pworldtest`
+if (project.hasProperty('worldtest')) {
+	fabricApi {
+		configureTests {
+			createSourceSet = true
+			modId = "aatracker-test"
+			enableGameTests = false
+			enableClientGameTests = true
+			eula = true
+		}
+	}
+}
