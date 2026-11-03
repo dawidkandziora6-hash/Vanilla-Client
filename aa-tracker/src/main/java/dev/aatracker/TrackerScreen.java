@@ -441,7 +441,7 @@ public final class TrackerScreen extends Screen {
 		AdvancementType type = e.display().type();
 		int col = type == AdvancementType.CHALLENGE ? 0xFFAA00AA : 0xFF55FF55;
 		out.add(e.display().title().copy().withColor(col & 0xFFFFFF));
-		for (String l : wrap(e.display().description().getString(), 200, 4)) out.add(Component.literal(l).withColor(0xAAAAAA));
+		for (String l : wrap(e.display().description().getString().replace("\n", " "), 200, 4)) out.add(Component.literal(l).withColor(0xAAAAAA));
 		boolean d = done(e);
 		out.add(Component.literal(d ? "✔ Done" : ready(e) ? "Ready to get" : "Get the one before first").withColor(d ? 0x55FF55 : ready(e) ? 0xFFFFFF : 0x777777));
 		String hint = HINTS.get(e.holder().id().getPath());

@@ -470,7 +470,7 @@ public final class AdvancementsChecklistScreen extends BaseScreen {
 		AdvancementType type = e.display().type();
 		String tc = type == AdvancementType.CHALLENGE ? "§d" : type == AdvancementType.GOAL ? "§b" : "§a";
 		lines.add(tc + "§l" + e.display().title().getString() + (done(e) ? "  §a✔" : ""));
-		lines.addAll(wrap("§7" + e.display().description().getString(), 200, 3));
+		lines.addAll(wrap("§7" + e.display().description().getString().replace("\n", " "), 200, 3));
 		String kind = type == AdvancementType.CHALLENGE ? "§5Challenge" : type == AdvancementType.GOAL ? "§3Goal" : "§2Advancement";
 		lines.add(kind + (done(e) ? " §8· §adone" : ready(e) ? " §8· §fready now" : " §8· §7do the one before first"));
 		String hint = HINTS.get(e.holder().id().getPath());
