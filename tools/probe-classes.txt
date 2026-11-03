@@ -1,4 +1,3 @@
-net/minecraft/client/renderer/entity/state/ArmedEntityRenderState -c
-net/minecraft/client/renderer/item/ItemModelResolver
-net/minecraft/core/particles/ParticleTypes
-net/minecraft/client/gui/screens/inventory/tooltip/ClientTooltipComponent -c
+net/minecraft/client/gui/GuiGraphicsExtractor
+net/minecraft/sounds/SoundEvents
+net/fabricmc/fabric/api/client/message/v1/ClientReceiveMessageEvents

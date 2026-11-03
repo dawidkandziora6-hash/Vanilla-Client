@@ -36,3 +36,4 @@ for j in $(find ~/.gradle -name 'fabric-*.jar' -path '*fabric-api*'); do unzip -
 grep -E "renderer/state/|HitboxesRenderState|Lightmap" probe/classes.txt > probe/state-classes.txt || true
 unzip -l "$JAR" | awk '{print $4}' | grep -iE "glint" > probe/glint.txt || true
 grep -iE "tooltip" probe/classes.txt > probe/tooltip-classes.txt || true
+unzip -l "$JAR" | awk '{print $4}' | grep -E "sprites/(advancements|hud/experience|container/|widget/)" > probe/gui-sprites.txt || true
