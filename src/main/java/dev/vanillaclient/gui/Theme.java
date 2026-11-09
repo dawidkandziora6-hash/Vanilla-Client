@@ -20,6 +20,11 @@ public final class Theme {
 
 	private Theme() {}
 
+	/** "Vanilla look": menus use Minecraft's own buttons, sliders and colors, no extra effects. */
+	public static boolean vanilla() {
+		return dev.vanillaclient.config.Config.get().vanillaMenus;
+	}
+
 	/** Seconds since the game started (for animations). */
 	public static float time() {
 		return (System.nanoTime() - START) / 1_000_000_000f;

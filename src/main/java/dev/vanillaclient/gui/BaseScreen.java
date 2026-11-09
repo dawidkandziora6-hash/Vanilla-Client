@@ -47,6 +47,7 @@ public abstract class BaseScreen extends Screen {
 
 	/** 0 → 1 during the first 250 ms after opening. */
 	protected float intro() {
+		if (Theme.vanilla()) return 1f;
 		return Theme.easeOut((System.currentTimeMillis() - openedAt) / 250f);
 	}
 

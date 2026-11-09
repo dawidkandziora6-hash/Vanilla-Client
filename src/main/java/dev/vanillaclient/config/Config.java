@@ -447,6 +447,8 @@ public final class Config {
 	public boolean screenshotMessage = true;
 	public boolean screenshotPopup = true;
 	public boolean helperButtons = true;
+	/** Menus in Minecraft's own look (buttons, sliders, plain colors, no effects). */
+	public boolean vanillaMenus = true;
 	/** L opens the Vanilla Client advancements tracker. */
 	public boolean ownAdvancementsScreen = true;
 	/** "✦ 38/126 advancements" in the chat after you get one. */

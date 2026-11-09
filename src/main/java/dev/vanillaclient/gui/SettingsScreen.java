@@ -955,6 +955,11 @@ public final class SettingsScreen extends BaseScreen {
 	private void general() {
 		Config c = cfg();
 		list.add(new Ui.Header("MENU"));
+		list.add(new Ui.Toggle("Vanilla look (Minecraft's own buttons, no effects)", i(Items.GRASS_BLOCK), () -> c.vanillaMenus, v -> {
+			c.vanillaMenus = v;
+			Config.save();
+			buildPage();
+		}));
 		list.add(new Ui.Toggle("Vanilla Client & Wardrobe in the pause menu", i(Items.WRITABLE_BOOK), () -> c.pauseMenuButton, v -> c.pauseMenuButton = v));
 		list.add(new Ui.Toggle("Advancement & stats helper buttons", i(Items.GOLDEN_APPLE), () -> c.helperButtons, v -> c.helperButtons = v));
 		list.add(new Ui.Toggle("L opens the Vanilla Client advancements", i(Items.KNOWLEDGE_BOOK), () -> c.ownAdvancementsScreen, v -> c.ownAdvancementsScreen = v));
@@ -1021,7 +1026,9 @@ public final class SettingsScreen extends BaseScreen {
 	private void drawSidebar(GuiGraphicsExtractor g, int mx, int my) {
 		int ENTRY = entryH();
 		int x = left();
-		Theme.panel(g, x - 4, top() - 4, SIDEBAR + 8, bottom() - top() + 6);
+		boolean van = Theme.vanilla();
+		if (!van) Theme.panel(g, x - 4, top() - 4, SIDEBAR + 8, bottom() - top() + 6);
+		else g.fill(x - 4, top() - 4, x + SIDEBAR + 4, bottom() + 2, 0x60000000);
 		int maxScroll = Math.max(0, sidebarContentH() - (bottom() - top()));
 		sideScrollTarget = Math.max(0, Math.min(maxScroll, sideScrollTarget));
 		sideScroll += (sideScrollTarget - sideScroll) * 0.3f;
@@ -1029,26 +1036,35 @@ public final class SettingsScreen extends BaseScreen {
 		float targetY = 0;
 		for (Entry e : sidebar()) if (e.page() == page) targetY = e.y();
 		if (indicatorY < 0) indicatorY = targetY;
-		indicatorY += (targetY - indicatorY) * 0.25f;
-		g.fill(x - 2, Math.round(indicatorY), x + SIDEBAR + 2, Math.round(indicatorY) + ENTRY - 1, 0x40FFFFFF);
-		g.fill(x - 2, Math.round(indicatorY), x, Math.round(indicatorY) + ENTRY - 1, Theme.ACCENT);
+		indicatorY += (targetY - indicatorY) * (van ? 1f : 0.25f);
+		if (van) {
+			// like a vanilla selection list: white frame, black inside
+			int iy = Math.round(indicatorY);
+			g.fill(x - 2, iy - 1, x + SIDEBAR + 2, iy + ENTRY, 0xFFFFFFFF);
+			g.fill(x - 1, iy, x + SIDEBAR + 1, iy + ENTRY - 1, 0xFF000000);
+		} else {
+			g.fill(x - 2, Math.round(indicatorY), x + SIDEBAR + 2, Math.round(indicatorY) + ENTRY - 1, 0x40FFFFFF);
+			g.fill(x - 2, Math.round(indicatorY), x, Math.round(indicatorY) + ENTRY - 1, Theme.ACCENT);
+		}
 		long now = System.currentTimeMillis();
 		int idx = 0;
 		for (Entry e : sidebar()) {
-			float t = Theme.easeOut((now - openedAt - idx * 25L) / 250f);
+			float t = van ? 1f : Theme.easeOut((now - openedAt - idx * 25L) / 250f);
 			idx++;
 			int off = Math.round((1f - t) * -12f);
 			if (e.header() != null) {
-				g.text(this.font, e.header(), x + 2 + off, e.y() + 2, Theme.alpha(0xFF808080, t), false);
+				g.text(this.font, van ? e.header().charAt(0) + e.header().substring(1).toLowerCase(java.util.Locale.ROOT) : e.header(),
+						x + 2 + off, e.y() + 2, Theme.alpha(van ? 0xFFA0A0A0 : 0xFF808080, t), false);
 				continue;
 			}
 			Page p = e.page();
 			boolean hover = mx >= x && mx < x + SIDEBAR && my >= e.y() && my < e.y() + ENTRY;
 			entryHover[p.ordinal()] += ((hover ? 1f : 0f) - entryHover[p.ordinal()]) * 0.3f;
-			int slide = Math.round(entryHover[p.ordinal()] * 3f) + off;
+			int slide = van ? 0 : Math.round(entryHover[p.ordinal()] * 3f) + off;
 			int ty = e.y() + (ENTRY - 8) / 2;
 			Icons.small(g, Icons.stack(p.icon), x + 4 + slide, ty);
-			int col = p == page ? Theme.ACCENT : Theme.lerpColor(0xFFC8C8C8, 0xFFFFFFFF, entryHover[p.ordinal()]);
+			int col = van ? (hover && p != page ? 0xFFFFFFA0 : 0xFFFFFFFF)
+					: p == page ? Theme.ACCENT : Theme.lerpColor(0xFFC8C8C8, 0xFFFFFFFF, entryHover[p.ordinal()]);
 			g.text(this.font, p.label, x + 16 + slide, ty, Theme.alpha(col, t), false);
 		}
 	}
@@ -1061,7 +1077,11 @@ public final class SettingsScreen extends BaseScreen {
 			int x = left() + SIDEBAR + 1;
 			int barH = Math.max(12, viewH * viewH / contentH);
 			int barY = top() + Math.round((viewH - barH) * (sideScroll / Math.max(1, contentH - viewH)));
-			g.fill(x, barY, x + 1, barY + barH, 0x90FFFFFF);
+			if (Theme.vanilla()) {
+				g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, net.minecraft.resources.Identifier.withDefaultNamespace("widget/scroller"), x, barY, 3, barH);
+			} else {
+				g.fill(x, barY, x + 1, barY + barH, 0x90FFFFFF);
+			}
 		}
 	}
 
@@ -1070,6 +1090,7 @@ public final class SettingsScreen extends BaseScreen {
 	@Override
 	public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
 		super.extractBackground(g, mouseX, mouseY, delta);
+		if (Theme.vanilla()) return;
 		// slow floating light specks behind the panels
 		float t = Theme.time();
 		for (int k = 0; k < 36; k++) {
@@ -1088,6 +1109,22 @@ public final class SettingsScreen extends BaseScreen {
 	@Override
 	protected void extractForeground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
 		float in = intro();
+		if (Theme.vanilla()) {
+			g.centeredText(this.font, this.title, this.width / 2, 10, 0xFFFFFFFF);
+			String crumb = (page.group == null ? "" : page.group.charAt(0) + page.group.substring(1).toLowerCase() + " › ") + page.label;
+			g.centeredText(this.font, crumb, this.width / 2, 24, 0xFFA0A0A0);
+			// header / footer lines like vanilla option screens
+			g.fill(0, top() - 7, this.width, top() - 6, 0x40FFFFFF);
+			g.fill(0, top() - 6, this.width, top() - 5, 0x80000000);
+			g.fill(0, bottom() + 4, this.width, bottom() + 5, 0x80000000);
+			g.fill(0, bottom() + 5, this.width, bottom() + 6, 0x40FFFFFF);
+			drawSidebar(g, mouseX, mouseY);
+			sidebarScrollbar(g);
+			g.fill(cx() - 4, top() - 4, cx() + contentW() + 6, bottom() + 2, 0x60000000);
+			list.render(g, this.font, mouseX, mouseY);
+			if (System.currentTimeMillis() - statusAt < 4000) g.centeredText(this.font, status, this.width / 2, this.height - 40, 0xFFFFFFFF);
+			return;
+		}
 		logo.draw(g, this.font, this.width / 2, 6, 1f, in);
 		// breadcrumb with typewriter animation
 		String crumb = (page.group == null ? "" : page.group.charAt(0) + page.group.substring(1).toLowerCase() + " › ") + page.label;

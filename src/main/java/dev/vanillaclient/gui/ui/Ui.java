@@ -48,6 +48,43 @@ public final class Ui {
 		}
 	}
 
+	static final Identifier CHECK = Identifier.withDefaultNamespace("widget/checkbox");
+	static final Identifier CHECK_HL = Identifier.withDefaultNamespace("widget/checkbox_highlighted");
+	static final Identifier CHECK_ON = Identifier.withDefaultNamespace("widget/checkbox_selected");
+	static final Identifier CHECK_ON_HL = Identifier.withDefaultNamespace("widget/checkbox_selected_highlighted");
+	static final Identifier SCROLLER = Identifier.withDefaultNamespace("widget/scroller");
+	static final Identifier SCROLLER_BG = Identifier.withDefaultNamespace("widget/scroller_background");
+
+	/** Text that fits: shrinks a little first, then cuts with "…". */
+	public static void fitText(GuiGraphicsExtractor g, Font font, String text, int x, int y, int maxW, int color, boolean shadow, boolean center) {
+		int tw = font.width(text);
+		if (tw <= maxW) {
+			g.text(font, text, center ? x - tw / 2 : x, y, color, shadow);
+			return;
+		}
+		if (tw * 0.8f <= maxW) {
+			g.pose().pushMatrix();
+			g.pose().translate(center ? x - tw * 0.4f : x, y + 1);
+			g.pose().scale(0.8f, 0.8f);
+			g.text(font, text, 0, 0, color, shadow);
+			g.pose().popMatrix();
+			return;
+		}
+		String cut = font.plainSubstrByWidth(text, maxW - font.width("…")) + "…";
+		g.text(font, cut, center ? x - font.width(cut) / 2 : x, y, color, shadow);
+	}
+
+	/** A real Minecraft button with centered text (and an optional item icon). */
+	public static void vButton(GuiGraphicsExtractor g, Font font, int x, int y, int w, int h, boolean hovered, String text, ItemStack icon) {
+		g.blitSprite(RenderPipelines.GUI_TEXTURED, hovered ? BUTTON_HL : BUTTON, x, y, w, h);
+		int iw = icon != null && !icon.isEmpty() ? 18 : 0;
+		int room = w - 8 - iw;
+		int tw = Math.min(font.width(text), room);
+		int tx = x + (w - tw - iw) / 2;
+		if (iw > 0) g.item(icon, tx, y + (h - 16) / 2);
+		fitText(g, font, text, tx + iw, y + (h - 8) / 2, room, 0xFFFFFFFF, true, false);
+	}
+
 	static float approach(float v, float target, float speed) {
 		return v + (target - v) * Math.min(1f, speed);
 	}
@@ -87,6 +124,7 @@ public final class Ui {
 		}
 
 		protected void rowBackground(GuiGraphicsExtractor g, float alpha) {
+			if (Theme.vanilla()) return;
 			int bg = Theme.lerpColor(0x18FFFFFF, 0x30FFFFFF, hover);
 			g.fill(x, y, x + w, y + height() - 2, Theme.alpha(bg, alpha));
 		}
@@ -108,6 +146,12 @@ public final class Ui {
 
 		@Override
 		public void render(GuiGraphicsExtractor g, Font font, int mx, int my, float alpha) {
+			if (Theme.vanilla()) {
+				int dot = text.indexOf("§8");
+				String main = dot > 0 ? text.substring(0, dot).trim() : text;
+				g.centeredText(font, "§l" + main, x + w / 2, y + 5, 0xFFFFFFFF);
+				return;
+			}
 			g.text(font, text, x + 1, y + 5, Theme.alpha(Theme.ACCENT, alpha), false);
 			int tw = font.width(text) + 6;
 			g.fill(x + tw, y + 9, x + w, y + 10, Theme.alpha(0x40FFFFFF, alpha));
@@ -198,13 +242,17 @@ public final class Ui {
 			boolean on = get.getAsBoolean();
 			if (knob < 0) knob = on ? 1f : 0f;
 			knob = approach(knob, on ? 1f : 0f, 0.3f);
+			if (Theme.vanilla()) {
+				vButton(g, font, x, y, w, 20, hovered, label + ": " + (on ? "ON" : "OFF"), null);
+				return;
+			}
 			rowBackground(g, alpha);
 			int tx = x + 6;
 			if (icon != null) {
 				Icons.small(g, icon, x + 5, y + 6);
 				tx += 11;
 			}
-			g.text(font, label, tx, y + 6, Theme.alpha(0xFFFFFFFF, alpha), false);
+			fitText(g, font, label, tx, y + 6, w - (tx - x) - 34, Theme.alpha(0xFFFFFFFF, alpha), false, false);
 			// switch
 			int sw = 22, sh = 10;
 			int sx = x + w - sw - 6;
@@ -262,7 +310,7 @@ public final class Ui {
 		}
 
 		private int sx() {
-			return label.isEmpty() ? x : x + Math.max(60, w * 2 / 5);
+			return label.isEmpty() || Theme.vanilla() ? x : x + Math.max(60, w * 2 / 5);
 		}
 
 		private int sw() {
@@ -272,6 +320,15 @@ public final class Ui {
 		@Override
 		public void render(GuiGraphicsExtractor g, Font font, int mx, int my, float alpha) {
 			updateHover(mx, my);
+			if (!label.isEmpty() && Theme.vanilla()) {
+				boolean hl = held || hovered;
+				g.blitSprite(RenderPipelines.GUI_TEXTURED, hl ? SLIDER_HL : SLIDER, x, y, w, 20);
+				double v = get.getAsDouble();
+				double f = max == min ? 0 : (v - min) / (max - min);
+				g.blitSprite(RenderPipelines.GUI_TEXTURED, hl ? HANDLE_HL : HANDLE, x + (int) Math.round(f * (w - 8)), y, 8, 20);
+				fitText(g, font, label + ": " + fmt.apply(v), x + w / 2, y + 6, w - 8, 0xFFFFFFFF, true, true);
+				return;
+			}
 			if (!label.isEmpty()) {
 				rowBackground(g, alpha);
 				int tx = x + 6;
@@ -279,7 +336,7 @@ public final class Ui {
 					Icons.small(g, icon, x + 5, y + 6);
 					tx += 11;
 				}
-				g.text(font, font.plainSubstrByWidth(label, sx() - tx - 4), tx, y + 6, Theme.alpha(0xFFFFFFFF, alpha), false);
+				fitText(g, font, label, tx, y + 6, sx() - tx - 4, Theme.alpha(0xFFFFFFFF, alpha), false, false);
 			}
 			int sx = sx(), sw = sw();
 			boolean hl = held || (mx >= sx && mx < sx + sw && my >= y && my < y + 20);
@@ -348,6 +405,10 @@ public final class Ui {
 		public void render(GuiGraphicsExtractor g, Font font, int mx, int my, float alpha) {
 			updateHover(mx, my);
 			bump = approach(bump, 0f, 0.2f);
+			if (Theme.vanilla()) {
+				vButton(g, font, x, y, w, 20, hovered, label + ": " + fmt.apply(get.get()), null);
+				return;
+			}
 			rowBackground(g, alpha);
 			g.text(font, label, x + 6, y + 6, Theme.alpha(0xFFFFFFFF, alpha), false);
 			String v = fmt.apply(get.get());
@@ -404,6 +465,13 @@ public final class Ui {
 		@Override
 		public void render(GuiGraphicsExtractor g, Font font, int mx, int my, float alpha) {
 			updateHover(mx, my);
+			if (Theme.vanilla()) {
+				g.blitSprite(RenderPipelines.GUI_TEXTURED, hovered ? BUTTON_HL : BUTTON, x, y, w, 20);
+				fitText(g, font, label, x + (w - 22) / 2, y + 6, w - 34, 0xFFFFFFFF, true, true);
+				g.fill(x + w - 19, y + 4, x + w - 5, y + 16, 0xFF000000);
+				g.fill(x + w - 18, y + 5, x + w - 6, y + 15, get.getAsInt() | 0xFF000000);
+				return;
+			}
 			rowBackground(g, alpha);
 			g.text(font, label, x + 6, y + 6, Theme.alpha(0xFFFFFFFF, alpha), false);
 			int sx = x + w - 30, sy = y + 4;
@@ -452,6 +520,10 @@ public final class Ui {
 		@Override
 		public void render(GuiGraphicsExtractor g, Font font, int mx, int my, float alpha) {
 			updateHover(mx, my);
+			if (Theme.vanilla()) {
+				vButton(g, font, x, y, w, h, hovered, label, icon);
+				return;
+			}
 			int lift = Math.round(hover);
 			g.blitSprite(RenderPipelines.GUI_TEXTURED, hovered ? BUTTON_HL : BUTTON, x, y - lift, w, h);
 			long since = System.currentTimeMillis() - pressedAt;
@@ -511,6 +583,10 @@ public final class Ui {
 			boolean on = get.getAsBoolean();
 			if (knob < 0) knob = on ? 1f : 0f;
 			knob = approach(knob, on ? 1f : 0f, 0.3f);
+			if (Theme.vanilla()) {
+				vButton(g, font, x, y, w, 30, hovered, name + ": " + (on ? "ON" : "OFF"), icon);
+				return;
+			}
 			int bg = Theme.lerpColor(0x30000000, 0x50FFFFFF, hover * 0.5f);
 			g.fill(x, y, x + w, y + 30, Theme.alpha(bg, alpha));
 			g.fill(x, y, x + 2, y + 30, Theme.alpha(Theme.lerpColor(0xFF555555, 0xFF3FA34D, knob), alpha));
@@ -565,6 +641,13 @@ public final class Ui {
 		@Override
 		public void render(GuiGraphicsExtractor g, Font font, int mx, int my, float alpha) {
 			updateHover(mx, my);
+			if (Theme.vanilla()) {
+				g.blitSprite(RenderPipelines.GUI_TEXTURED, hovered ? BUTTON_HL : BUTTON, x, y, w, 38);
+				g.item(icon, x + 8, y + 11);
+				fitText(g, font, name, x + 30, y + 9, w - 36, 0xFFFFFFFF, true, false);
+				fitText(g, font, sub, x + 30, y + 21, w - 36, 0xFFA0A0A0, true, false);
+				return;
+			}
 			int lift = Math.round(hover * 2);
 			int yy = y - lift;
 			g.fill(x, yy, x + w, yy + 38, Theme.alpha(Theme.lerpColor(0x40000000, 0x60202020, hover), alpha));
@@ -727,6 +810,14 @@ public final class Ui {
 			boolean on = get.getAsBoolean();
 			if (knob < 0) knob = on ? 1f : 0f;
 			knob = approach(knob, on ? 1f : 0f, 0.3f);
+			if (Theme.vanilla()) {
+				boolean sw = hovered && (onSwitch(mx) || open == null);
+				g.blitSprite(RenderPipelines.GUI_TEXTURED, hovered && !sw ? BUTTON_HL : BUTTON, x, y, w, 24);
+				g.item(icon, x + 4, y + 4);
+				fitText(g, font, name, x + 22, y + 8, w - 22 - 18, on ? 0xFFFFFFFF : 0xFFA0A0A0, true, false);
+				g.blitSprite(RenderPipelines.GUI_TEXTURED, on ? (sw ? CHECK_ON_HL : CHECK_ON) : (sw ? CHECK_HL : CHECK), x + w - 15, y + 6, 12, 12);
+				return;
+			}
 			g.fill(x, y, x + w, y + 24, Theme.alpha(Theme.lerpColor(0x30000000, 0x40FFFFFF, hover * 0.6f), alpha));
 			g.fill(x, y + 22, x + w, y + 24, Theme.alpha(Theme.lerpColor(0xFF3A3A3A, 0xFF3FA34D, knob), alpha));
 			g.outline(x, y, w, 24, Theme.alpha(Theme.lerpColor(0x28FFFFFF, 0x90FFFFFF, hover), alpha));
@@ -842,7 +933,7 @@ public final class Ui {
 			long now = System.currentTimeMillis();
 			int i = 0;
 			for (Control c : controls) {
-				float t = Theme.easeOut((now - builtAt - i * 28L) / 260f);
+				float t = Theme.vanilla() ? 1f : Theme.easeOut((now - builtAt - i * 28L) / 260f);
 				i++;
 				if (c.y + c.height() < top || c.y > bottom) continue;
 				int off = Math.round((1f - t) * 14f);
@@ -858,8 +949,13 @@ public final class Ui {
 			if (contentH > viewH) {
 				int barH = Math.max(12, viewH * viewH / contentH);
 				int barY = top + Math.round((viewH - barH) * (scroll / Math.max(1, contentH - viewH)));
-				g.fill(x + w + 3, top, x + w + 4, bottom, 0x30FFFFFF);
-				g.fill(x + w + 3, barY, x + w + 4, barY + barH, 0xC0FFFFFF);
+				if (Theme.vanilla()) {
+					g.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER_BG, x + w + 2, top, 6, viewH);
+					g.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER, x + w + 2, barY, 6, barH);
+				} else {
+					g.fill(x + w + 3, top, x + w + 4, bottom, 0x30FFFFFF);
+					g.fill(x + w + 3, barY, x + w + 4, barY + barH, 0xC0FFFFFF);
+				}
 			}
 		}
 
