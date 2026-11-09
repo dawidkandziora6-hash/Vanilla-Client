@@ -74,6 +74,14 @@ public final class Ui {
 		g.text(font, cut, center ? x - font.width(cut) / 2 : x, y, color, shadow);
 	}
 
+	/** Button text: no color codes and no "(hints in brackets)". */
+	static String plain(String label) {
+		String t = net.minecraft.ChatFormatting.stripFormatting(label);
+		if (t == null) t = label;
+		t = t.replaceAll("\\s*\\([^)]*\\)", "");
+		return t.trim();
+	}
+
 	/** A real Minecraft button with centered text (and an optional item icon). */
 	public static void vButton(GuiGraphicsExtractor g, Font font, int x, int y, int w, int h, boolean hovered, String text, ItemStack icon) {
 		g.blitSprite(RenderPipelines.GUI_TEXTURED, hovered ? BUTTON_HL : BUTTON, x, y, w, h);
@@ -243,7 +251,7 @@ public final class Ui {
 			if (knob < 0) knob = on ? 1f : 0f;
 			knob = approach(knob, on ? 1f : 0f, 0.3f);
 			if (Theme.vanilla()) {
-				vButton(g, font, x, y, w, 20, hovered, label + ": " + (on ? "ON" : "OFF"), null);
+				vButton(g, font, x, y, w, 20, hovered, plain(label) + ": " + (on ? "ON" : "OFF"), null);
 				return;
 			}
 			rowBackground(g, alpha);
@@ -326,7 +334,7 @@ public final class Ui {
 				double v = get.getAsDouble();
 				double f = max == min ? 0 : (v - min) / (max - min);
 				g.blitSprite(RenderPipelines.GUI_TEXTURED, hl ? HANDLE_HL : HANDLE, x + (int) Math.round(f * (w - 8)), y, 8, 20);
-				fitText(g, font, label + ": " + fmt.apply(v), x + w / 2, y + 6, w - 8, 0xFFFFFFFF, true, true);
+				fitText(g, font, plain(label) + ": " + fmt.apply(v), x + w / 2, y + 6, w - 8, 0xFFFFFFFF, true, true);
 				return;
 			}
 			if (!label.isEmpty()) {
@@ -406,7 +414,7 @@ public final class Ui {
 			updateHover(mx, my);
 			bump = approach(bump, 0f, 0.2f);
 			if (Theme.vanilla()) {
-				vButton(g, font, x, y, w, 20, hovered, label + ": " + fmt.apply(get.get()), null);
+				vButton(g, font, x, y, w, 20, hovered, plain(label) + ": " + fmt.apply(get.get()), null);
 				return;
 			}
 			rowBackground(g, alpha);
@@ -467,7 +475,7 @@ public final class Ui {
 			updateHover(mx, my);
 			if (Theme.vanilla()) {
 				g.blitSprite(RenderPipelines.GUI_TEXTURED, hovered ? BUTTON_HL : BUTTON, x, y, w, 20);
-				fitText(g, font, label, x + (w - 22) / 2, y + 6, w - 34, 0xFFFFFFFF, true, true);
+				fitText(g, font, plain(label), x + (w - 22) / 2, y + 6, w - 34, 0xFFFFFFFF, true, true);
 				g.fill(x + w - 19, y + 4, x + w - 5, y + 16, 0xFF000000);
 				g.fill(x + w - 18, y + 5, x + w - 6, y + 15, get.getAsInt() | 0xFF000000);
 				return;
@@ -521,7 +529,7 @@ public final class Ui {
 		public void render(GuiGraphicsExtractor g, Font font, int mx, int my, float alpha) {
 			updateHover(mx, my);
 			if (Theme.vanilla()) {
-				vButton(g, font, x, y, w, h, hovered, label, icon);
+				vButton(g, font, x, y, w, h, hovered, plain(label), icon);
 				return;
 			}
 			int lift = Math.round(hover);
@@ -891,6 +899,7 @@ public final class Ui {
 			int col = 0, rowSpan = 0, rowH = 0;
 			for (Control c : controls) {
 				int sp = Math.max(1, c.span);
+				if (sp == 3 && Theme.vanilla() && w < 360) sp = 2;
 				if (sp == 1) {
 					if (col > 0) {
 						yy += rowH + 2;

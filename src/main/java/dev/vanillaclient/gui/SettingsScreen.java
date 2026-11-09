@@ -241,9 +241,14 @@ public final class SettingsScreen extends BaseScreen {
 		dev.vanillaclient.features.ClientRanks.Rank cr = dev.vanillaclient.features.ClientRanks.mine();
 		int col = cr == null ? 0xFF808080 : 0xFF000000 | cr.from();
 		float pulse = 0.5f + 0.5f * (float) Math.sin(Theme.time() * 2.5);
-		g.fillGradient(x, y, x + w, y + 32, Theme.alpha(Theme.lerpColor(col, 0xFF000000, 0.55f - pulse * 0.1f), a), Theme.alpha(0x60000000, a));
-		g.fill(x, y, x + 2, y + 32, Theme.alpha(col, a));
-		g.outline(x, y, w, 32, Theme.alpha(0x40FFFFFF, a));
+		if (Theme.vanilla()) {
+			g.fill(x, y, x + w, y + 32, 0x80000000);
+			g.outline(x, y, w, 32, 0xFF000000);
+		} else {
+			g.fillGradient(x, y, x + w, y + 32, Theme.alpha(Theme.lerpColor(col, 0xFF000000, 0.55f - pulse * 0.1f), a), Theme.alpha(0x60000000, a));
+			g.fill(x, y, x + 2, y + 32, Theme.alpha(col, a));
+			g.outline(x, y, w, 32, Theme.alpha(0x40FFFFFF, a));
+		}
 		// your head
 		try {
 			var tex = this.minecraft.player != null ? this.minecraft.player.getSkin().body().texturePath() : null;
@@ -955,7 +960,7 @@ public final class SettingsScreen extends BaseScreen {
 	private void general() {
 		Config c = cfg();
 		list.add(new Ui.Header("MENU"));
-		list.add(new Ui.Toggle("Vanilla look (Minecraft's own buttons, no effects)", i(Items.GRASS_BLOCK), () -> c.vanillaMenus, v -> {
+		list.add(new Ui.Toggle("Vanilla look", i(Items.GRASS_BLOCK), () -> c.vanillaMenus, v -> {
 			c.vanillaMenus = v;
 			Config.save();
 			buildPage();
